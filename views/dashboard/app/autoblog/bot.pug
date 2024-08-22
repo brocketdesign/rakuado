@@ -1,0 +1,208 @@
+extends ../../base
+
+block mainContent
+    h1 
+        i.fas.fa-robot 
+        | 作成フォーム
+    .toolbar.btn-toolbar.my-2
+        .toolbar-body.py-3.px-2.row.w-100
+            .col-10
+                a.btn.btn-dark.shadow-none.m-2#list(type="button", href=`/dashboard/app/autoblog?blogId=${blogId}`)
+                    i.fas.fa-robot 
+                a.btn.btn-success.shadow-none.m-2(type="button", href="/dashboard/app/autoblog/info/")
+                    i.fas.fa-plus 
+                if botId
+                    button.btn.btn-info.shadow-none.text-white.m-2.duplicate-bot-btn(data-id=botId)
+                        i.far.fa-copy
+            .col-2
+                if botId
+                    button.delete-blog-btn.btn.btn-danger.shadow-none.float-end.my-2(data-id=botId) 
+                            i.fas.fa-trash-alt
+            // Add more buttons with icons as needed
+    form#botForm(method="post", action="/submit-bot-info" class="needs-validation" novalidate)
+        .row.row-cols-1.row-cols-sm-2
+            .col
+                input#blogId(type="hidden", name="blogId", data-id=(blogId ? blogId : ""))
+                input#botId(type="hidden", name="botId", data-id=(botId ? botId : ""))
+                .card.my-2
+                    .card-header
+                        h5 投稿情報
+                    .card-body
+                        .row
+                            div.form-group
+                                label.text-muted.fw-bold(for="postCategory", class="form-label") 投稿カテゴリー：
+                                select#postCategory(name="postCategory", class="form-select", multiple=true)
+                            div.form-group
+                                label.text-muted.fw-bold.text-muted.fw-bold(for="botName", class="form-label") ボット名：
+                                input#botName(type="text", name="botName", required=true class="form-control")
+                                div.invalid-feedback ボット名が必要です。
+                            div.form-group
+                                label.text-muted.fw-bold.text-muted.fw-bold(for="botDescription", class="form-label") ボットの説明：
+                                textarea#botDescription(name="botDescription", required=true class="form-control", rows=5)
+                                div.invalid-feedback ボットの説明が必要です。
+
+                .card.my-2
+                    .card-header
+                        h5 記事情報
+                    .card-body
+                        .row
+
+                            div.form-group
+                                label.text-muted.fw-bold(for="articleLength", class="form-label") 記事の長さ：
+                                select#articleLength(name="articleLength" class="form-select")
+                                    option(value="1000") 〜500単語
+                                    option(value="2000") 500〜1000単語
+                                    option(value="4000") 1000〜2000単語
+
+                            div.form-group
+                                label.text-muted.fw-bold(for="articleCategories", class="form-label") 記事のカテゴリー：
+                                select#articleCategories(name="articleCategories", multiple=true, class="form-select")
+                                    option(value="Technology") テクノロジー
+                                    option(value="Travel") 旅行
+                                    option(value="Food") 食品
+                                    option(value="Health & Fitness") 健康とフィットネス
+                                    option(value="Fashion") ファッション
+                                    option(value="Lifestyle") ライフスタイル
+                                    option(value="Beauty") 美容
+                                    option(value="Sports") スポーツ
+                                    option(value="Entertainment") エンターテイメント
+                                    option(value="Finance") ファイナンス
+                                    option(value="Business") ビジネス
+                                    option(value="Marketing") マーケティング
+                                    option(value="Education") 教育
+                                    option(value="Parenting") 育児
+                                    option(value="Home & Garden") 家庭とガーデニング
+                                    option(value="DIY & Crafts") DIYとクラフト
+                                    option(value="Photography") 写真
+                                    option(value="Art & Design") アートとデザイン
+                                    option(value="Books & Literature") 書籍と文学
+                                    option(value="Science") 科学
+                                    option(value="History") 歴史
+                                    option(value="Politics") 政治
+                                    option(value="Nature") 自然
+                                    option(value="Pets") ペット
+                                    option(value="Relationships") 関係
+                                    option(value="Self Improvement") 自己改善
+                                    option(value="Spirituality") スピリチュアリティ
+                                    option(value="Technology & Gadgets") テクノロジーとガジェット
+                                    option(value="Video Games") ビデオゲーム
+                                    option(value="Film & TV") 映画とテレビ
+                                    option(value="Music") 音楽
+                                    option(value="Cooking & Recipes") 料理とレシピ
+                                    option(value="Gardening") ガーデニング
+                                    option(value="Home Improvement") ホームインプロvement
+                                    option(value="Crafts & DIY") クラフトとDIY
+                                    option(value="Fashion & Beauty") ファッションとビューティー
+                                    option(value="Parenting & Family") 親子関係と家族
+                                    option(value="Finance & Money") ファイナンスとお金
+                                    option(value="Career & Work") キャリアと仕事
+                                    option(value="Education & Learning") 教育と学習
+                                    option(value="Health & Wellness") 健康とウェルネス
+                                    option(value="Fitness & Exercise") フィットネスとエクササイズ
+                                    option(value="Sports & Outdoors") スポーツとアウトドア
+                                    option(value="Travel & Adventure") 旅行と冒険
+                                    option(value="Art & Creativity") アートと創造性
+                                    option(value="Books & Writing") 書籍と執筆
+                                    option(value="Science & Technology") 科学と技術
+                                    option(value="History & Culture") 歴史と文化
+                                    option(value="Politics & Society") 政治と社会
+                                    option(value="Nature & Environment") 自然と環境
+                                    option(value="Animals & Pets") 動物とペット
+                                    option(value="Relationships & Love") 関係と愛
+                                    option(value="Self-Improvement & Motivation") 自己改善と動機付け
+                                    option(value="Spirituality & Religion") スピリチュアリティと宗教
+                            div.form-group
+                                label.text-muted.fw-bold(for="targetAudience", class="form-label") ターゲットオーディエンス：
+                                select#targetAudience(name="targetAudience[]" multiple class="form-select")
+                                    option(value="Men") 男性
+                                    option(value="Women") 女性
+                                    option(value="Children") 子供
+                                    option(value="Teenagers") 十代の若者
+                                    option(value="Young Adults") 若者
+                                    option(value="Elderly") 高齢者
+                                    option(value="Students") 学生
+                                    option(value="Professionals") プロフェッショナル
+                                    option(value="Parents") 親
+                                    option(value="Entrepreneurs") 起業家
+                                    option(value="Tech Enthusiasts") テクノロジー愛好家
+                                    option(value="Fitness Enthusiasts") フィットネス愛好家
+                                    option(value="Food Enthusiasts") 食品愛好家
+                                    option(value="Travel Enthusiasts") 旅行愛好家
+                                    option(value="Fashion Enthusiasts") ファッション愛好家
+
+
+            .col.position-sticky
+                .card.my-2
+                    .card-header
+                        h5 コンテンツのオプション
+                    .card-body
+                        .row
+                            div.form-group.col-12.col-sm-6
+                                label.text-muted.fw-bold(for="postLanguage", class="form-label") テキストの言語：
+                                select#postLanguage(name="postLanguage" class="form-select")
+                                    option(value="japanese") 日本語
+                                    option(value="french") フランス語
+                                    option(value="english") 英語
+                                    option(value="spanish") スペイン語
+                                    option(value="german") ドイツ語
+                                    option(value="chinese") 中国語
+                            div.form-group.col-12.col-sm-6
+                                label.text-muted.fw-bold(for="postgpt", class="form-label") GPT
+                                select#postgpt(name="postgpt" class="form-select")
+                                    option(value="gpt4o") GPT-4o
+                                    option(value="gpt4o-mini") GPT-4o-mini
+                            div.form-group.col-12.col-sm-6
+                                label.text-muted.fw-bold(for="postFrequency", class="form-label") 投稿頻度：
+                                select#postFrequency(name="postFrequency" class="form-select")
+                                    option(value="0 0,12 * * *") 1日に2回
+                                    option(value="0 * * * *") 1時間ごと
+                                    option(value="*/30 * * * *") 30分ごと
+                                    option(value="*/10 * * * *") 10分ごと
+                                    option(value="0 0 * * *") 毎日
+                                    option(value="0 0 * * 0") 毎週
+                            div.form-group.col-12.col-sm-6
+                                label.text-muted.fw-bold(for="postStatus", class="form-label") 投稿頻度：
+                                select#postStatus(name="postStatus" class="form-select")
+                                    option(value="publish") 公開
+                                    option(value="draft") 下書き
+
+                            div.form-group.col-12.col-sm-6
+                                label.text-muted.fw-bold(for="writingStyle", class="form-label") 好みの執筆スタイル：
+                                select#writingStyle(name="writingStyle" class="form-select")
+                                    option(value="Descriptive", selected) 記述的
+                                    option(value="Informative") 情報的
+                                    option(value="Creative") 創造的
+                                    option(value="Narrative") 物語性
+                                    option(value="Persuasive") 説得力のある
+                                    option(value="Reflective") 内省的
+                                    option(value="Argumentative") 議論的
+                                    option(value="Analytical") 分析的
+                                    option(value="Technical") 技術的
+                                    option(value="Journalistic") ジャーナリスティック
+                                    option(value="Neutral", selected) 中立的
+
+                            div.form-group.col-12.col-sm-6
+                                label.text-muted.fw-bold(for="writingTone", class="form-label") 好みの執筆トーン：
+                                select#writingTone(name="writingTone" class="form-select")
+                                    option(value="Formal") フォーマル
+                                    option(value="Assertive") 断定的
+                                    option(value="Cheerful") 快活な
+                                    option(value="Humorous") ユーモラス
+                                    option(value="Informal") カジュアル
+                                    option(value="Inspirational") インスピレーション
+                                    option(value="Professional") プロフェッショナル
+                                    option(value="Coincidental") 偶然の
+                                    option(value="Emotional") 感情的な
+                                    option(value="Persuasive") 説得力のある
+                                    option(value="Supportive") 支援的な
+                                    option(value="Sarcastic") 皮肉な
+                                    option(value="Condescending") 遠慮なく
+                                    option(value="Skeptical") 懐疑的な
+                                    option(value="Narrative") 物語的な
+                                    option(value="Journalistic") ジャーナリスティック
+
+
+
+                button.w-100.my-2(type="submit" class="btn btn-primary") 送信
+
+    script(src="/js/autoblog.js")

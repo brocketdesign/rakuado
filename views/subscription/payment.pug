@@ -1,0 +1,25 @@
+extends ../dashboard/base
+
+block mainContent
+    .d-flex.justify-content-between.my-4
+        if user.subscriptionId
+            a.btn.btn-primary(type="button" href="/payment/subscription/bought-products") My Membership
+        if subscriptions
+            .d-flex.justify-content-between
+                h3 My Membership
+                button.btn.btn-primary(onclick="updatePaymentMethod(this)" data-user-id=user._id) Update Payment Method
+            each subscription in subscriptions
+                .card.mt-3
+                    .card-body
+                        h5.card-title #{subscription.productName}
+                        ul.list-group.list-group-flush
+                            li.list-group-item Status: #{subscription.isActive == true ? 'Active':'Inactive'}
+                            li.list-group-item Start Date: #{subscription.startDate}
+                            li.list-group-item Next Payment Date: #{subscription.nextPaymentDate}
+                            li.list-group-item Price: #{subscription.price}¥/month
+                        if subscription.isActive === true
+                            .text-end
+                                button.btn.btn-danger(type="submit" onclick=`cancelSubscription("${subscription.id}")`) Cancel
+    include plan
+
+    script(src='/js/stripe.js')

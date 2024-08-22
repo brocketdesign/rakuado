@@ -1,0 +1,23 @@
+extends ../../base
+
+block mainContent
+  .container
+    h1 
+        i.fas.fa-chart-line 
+        | Graph
+    .toolbar.btn-toolbar.my-2
+        .toolbar-body.py-3.px-2.row.w-100
+            .col-10
+                a.btn.btn-dark.shadow-none.m-2#list(type="button", href=`/dashboard/app/affiliate`)
+                    i.fas.fa-list 
+    #affiliateId(data-id=(affiliateId ? affiliateId : ""))
+    .infos
+    div#dateRangeSelector
+        button.btn.btn-primary.me-2(onclick="updateDateRange('thisMonth')") 今月
+        button.btn.btn-primary.me-2(onclick="updateDateRange('lastMonth')") 先月
+        button.btn.btn-primary(onclick="updateDateRange('last7Days')") 過去7日間
+    .container-graph
+      canvas#analyticsChart(width="800" height="400")
+          // Setup event handlers to update chart based on user inputs
+  script(src="https://cdn.jsdelivr.net/npm/chart.js")
+  script(src='/js/affiliate-graph.js')

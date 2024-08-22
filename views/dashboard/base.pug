@@ -1,0 +1,10 @@
+extends ../default
+
+block content
+  .container-fluid.h-100
+    .row.h-100
+      include ../sidebar
+      .row.justify-content-center.m-0.p-0
+        .container.py-4.bg-light.h-100
+          main#dashboard.px-md-3
+            block mainContent

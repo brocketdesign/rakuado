@@ -1,0 +1,26 @@
+extends ../default
+
+block content
+  .container-fluid
+    .position-absolute.top-50.start-50.translate-middle#positionElement
+      .col
+        .card.shadow
+          .card-body
+            h1.card-title.text-center Sign Up
+            if presign
+              .card 
+                .card-body 
+                  p Verify your email to login 
+                  a#resend-email(href="#" onclick=`resendSigninMail(${userID})`) Resend email
+            else  
+              if error
+                .border-rounded.px-3.py-2   
+                  p=error
+              form(action='/user/signup', method='POST')
+                .mb-3
+                  label(for='email', class='form-label') Email:
+                  input(type='text', name='email', id='email', class='form-control')
+                button(type='submit', class='btn btn-primary btn-block') Sign Up
+              p.card-text.text-center.mt-3
+                span.d-block Already have an account? 
+                a(href='/user/login') Log In

@@ -1,0 +1,85 @@
+.row.justify-content-center.my-3
+    .text-center
+        h2 メンバーシップ
+        p プランをアップグレード ✨
+    .tab-content.my-5
+        .row.row-cols-1.row-cols-md-3.mb-3.text-center.m-auto.justify-content-center
+            .col
+                .card.mb-4.rounded-3.shadow-sm.border
+                    .card-header.py-3.bg-white
+                        h4.my-0.fw-bold 無料プラン
+                        h6.mt-1.fw-normal 最低限から始めたい方へ
+                    .card-body
+                        h1.card-title.pricing-card-title ¥0
+                        small.text-muted.fw-light 永久無料
+                        ul.list-unstyled.mt-3.mb-4.text-start.ps-3
+                            li
+                                i.fa.fa-check.text-primary.me-3
+                                | GPT-3.5を利用可能
+                            li
+                                i.fa.fa-times.me-3
+                                | GPT-4は利用不可
+                            li
+                                i.fa.fa-times.me-3
+                                | 利用制限: 月間5,000文字
+                            li
+                                i.fa.fa-times.me-3
+                                | プロジェクト数: 最大3つ
+                            li
+                                i.fa.fa-times.me-3
+                                | ユーザー数: 最大2人
+                            li
+                                i.fa.fa-times.me-3
+                                | 50+テンプレート利用可能
+                        a.btn.w-100.btn.btn-lg.btn-light.border.border-primary.text-primary(href="/dashboard" type="button") 今すぐ利用する
+            .col
+                .card.mb-4.rounded-3.shadow-sm.border-primary
+                    .card-header.py-3.text-white.bg-primary.border-primary
+                        h4.my-0.fw-bold スタンダード
+                        h6.mt-1.fw-normal 安心の無制限アクセスをお楽しみください。
+                    .card-body
+                        h1.card-title.pricing-card-title ¥1,500
+                        small.text-muted.fw-light 1ヶ月あたり
+                        ul.list-unstyled.mt-3.mb-4.text-start.ps-3
+                            li
+                                i.fa.fa-check.text-primary.me-3
+                                | GPT-3.5を利用可能
+                            li
+                                i.fa.fa-check.text-primary.me-3
+                                | GPT-4を利用可能
+                            li
+                                i.fa.fa-check.text-primary.me-3
+                                | 利用制限: 無制限
+                            li
+                                i.fa.fa-check.text-primary.me-3
+                                | プロジェクト数: 最大3つ
+                            li
+                                i.fa.fa-check.text-primary.me-3
+                                | ユーザー数: 最大2人
+                            li
+                                i.fa.fa-check.text-primary.me-3
+                                | 50+テンプレート利用可能
+                        if user
+                            button.w-100.btn.btn-lg.btn-primary(onclick="createCheckoutSession(this)" data-id="prod_OeUHg9ZQIyCkil" data-price="price_1NrBIeC8xKGwQm6Jg77DFLyP" type="button") アップグレード
+                        else 
+                            a.btn.w-100.btn.btn-lg.btn-primary(href="/user/signup" type="button") 無料で始める
+    .card.shadow-0.border
+        .card-body(class= !user ? 'bg-light' : 'bg-white')
+            .my-2
+                p.me-2.tag.border.border-dark.px-3.py-2.rounded.w-auto.d-inline-block
+                    | 提供元:
+                    span.fw-bold stripe
+                h5.fw-bold  RAKUBUNは「Stripe」を利用して決済処理を行っています。
+                p.text-sm.f-muted 「Stripe」は業界団体の定める厳格な基準に準拠しており、各国規制当局によるライセンス
+
+    div#accordionExample.accordion
+        each item, index in faq
+            div.card.my-3
+                div(class='card-header' id=`heading${index}` type='button' data-bs-toggle='collapse' data-bs-target=`#collapse${index}` aria-expanded='false' aria-controls=`collapse${index}`)
+                    h5.mb-0
+                        button.btn.btn-link
+                        | #{item.question}
+                div(class='collapse' id=`collapse${index}` aria-labelledby=`heading${index}` data-bs-parent='#accordionExample')
+                    div.card-body
+                        | #{item.answer}
+

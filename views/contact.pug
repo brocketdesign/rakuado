@@ -1,0 +1,30 @@
+extends default
+
+block content
+    .container.mt-5
+      h2 Contact Us
+
+      // Condition to check if the form was sent
+      if sent
+        .alert.alert-success
+          strong Success! 
+          | Your message has been sent successfully. We'll get back to you shortly.
+
+      else
+        form.bg-light.p-3(action="/contact" method="POST")
+          .mb-3
+            label(for="name") Name
+            input#name.form-control(type="text" name="name" value=user.username required)
+
+          .mb-3
+            label(for="email") Email
+            input#email.form-control(type="email" name="email" value=user.email required)
+
+          .mb-3
+            label(for="message") Message
+            textarea#message.form-control(name="message" rows="4" required)
+
+          button.btn.btn-primary(type='submit') Submit
+
+        script.
+          // Here you can add any necessary JavaScript or form validation.

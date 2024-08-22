@@ -1,0 +1,18 @@
+extends ../../base
+
+block mainContent
+
+    .container.mt-5
+      h1.text-center Plugin Status Checker
+      .row
+        .col-md-6.offset-md-3
+          form#statusForm
+            .mb-3
+              label(for='wordpressUrl', class='form-label') WordPress Site URL
+              input#wordpressUrl.form-control(type='url', placeholder='Enter WordPress site URL', required=true)
+            button.btn.btn-primary(type='submit') Check Status
+      .row.mt-3
+        .col-md-6.offset-md-3
+          .alert.alert-info#result.hidden Role to display results here
+
+    script(src="/js/affiliate.js?v=1.0.1")

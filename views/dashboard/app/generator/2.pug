@@ -1,0 +1,67 @@
+extends ../../base
+
+block mainContent
+    link(rel='stylesheet', href='/css/generator/sectiongenerator.css')
+
+    .row.justify-content-center
+        .col-md-8.my-2.bg-white.border.rounded.shadow.py-4
+            h2.fw-bold.text-center.current-title セクションジェネレーターエクストラオーディネア！
+            p.current-description
+            ul#result.list-group
+    hr.my-4
+    .container.mt-5
+        .row.justify-content-center
+            .col-md-8
+                form#generator(data-type="2")
+                    .card
+                        .card-header
+                            h3.mb-0 ここに魔法の材料を入力してください！
+                        .card-body
+                            .form-group.my-2
+                                label(for="title") 魅力的なタイトル
+                                input#title.form-control(type="text", name="title", placeholder="素敵なタイトルを入力してください", required)
+
+                            .form-group.my-2
+                                label(for="description") 魅力的なDESCRIPTION
+                                input#description.form-control(type="text", name="description", placeholder="素敵なタイトルを入力してください", required)
+
+                            .form-group.my-2
+                                label(for="sectionsCount") セクションの数
+                                input#sectionsCount.form-control(type="number", name="sectionsCount", placeholder="セクションの数は？ 1、2、3...", value=5, min="1" max="5" required)
+                            .form-group.my-2
+                                label(for="sectionsSubject") セクションnaiyou
+                                textarea#sectionsSubject.form-control(name="sectionsSubject", placeholder="1行ごとにセクションnaiyouを入力してください")
+
+                            .row 
+                                .col-md-4.my-2
+                                    .form-group
+                                        label(for="language") 言語
+                                        select#language.form-control(name="language")
+                                            option(value="japanese" selected) 日本語
+                                            option(value="english") 英語
+                                            option(value="spanish") スペイン語
+                                            option(value="french") Français
+                                            // 必要に応じて他の言語を追加
+                                .col-md-4.my-2
+                                    .form-group
+                                        label(for="writingStyle") 書き方
+                                        select#writingStyle.form-control(name="writingStyle")
+                                            option(value="narrative") 物語性
+                                            option(value="expository") 説明的
+                                            option(value="descriptive") 描写的
+                                            option(value="persuasive") 説得力のある
+
+                                .col-md-4.my-2
+                                    .form-group
+                                        label(for="writingTone") トーン
+                                        select#writingTone.form-control(name="writingTone")
+                                            option(value="formal") フォーマル
+                                            option(value="friendly") フレンドリー
+                                            option(value="casual") カジュアル
+                                            option(value="humorous") ユーモラス
+
+                            .form-group.my-2
+                                button#generation.btn.btn-primary.w-100(type="submit") 
+                                    span.load.spinner-border.spinner-border-sm.me-2(role="status", style="display:none")
+                                    span.text 作成しましょう！
+    script(src="/js/generator.js")

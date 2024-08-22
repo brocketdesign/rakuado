@@ -1,0 +1,65 @@
+extends ../../base
+
+block mainContent
+    link(rel='stylesheet', href='/css/generator/titlegenerator.css')
+    h2.fw-bold.text-center SEO対応のタイトル生成ツール
+    hr.my-4
+    .container.mt-5
+        .row.justify-content-center
+            .col-md-6.col-12.my-2.order-2
+                .row
+                    .col-md-8.my-2
+                        h3 タイトル生成
+                        ul#result.list-group
+                    .col-md-8.my-2
+                        h3 Google
+                        ul#seoSearch.list-group
+            .col-md-6.col-12.my-2.order-1
+                form#generator(data-type="1")
+                    .card
+                        .card-header
+                            h3.mb-0 キーワードを入力してください
+                        .card-body
+                            .form-group.my-2
+                                label(for="keywords") 主要なキーワード
+                                .keywords.form-box.rounded.row.row-cols-3
+                                    input#keywords.form-control.w-100(type="text", name="keywords", placeholder="「Enter」または「コンマ」を押して追加", required)
+                            .form-group.my-2
+                                label(for="count") タイトル数
+                                input#count.form-control(type="number", name="count", placeholder="1、2、3...", value=2, min="1" max="5" required)
+
+                            .row 
+                                .col-md-4.my-2
+                                    .form-group
+                                        label(for="language") 言語
+                                        select#language.form-control(name="language")
+                                            option(value="japanese" selected) 日本語
+                                            option(value="english") 英語
+                                            option(value="spanish") スペイン語
+                                            option(value="french") Français
+                                            // 必要に応じて他の言語を追加
+                                .col-md-4.my-2
+                                    .form-group
+                                        label(for="writingStyle") 書き方
+                                        select#writingStyle.form-control(name="writingStyle")
+                                            option(value="narrative") 物語性
+                                            option(value="expository") 説明的
+                                            option(value="descriptive") 描写的
+                                            option(value="persuasive") 説得力のある
+
+                                .col-md-4.my-2
+                                    .form-group
+                                        label(for="writingTone") トーン
+                                        select#writingTone.form-control(name="writingTone")
+                                            option(value="formal") フォーマル
+                                            option(value="friendly") フレンドリー
+                                            option(value="casual") カジュアル
+                                            option(value="humorous") ユーモラス
+
+                            .form-group.my-2
+                                button#generation.btn.btn-info.w-100.text-center(type="submit") 
+                                    span.load.spinner-border.spinner-border-sm.me-2(role="status" style="display:none")
+                                    span.text 提案されるトピック
+
+    script(src="/js/generator.js")
+

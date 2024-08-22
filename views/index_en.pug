@@ -1,0 +1,188 @@
+extends default
+
+block content
+
+    //- login popup
+    #login-container.position-fixed.d-none(onclick="hideLogin()" style="inset:0;z-index:99;background-color: #000000b0;")
+        .position-fixed.top-50.start-50.translate-middle#positionElement
+            .col
+                #login-form.card.shadow.bg-light.border.border-white
+                    .card-body.d-flex.flex-column.justify-content-center(style="min-height: 250px;")
+                        h1.card-title.text-start Welcome to RAKUBUN
+                        span Join the community and unlock amazing features! 🧙
+                        .mb-3
+                        .verify-email.d-none(style="min-height: 60px;")
+                            span Verify your email to login
+                            a#resend-email(href="#" style="display:block" onclick="resendSigninMail()") Resend email
+
+                        form
+                            .mb-3
+                                label.d-none(for='email', class='form-label') Email:
+                                .input-group
+                                    input(type='email', name='email', id='email', class='form-control' placeholder="Enter your email address")
+                                    button.btn.btn-primary.shadow-0.input-group-append(type='submit') 
+                                        i.fas.fa-arrow-circle-right
+                        .separator.mb-3
+                            hr
+                            span Or
+                            hr
+                        .container
+                            a(href='/auth/google', class='google-login-button')
+                                img(src='/img/googleauth.png', alt='Continue with Google')
+
+                        .copyright.mt-3
+                            input.d-none.me-2(type="checkbox")
+                            span By continuing, you agree to our Terms of Use and Privacy Policy.
+
+    //- Background image
+    div#intro.bg-image.shadow-1-strong
+        div(style="background:linear-gradient(45deg, rgb(23, 88, 213), rgb(14, 167, 214) 100%);")
+            div.container.d-flex.align-items-center.h-100(style="min-height:70vh;")
+                div.text-white.col-12.col-md-12.py-5
+                    h1.mb-3.fw-bold.display-4(style="height: 200px;")
+                        span RAKUBUN
+                        span(style="opacity: 0.8;") ,
+                        p.generate-text#headline(data-context="Write a headline to replace this headline: Create content 10 times faster with AI")
+                        span.generate-text-fail(style="display:none")
+                            span Create content 10 times faster with AI
+                    h5 Create high-quality articles, social media, and ad copy in seconds
+                    h5.mb-4 AI Writing Assistant
+                    button.btn.btn-warning.btn-lg.m-2(onclick="displayLogin()", role="button", style="font-size:1em;") Try it for free first
+
+    div.container.pt-5(style="overflow-x:hidden;")
+        //- Section: Features
+        section 
+            #icon-grid.container.px-4.py-5
+                div(style="height: 200px;")
+                    h1.display-4.fw-bold.generate-text(data-context="Write a headline to replace this headline: Streamline Content Creation More Efficiently Than ChatGPT")
+                    .generate-text-fail
+                        h1.display-4.fw-bold Streamline Content Creation More Efficiently Than
+                        h1.display-4.fw-bold ChatGPT
+                h6.fw-normal With over 100 effective Japanese templates, including blog articles and ad copy, you can create content in the desired genre immediately.
+                .row.row-cols-1.row-cols-sm-2.row-cols-md-3.row-cols-lg-3.g-4.py-5
+                    .col.d-flex.align-items-start
+                        i.bi.text-muted.flex-shrink-0.me-3.fa.fa-pencil-alt(style='width: 1.75em; height: 1.75em;')   
+                        div
+                            h4.fw-bold.mb-0 SEO Blog Creation
+                            p Create optimized blog articles using ChatGPT.
+                    .col.d-flex.align-items-start
+                        i.bi.text-muted.flex-shrink-0.me-3.fa.fa-twitter(style='width: 1.75em; height: 1.75em;')   
+                        div
+                            h4.fw-bold.mb-0 Twitter Post Assistant
+                            p Get suggestions and support for creating effective tweets.
+                    .col.d-flex.align-items-start
+                        i.bi.text-muted.flex-shrink-0.me-3.fa.fa-search-dollar(style='width: 1.75em; height: 1.75em;')   
+                        div
+                            h4.fw-bold.mb-0 Keyword Optimization
+                            p Acquire popular keywords to optimize your content.
+                    .col.d-flex.align-items-start
+                        i.bi.text-muted.flex-shrink-0.me-3.fa.fa-chart-line(style='width: 1.75em; height: 1.75em;')   
+                        div
+                            h4.fw-bold.mb-0 Performance Analysis
+                            p Analyze the effectiveness of your posts and find the best strategies.
+                    .col.d-flex.align-items-start
+                        i.bi.text-muted.flex-shrink-0.me-3.fa.fa-robot(style='width: 1.75em; height: 1.75em;')   
+                        div
+                            h4.fw-bold.mb-0 AI Dialogue
+                            p Engage in conversations with ChatGPT based on user requests.
+                    .col.d-flex.align-items-start
+                        i.bi.text-muted.flex-shrink-0.me-3.fa.fa-images(style='width: 1.75em; height: 1.75em;')
+                        div
+                            h4.fw-bold.mb-0 Visual Content Suggestions
+                            p Get suggestions to optimize images and graphics.
+                    .col.d-flex.align-items-start
+                        i.bi.text-muted.flex-shrink-0.me-3.fa.fa-share-alt(style='width: 1.75em; height: 1.75em;')
+                        div
+                            h4.fw-bold.mb-0 Social Media Integration
+                            p Post to multiple social media platforms from a single platform.
+                    .col.d-flex.align-items-start
+                        i.bi.text-muted.flex-shrink-0.me-3.fa.fa-cogs(style='width: 1.75em; height: 1.75em;')
+                        div
+                            h4.fw-bold.mb-0 Customization Settings
+                            p Customize the app to suit your needs.
+
+
+        hr.my-5
+        //- Section: Content
+        section
+            div.row
+                div.col-md-6.gx-5.mb-4
+                    div.bg-image.hover-overlay.ripple.shadow-2-strong.rounded-5(data-mdb-ripple-color="light")
+                        img.img-fluid(src="https://mdbootstrap.com/img/new/standard/nature/111.jpg")
+                        a(href="#")
+                            div.mask(style="background-color: rgba(251, 251, 251, 0.15);")
+                div.col-md-6.gx-5.mb-4
+                    h4.fw-bold.display-4 Streamline Content Creation More Efficiently Than
+                    h4.fw-bold.display-4 ChatGPT
+                    p.text-muted
+                        | With over 100 effective Japanese templates, including blog articles and ad copy, you can create content in the desired genre immediately.
+                    p.strong Secure and Reliable
+                    p.text-muted
+                        | Our service excels in security, ensuring the strict protection of personal information and confidential data. You can use it with confidence.
+
+        hr.my-5
+        //- Section: Content
+        section
+            div.row
+                div.col-md-6.gx-5.mb-4.order-md-2
+                    div.bg-image.hover-overlay.ripple.shadow-2-strong.rounded-5(data-mdb-ripple-color="light")
+                        img.img-fluid(src="https://mdbootstrap.com/img/new/standard/nature/111.jpg")
+                        a(href="#")
+                            div.mask(style="background-color: rgba(251, 251, 251, 0.15);")
+                div.col-md-6.gx-5.mb-4
+                    h4.fw-bold.display-4 Create Long-Form Content with AI Editor
+                    p.text-muted
+                        | With over 100 effective Japanese templates, including blog articles and ad copy, you can create content in the desired genre immediately.
+                    p.strong Secure and Reliable
+                    p.text-muted
+                        | Our service excels in security, ensuring the strict protection of personal information and confidential data. You can use it with confidence.
+        hr.my-5
+        //- Section: Content
+        section.text-center
+            h4.mb-5.strong Diverse Features
+            div.row
+                div.col-lg-4.col-md-12.mb-4
+                    div.card
+                        div.bg-image.hover-overlay.ripple(data-mdb-ripple-color="light")
+                            img.img-fluid(src="https://mdbootstrap.com/img/new/standard/nature/184.jpg")
+                            a(href="#")
+                                div.mask(style="background-color: rgba(251, 251, 251, 0.15);")
+                        div.card-body
+                            h5.card-title Contract Creation
+                            p.card-text
+                                | With CloudSign, you can easily create contracts. Use customizable templates to fill in contract details effortlessly.
+                            a.btn.btn-primary(href="/user/signup") See Details
+
+                div.col-lg-4.col-md-6.mb-4
+                    div.card
+                        div.bg-image.hover-overlay.ripple(data-mdb-ripple-color="light")
+                            img.img-fluid(src="https://mdbootstrap.com/img/new/standard/nature/023.jpg")
+                            a(href="#!")
+                                div.mask(style="background-color: rgba(251, 251, 251, 0.15);")
+                        div.card-body
+                            h5.card-title Signature Management
+                            p.card-text
+                                | CloudSign makes it easy to manage electronic signatures. It also supports contracts with multiple participants.
+                            a.btn.btn-primary(href="/user/signup") See Details
+
+                div.col-lg-4.col-md-6.mb-4
+                    div.card
+                        div.bg-image.hover-overlay.ripple(data-mdb-ripple-color="light")
+                            img.img-fluid(src="https://mdbootstrap.com/img/new/standard/nature/111.jpg")
+                            a(href="#!")
+                                div.mask(style="background-color: rgba(251, 251, 251, 0.15);")
+                        div.card-body
+                            h5.card-title Safety and Reliability
+                            p.card-text
+                                | CloudSign prioritizes the protection of personal information. Sign your important contracts with peace of mind.
+                            a.btn.btn-primary(href="/user/signup") See Details
+
+        hr.my-5
+        //- Section: Pricing
+        section.text-center
+            .pricing-header.p-3.pb-md-4.mx-auto.text-center
+                h1.display-4.fw-bold Plans Tailored to Your Usage
+                h1.display-4.fw-bold We Have the Perfect Plan for You
+                p.fs-5.text-muted Quickly build an effective pricing table for your potential customers with this Bootstrap example. It’s built with default Bootstrap components and utilities with little customization.
+        include subscription/plan
+

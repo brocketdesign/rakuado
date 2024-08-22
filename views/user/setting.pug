@@ -1,0 +1,102 @@
+extends ../dashboard/base
+
+block mainContent
+    ul.nav.nav-tabs
+        li.nav-item
+            a.nav-link(href='#personalInfo' data-bs-toggle='tab') Account settings
+        li.nav-item
+            a.nav-link(href='#wordpressInfo' data-bs-toggle='tab') Wordpress
+        li.nav-item.d-none
+            a.nav-link(href='#passwordUpdate' data-bs-toggle='tab') Password update
+    .tab-content.pb-5#updateProfile(style="display:none")
+        #personalInfo.tab-pane.fade
+            .header
+                .banner-image(style="cursor:pointer")
+                    img(src=user.bannerImage || 'https://placehold.co/51x76',, alt='Banner Image' style="height: 60vh; width: 100%; object-fit: cover; object-position: center;cursor:pointer")
+                .profile-image.text-center(style="transform: translateY(-50%);cursor:pointer")
+                    img.shadow.border.border-dark(src=user.profileImage || 'https://placehold.co/51x76', alt='User Profile Image' style="object-fit: contain; width: 150px; height: 150px; border-radius: 50%; object-fit: cover;")
+            form.row.mt-3
+                .form-group.col-12.col-sm-6.d-none
+                    label(for='profileImage') Profile picture
+                    .input-group
+                        input#profileImage.form-control(type='file', name="profileImage", value=user.profileImage)
+                .form-group.col-12.col-sm-6.d-none
+                    label(for='bannerImage') Banner image
+                    .input-group
+                        input#bannerImage.form-control(type='file', name="bannerImage", value=user.bannerImage)
+                hr.my-3.d-none
+                .form-group.col-12
+                    label(for='language') 言語
+                    select#language.form-control(name="language")
+                        option(value="japanese" selected) 日本語
+                        option(value="english") 英語
+                        option(value="spanish") スペイン語
+                        option(value="french") Français
+                hr.my-3.d-none
+                .form-group.col-12.d-none
+                    label(for='username') Nickname
+                    input#username.form-control(name="username", type='text', placeholder='Enter Nickname' value=user.username)
+                .form-group.col-12.col-sm-6.d-none
+                    label(for='lastName') Last name
+                    input#lastName.form-control(name="lastName", type='text', placeholder='Enter Last Name' value=user.lastName)
+                .form-group.col-12.col-sm-6.d-none
+                    label(for='firstName') First name
+                    input#firstName.form-control(name="firstName", type='text', placeholder='Enter First Name' value=user.firstName)
+                hr.my-3
+                .form-group.col-12.col-sm-6
+                    label(for='email') Email
+                    input#email.form-control(name="email", type='email', placeholder='Enter Email' value=user.email)
+                .form-group.col-12.col-sm-6.d-none
+                    label(for='phoneNumber') Phone Number
+                    input#phoneNumber.form-control(name="phoneNumber", type='tel', placeholder='Enter Phone Number' value=user.phoneNumber)
+                .form-group.col-12.col-sm-6.d-none
+                    label(for='birthDate') Date of birth
+                    input#birthDate.form-control(name="birthDate", type='date' value=user.birthDate)
+                hr.my-3.d-none
+                .form-group.col-12.col-sm-6.d-none
+                    label(for='address') Address
+                    input#address.form-control(name="address", type='text', placeholder='Enter Address' value=user.address)
+                .form-group.col-12.col-sm-6.d-none
+                    label(for='city') City or municipality
+                    input#city.form-control(name="city", type='text', placeholder='Enter City' value=user.city)
+                .form-group.col-12.col-sm-6.d-none
+                    label(for='state') Prefecture or State
+                    input#state.form-control(name="state", type='text', placeholder='Enter State' value=user.state)
+                .form-group.col-12.col-sm-6.d-none
+                    label(for='zip') Postal code
+                    input#zip.form-control(name="zip", type='text', placeholder='Enter Zip Code' value=user.zip)
+                .form-group.col-12.col-sm-6.d-none
+                    label(for='country') Country
+                    select#country.form-control(name="country")
+                    option(value=user.country) Select your country
+                button.btn.btn-primary.my-4(type='submit') Send
+        #wordpressInfo.tab-pane.fade
+            form.row.mt-3
+                .form-group.col-12.col-sm-6
+                    label(for='blogUrl') Blog URL
+                    input#blogUrl.form-control(name="blogUrl", type='url', placeholder='', required)
+                .form-group.col-12.col-sm-6
+                    label(for='blogTheme') Blog Theme
+                    input#blogTheme.form-control(name="blogTheme", type='text', placeholder='What is it about')
+                hr.my-3
+                .form-group.col-12.col-sm-6
+                    label(for='blogUsername') User Name
+                    input#blogUsername.form-control(name="blogUsername", type='text', placeholder='', required)
+                .form-group.col-12.col-sm-6
+                    label(for='blogPassword') Password
+                    input#blogPassword.form-control(name="blogPassword", type='password', placeholder='', required)
+                button.btn.btn-primary.my-4(type='submit') Send
+        #passwordUpdate.tab-pane.fade.d-none
+            form.row.mt-3
+                .form-group.col-12.col-sm-6
+                    label(for='userOldPassword') Old password
+                    input#userOldPassword.form-control(name="userOldPassword", type='password', placeholder='Please enter the existing password.', required)
+                    small.text-muted Please enter the existing password. 
+                hr.my-3
+                .form-group.col-12.col-sm-6
+                    label(for='userPassword') New Passord
+                    input#userPassword.form-control(name="userPassword", type='password', placeholder='Please enter the new password.', required)
+                .form-group.col-12.col-sm-6
+                    label(for='userPasswordVerification') Confirm new password
+                    input#userPasswordVerification.form-control(name="userPasswordVerification", type='password', placeholder='新しいパスワードを確認するために入力してください', required)
+                button.btn.btn-primary.my-4(type='submit') Send

@@ -1,0 +1,106 @@
+extends ../../base
+
+block mainContent
+    h1 ブログ情報フォーム
+    .toolbar.btn-toolbar.my-2
+        .toolbar-body.py-3.px-2.row.w-100
+            .col-10
+                a.btn.btn-dark.shadow-none.m-2(type="button", href="/dashboard/app/autoblog/")
+                    i.fas.fa-list 
+                a.btn.btn-dark.shadow-none.m-2#list(type="button", href=blogId? `/dashboard/app/autoblog?blogId=${blogId}` : '#')
+                    i.fas.fa-robot 
+                a.btn.btn-success.shadow-none.m-2(type="button", href="/dashboard/app/autoblog/info/")
+                    i.fas.fa-plus 
+                if blogId
+                    button.btn.btn-info.shadow-none.text-white.m-2.duplicate-blog-btn(data-id=blogId)
+                        i.far.fa-copy
+                button.btn.btn-warning.shadow-none.m-2(type="button")
+                    i.fas.fa-edit 
+                button.btn.btn-info.shadow-none.m-2(type="button")
+                    i.fas.fa-cog 
+            .col-2
+                if blogId
+                    button.delete-blog-btn.btn.btn-danger.shadow-none.float-end.my-2(data-id=blogId) 
+                            i.fas.fa-trash-alt
+            // Add more buttons with icons as needed
+    form#autoBlogForm(method="post", action="/submit-blog-info" class="needs-validation" novalidate)
+        .row.row-cols-1.row-cols-sm-2
+            .col
+                input#blogId(type="hidden", name="blogId", data-id=(blogId ? blogId : ""))
+                .card.my-2
+                    .card-header
+                        h5 ブログ情報
+                    .card-body
+                        .row
+                            
+                            div.form-group.col-12.col-sm-6
+                                label.text-muted.fw-bold.text-muted.fw-bold(for="blogName", class="form-label") ブログ名:
+                                input#blogName(type="text", name="blogName", required=true class="form-control")
+                                div.invalid-feedback ブログ名は必須です。
+
+                            div.form-group.col-12.col-sm-6
+                                label.text-muted.fw-bold.text-muted.fw-bold(for="blogUrl", class="form-label") ブログURL:
+                                .input-group
+                                    input#blogUrl(type="text", name="blogUrl", required=true class="form-control")
+                                    span.input-group-text(id="openNewPageIcon" style="display: none;")
+                                        a(href="#" target="_blank")
+                                            i.fas.fa-external-link-alt
+                                div.invalid-feedback ブログURLは必須です。
+
+
+                .card.my-2
+                    .card-header
+                        h5 ブログ認証
+                    .card-body
+                        .row
+                            div.form-group.col-12.col-sm-6
+                                label.text-muted.fw-bold(for='blogUsername') ユーザー名
+                                input#blogUsername.form-control(name="blogUsername", type='text', placeholder='', required)
+                            div.form-group.col-12.col-sm-6
+                                label.text-muted.fw-bold(for='blogPassword') パスワード
+                                input#blogPassword.form-control(name="blogPassword", type='password', placeholder='', required)
+                .card.my-2
+                    .card-header
+                        h5 WordPressブログのURLを追加
+                    .card-body#blogUrls
+                        //- Placeholder for blog URLs; content will be loaded via jQuery
+                        .input-group.mb-3.template(style='display: none;')
+                            input.form-control(type="text", placeholder="Enter blog URL", name="additionalUrls[]")
+                            .input-group-append
+                                button.btn.btn-outline-secondary.add-blog-url(type="button")
+                                    i.fas.fa-plus
+                                button.btn.btn-outline-danger.remove-blog-url(type="button")
+                                    i.fas.fa-trash-alt
+
+            .col
+                div.form-group.col-12.col-sm-6
+                    label.text-muted.fw-bold(for="postLanguage", class="form-label") テキストの言語：
+                    select#postLanguage(name="postLanguage" class="form-select")
+                        option(value="japanese") 日本語
+                        option(value="french") フランス語
+                        option(value="english") 英語
+                        option(value="spanish") スペイン語
+                        option(value="german") ドイツ語
+                        option(value="chinese") 中国語
+                div.form-group.col-12.col-sm-6
+                    label.text-muted.fw-bold(for="postgpt", class="form-label") GPT
+                    select#postgpt(name="postgpt" class="form-select")
+                        option(value="gpt4o") GPT-4o
+                        option(value="gpt3") GPT-3
+                        option(value="gpt4") GPT-4
+                div.form-group.col-12.col-sm-6
+                    label.text-muted.fw-bold(for="postFrequency", class="form-label") 投稿頻度：
+                    select#postFrequency(name="postFrequency" class="form-select")
+                        option(value="0 0,12 * * *") 1日に2回
+                        option(value="0 * * * *") 1時間ごと
+                        option(value="*/30 * * * *") 30分ごと
+                        option(value="*/10 * * * *") 10分ごと
+                        option(value="0 0 * * *") 毎日
+                        option(value="0 0 * * 0") 毎週
+                button.btn.btn-primary.my-4(type="button" onclick=`postBlogArticle("${blogId ? blogId : ""}")`)
+                    | 記事を投稿
+
+
+            button.w-100.my-2(type="submit" class="btn btn-success") 送信
+
+    script(src="/js/autoblog.js")

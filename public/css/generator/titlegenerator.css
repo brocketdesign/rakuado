@@ -1,0 +1,25 @@
+.keyword-badge {
+    display: inline-block;
+    margin: 2px;
+    padding: 5px;
+    background-color: #ddd;
+    border-radius: 3px;
+    cursor: default;
+}
+
+.keyword-badge .remove-tag {
+    margin-left: 5px;
+    color: red;
+    cursor: pointer;
+}
+.form-box,.form-box:hover .keyword-badge{
+    background-color: #fbfbfb;
+}
+.form-box:hover,.form-box .keyword-badge{
+    background-color: #cecece;
+}
+
+.form-box input{
+    border: none;
+    background-color: transparent;
+}
