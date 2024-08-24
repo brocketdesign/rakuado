@@ -66,13 +66,7 @@ function startServer() {
 
       app.set('trust proxy', 1); 
       
-      const corsOptions = {
-          origin: '*',
-          methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-          allowedHeaders: 'Content-Type, Authorization',
-      };
-      
-      app.use(cors(corsOptions));
+      app.use(cors());
 
       app.set('view engine', 'pug');
       app.set('views', './views');
