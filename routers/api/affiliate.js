@@ -4,8 +4,8 @@ const axios = require('axios');
 const { ObjectId } = require('mongodb');
 const url = require('url');
 const {updateFavicon} = require('../../services/tools')
-const cors = require('cors');
-router.use(cors());
+
+
 // Route to check the plugin activation status from WordPress
 router.get('/check-plugin-status', async (req, res) => {
     const { affiliateId } = req.query; // Get affiliateId from query parameters
