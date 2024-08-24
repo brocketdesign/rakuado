@@ -30,7 +30,7 @@ const setCronJobForUser = async (db, botId, schedule) => {
   blogInfo.blogId = blogInfo._id
   const combinedPowers = { ...botInfo, ...blogInfo };
 
-  autoBlog(combinedPowers,db)
+  //autoBlog(combinedPowers,db)
   console.log(`Set job for blog ${botId} at ${botInfo.postFrequency}`)
   cronJobsMap[botId] = cron.schedule(botInfo.postFrequency, () => {
     console.log(`Doing something for blog ${botId}`);
@@ -47,7 +47,7 @@ const initializeCronJobs = async (db) => {
   // Assuming you have a function to get all user schedules from your database
   const bots = await db.collection('botInfos').find({ isActive: true }).toArray(); // You'll need to implement this
   bots.forEach(bot => {
-    setCronJobForUser(db, bot._id, bot.postFrequency);
+    //setCronJobForUser(db, bot._id, bot.postFrequency);
   });
   //RSS auto blog post
   //rsspost(db)
