@@ -199,7 +199,7 @@ router.get('/details/:affiliateID', async (req, res) => {
 // Route to get all affiliate data
 router.get('/all-affiliate-data', async (req, res) => {
     try {
-        const affiliates = await global.db.collection('affiliate').find({}).toArray();
+        const affiliates = await global.db.collection('affiliate').find({}).sort({_id:-1}).toArray();
         res.status(200).json(affiliates);
     } catch (error) {
         res.status(500).send({ message: 'Error fetching affiliate data', error: error.message });
