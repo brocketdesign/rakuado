@@ -1,24 +1,27 @@
 extends ../../base
 
 block mainContent
-
-    .container.mt-5
-      h1 アフィリエイトダッシュボード
-      .table-responsive
-        table.table.table-striped#affiliateTable
-          thead
-            tr
-              th 名前
-              th ウェブサイトのURL
-              th 閲覧
-              th クリック
-              th アクティベート
-              th 最新のステータス
-              th 削除
-          tbody#affiliateTableBody
+  style.
+    #affiliateTable td{
+      padding: 5px 20px;
+    }
+  .container.mt-2
+    h1.text-center.display-6.mb-5 アフィリエイター
+    .table-responsive.bg-white.p-1.rounded.shadow
+      table.table.table-striped#affiliateTable
+        thead
+          tr
+            th 名前
+            th ウェブサイトのURL
+            th 閲覧
+            th クリック
+            th アクティベート
+            th 最新のステータス
+            th 削除
+        tbody#affiliateTableBody
 
 
           
 
 
-    script(src="/js/affiliate.js")
+  script(src="/js/affiliate.js")

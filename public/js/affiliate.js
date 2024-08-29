@@ -47,8 +47,10 @@ $(document).ready(function() {
                 $.get(`/api/affiliate/fetch-popup-data`, { affiliateId: affiliate._id, action: action, today: formattedDate })
                     .done((data) => {
                         // Update the table cells for daily and monthly data
-                        $(`#row-${affiliate._id} .analytics-${action}`).html(`
-                            本日: ${data.daily} | 今月: ${data.monthly}
+                        $(`#row-${affiliate._id} .analytics-${action}`).html(`  
+                            <div class="h-100 d-flex justify-content-center align-items-center">
+                                本日: ${data.daily} | 今月: ${data.monthly}
+                            </div>
                         `);
                     })
                     .fail((error) => {
@@ -63,25 +65,32 @@ $(document).ready(function() {
         const tableBody = $('#affiliateTableBody');
         tableBody.empty(); // Clear existing table rows
     
-        affiliates.forEach(affiliate => {
+        let btnClass = "btn-light";
+        affiliates.forEach((affiliate, index) => {
+            btnClass = index % 2 === 0 ? "btn-light" : "btn-white";
             const row = `
                 <tr id="row-${affiliate._id}">
                     <td>${affiliate.name}</td>
-                    <td><a href="${affiliate.wordpressUrl}" target="_blank">${affiliate.wordpressUrl}</a></td>
+                    <td>
+                        <a href="${affiliate.wordpressUrl}" target="_blank" class="btn ${btnClass}">
+                            <img src="${affiliate.favicon}" width="30px;" class="me-2">
+                            ${affiliate.wordpressUrl.replace('https://','').slice(0,10)}
+                        </a>
+                    </td>
                     <td class="analytics-opened"></td>
                     <td class="analytics-interacted"></td>
-                    <td>
+                    <td class="text-center">
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" ${affiliate.isActive ? 'checked' : ''} onchange="toggleActivation('${affiliate._id}', this.checked)">
                         </div>
                     </td>
                     <td>
-                    <button class="btn btn-info" onclick="checkStatus('${affiliate._id}')"><i class="fas fa-bolt"></i></button>
-                    <button class="btn btn-primary" onclick="showDetail('${affiliate._id}')"><i class="fas fa-info"></i></button>
-                    <a class="btn btn-dark" href="/dashboard/app/affiliate/graph/${affiliate._id}" )"><i class="fas fa-chart-line"></i></a>
+                    <span type="button" class="badge badge-info mx-2" onclick="checkStatus('${affiliate._id}')"><i class="fas fa-bolt"></i></span>
+                    <span type="button"  class="badge badge-primary mx-2" onclick="showDetail('${affiliate._id}')"><i class="fas fa-info"></i></span>
+                    <a class="badge badge-secondary mx-2" href="/dashboard/app/affiliate/graph/${affiliate._id}" )"><i class="fas fa-chart-line"></i></a>
                     </td>
                     <td>
-                        <button class="btn btn-danger d-none" onclick="deleteAffiliate('${affiliate._id}')"><i class="far fa-trash-alt"></i></button>
+                        <span type="button"  class="badge badge-danger mx-2" onclick="deleteAffiliate('${affiliate._id}')"><i class="far fa-trash-alt"></i></span>
                     </td>
                 </tr>
             `;
