@@ -1263,22 +1263,39 @@ const handleEvents = () => {
     });
 }
 const headlines = [
-    "AI技術でデザイン品質を劇的に向上",
-    "AI搭載の先端コンテンツ最適化技術",
-    "AIでビジネス生産性を大幅に強化",
-    "コンテンツ制作の新時代: AIの可能性を最大化する",
-    "AIの力でクリエイティブワークを劇的に加速",
-    "AI統合ツールでコンテンツ制作の限界を押し上げる",
-    "革新的なAI技術でコンテンツ制作の限界を超える",
-    "AI搭載コンテンツ戦略でビジネス成長を支援",
-    "AI技術とクリエイティビティの融合で次世代コンテンツを創造",
-    "AIとクリエイティブデザインの力でコンテンツ業界をリードする"
-  ];
+    "簡単設定で即スタート",
+    "広告管理の手間を軽減",
+    "既存広告はそのままで",
+    "プラグインひとつで、簡単収益化",
+    "広告の掲載場所",
+    "Earnings Made Simple",
+    "報酬はサイトのPV数に応じて決定",
+    "初回登録で500円分をプレゼント",
+    "最低振込額は2,000円から"
+];
   
-let $headlineElement = $("#headline"); // replace this with your actual jQuery selector
-let currentHeadlineIndex = 0;
-showNextHeadline();
-
+  let $headlineElement = $("#headline"); // Your headline element
+  let currentHeadlineIndex = 0;
+  
+  setContainerHeight();  // Set the container height at page load
+  showNextHeadline();
+  
+  function setContainerHeight() {
+      let maxHeight = 0;
+      const $tempElement = $("#headline");
+  
+      headlines.forEach(function(headline) {
+          $tempElement.text(headline);
+          let height = $("#headline-container").height();
+          if (height > maxHeight) {
+              maxHeight = height;
+          }
+          $tempElement.text('');
+      });
+  
+      $("#headline-container").height(maxHeight);
+  }
+  
 function appendHeadlineCharacterByCharacter($element, headline, callback) {
     let index = 0;
 
