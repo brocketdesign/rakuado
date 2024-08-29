@@ -56,7 +56,13 @@ function startServer() {
         res.locals.messages = req.flash();
         next();
       });
-      
+      app.use((req, res, next) => {
+        if (process.env.NODE_ENV !== 'local' && req.header('x-forwarded-proto') !== 'https') {
+          res.redirect(`https://${req.header('host')}${req.url}`);
+        } else {
+          next();
+        }
+      });   
       app.use(passport.initialize());
       app.use(passport.session());
 
