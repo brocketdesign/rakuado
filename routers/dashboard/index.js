@@ -9,6 +9,7 @@ const ensureMembership = require('../../middleware/ensureMembership');
 const {sendEmail} = require('../../services/email')
 const path = require('path');
 const { ObjectId } = require('mongodb');
+const axios = require('axios');
 
 // Route for handling '/dashboard/'
 router.get('/', ensureAuthenticated, ensureMembership, async (req, res) => {
