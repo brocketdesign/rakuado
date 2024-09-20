@@ -13,12 +13,13 @@ const { ObjectId } = require('mongodb');
 // Route for handling '/dashboard/'
 router.get('/', ensureAuthenticated, ensureMembership, async (req, res) => {
   try {
-    res.redirect('/dashboard/app/affiliate/');
+    res.render('dashboard/top');
+    //res.redirect('/dashboard/app/affiliate/');
   } catch (error) {
     res.status(500).send('Server Error');
   }
 });
-router.get('/ab-test-results', async (req, res) => {
+router.get('/app/ab-test-results', async (req, res) => {
   const affiliateId = req.user.affiliateId; // Assuming you have the affiliateId from the logged-in user
 
   try {
