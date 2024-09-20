@@ -1,0 +1,91 @@
+extends ../../base
+
+block mainContent
+  h1 Create New A/B Test
+
+  form#abTestForm(action="/api/affiliate/create-ab-test" method="POST" enctype="multipart/form-data")
+    .form-group
+      label(for="imageName") Image Name
+      input#imageName.form-control(type="text" name="imageName" required)
+
+    .form-row
+      .form-group.col-md-6
+        label Image A
+        #dropzoneA.dropzone
+          p Drop Image A here or click to upload.
+        input#imageA(type="file" name="imageA" accept="image/*" required hidden)
+      .form-group.col-md-6
+        label Image B
+        #dropzoneB.dropzone
+          p Drop Image B here or click to upload.
+        input#imageB(type="file" name="imageB" accept="image/*" required hidden)
+
+    button#submitBtn.btn.btn-primary(type="submit") Create A/B Test
+
+  // Include jQuery and any other scripts
+  script(src="https://code.jquery.com/jquery-3.6.0.min.js")
+  script.
+    $(document).ready(function() {
+      function setupDropzone(dropzoneId, inputId) {
+        var dropzone = $(dropzoneId);
+        var inputFile = $(inputId);
+
+        dropzone.on('dragover', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          $(this).addClass('dragging');
+        });
+
+        dropzone.on('dragleave', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          $(this).removeClass('dragging');
+        });
+
+        dropzone.on('drop', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          $(this).removeClass('dragging');
+
+          var files = e.originalEvent.dataTransfer.files;
+          if (files.length > 0) {
+            inputFile[0].files = files;
+            $(this).text(files[0].name);
+          }
+        });
+
+        dropzone.on('click', function() {
+          inputFile.click();
+        });
+
+        inputFile.on('change', function() {
+          if (this.files && this.files[0]) {
+            dropzone.text(this.files[0].name);
+          }
+        });
+      }
+
+      setupDropzone('#dropzoneA', '#imageA');
+      setupDropzone('#dropzoneB', '#imageB');
+
+      $('#abTestForm').on('submit', function(e) {
+        e.preventDefault();
+
+        var formData = new FormData(this);
+
+        $.ajax({
+          url: '/api/affiliate/create-ab-test',
+          type: 'POST',
+          data: formData,
+          contentType: false,
+          processData: false,
+          success: function(response) {
+            alert('A/B Test created successfully!');
+            window.location.reload();
+          },
+          error: function(xhr, status, error) {
+            alert('Error creating A/B Test: ' + xhr.responseJSON.message);
+          }
+        });
+      });
+    });

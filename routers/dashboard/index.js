@@ -18,6 +18,22 @@ router.get('/', ensureAuthenticated, ensureMembership, async (req, res) => {
     res.status(500).send('Server Error');
   }
 });
+router.get('/ab-test-results', async (req, res) => {
+  const affiliateId = req.user.affiliateId; // Assuming you have the affiliateId from the logged-in user
+
+  try {
+      const response = await axios.get('https://app.rakuado.net/api/affiliate/get-ab-test-results', {
+          params: { affiliateId }
+      });
+
+      const results = response.data;
+
+      res.render('dashboard/app/abtest/list', { results });
+  } catch (error) {
+      console.error('Failed to fetch A/B test results:', error);
+      res.status(500).send('Failed to fetch A/B test results');
+  }
+});
 //Route for handling '/affiliate/'
 router.get('/app/affiliate/', ensureAuthenticated,ensureMembership, async (req, res) => {  
   res.render('dashboard/app/affiliate/list',{user:req.user,title:"RAKUBUN - Dashboard"});

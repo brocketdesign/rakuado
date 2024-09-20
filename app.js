@@ -49,6 +49,7 @@ function startServer() {
 
       // Serve static files from the 'public' directory
       app.use(express.static(path.join(__dirname, 'public')));
+      app.use('/uploads', express.static('uploads'));
 
       app.use(compression());
       app.use(flash());
@@ -84,9 +85,9 @@ function startServer() {
       const payment = require('./routers/payment');
       const dashboard= require('./routers/dashboard/index');
       const generator = require('./routers/api/generator');
-      const rss = require('./routers/api/rss');
       const autoblog = require('./routers/api/autoblog');
       const affiliate = require('./routers/api/affiliate');
+      const abtest = require('./routers/api/abtest');
       
       app.use('/', index); 
       app.use('/user', user); 
@@ -94,9 +95,9 @@ function startServer() {
       app.use('/payment', payment);
       app.use('/dashboard', dashboard);
       app.use('/api/generator', generator);
-      app.use('/api/rss', rss);
       app.use('/api/autoblog', autoblog);
       app.use('/api/affiliate', affiliate);
+      app.use('/api/abtest', abtest);
 
 
 

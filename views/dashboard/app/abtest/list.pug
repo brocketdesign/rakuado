@@ -1,0 +1,18 @@
+extends ../../base
+
+block mainContent
+  h1 A/B Test Results
+  table
+    thead
+      tr
+        th Date
+        th Image
+        th Variant
+        th Clicks
+    tbody
+      each result in results
+        tr
+          td= result.date
+          td: img(src=result.imageUrl, width="100")
+          td= result.variant
+          td= result.clicks
