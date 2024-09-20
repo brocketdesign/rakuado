@@ -24,7 +24,7 @@ router.get('/app/ab-test-results', async (req, res) => {
   const affiliateId = req.user.affiliateId; // Assuming you have the affiliateId from the logged-in user
 
   try {
-      const response = await axios.get('https://app.rakuado.net/api/affiliate/get-ab-test-results', {
+      const response = await axios.get('https://app.rakuado.net/api/abtest/get-ab-test-results', {
           params: { affiliateId }
       });
 
