@@ -74,7 +74,7 @@ block mainContent
         var formData = new FormData(this);
 
         $.ajax({
-          url: '/api/affiliate/create-ab-test',
+          url: '/api/abtest/create-ab-test',
           type: 'POST',
           data: formData,
           contentType: false,

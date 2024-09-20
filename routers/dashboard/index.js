@@ -19,6 +19,10 @@ router.get('/', ensureAuthenticated, ensureMembership, async (req, res) => {
   } catch (error) {
     res.status(500).send('Server Error');
   }
+}); 
+// Route to render the A/B test creation page
+router.get('/app/create-ab-test', (req, res) => {
+  res.render('create-ab-test'); // Render the PUG template
 });
 router.get('/app/ab-test-results', async (req, res) => {
   const affiliateId = req.user.affiliateId; // Assuming you have the affiliateId from the logged-in user

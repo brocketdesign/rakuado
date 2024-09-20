@@ -16,11 +16,7 @@ const storage = multer.diskStorage({
   });
   
   const upload = multer({ storage: storage });
-  
-  // Route to render the A/B test creation page
-  router.get('/create-ab-test', (req, res) => {
-    res.render('create-ab-test'); // Render the PUG template
-  });
+ 
   
   // Route to handle A/B test creation
   router.post('/create-ab-test', upload.fields([{ name: 'imageA' }, { name: 'imageB' }]), async (req, res) => {
