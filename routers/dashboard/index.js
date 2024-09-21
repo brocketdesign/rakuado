@@ -22,7 +22,7 @@ router.get('/', ensureAuthenticated, ensureMembership, async (req, res) => {
 }); 
 // Route to render the A/B test creation page
 router.get('/app/create-ab-test', (req, res) => {
-  res.render('create-ab-test'); // Render the PUG template
+  res.render('dashboard/app/abtest/create-ab-test'); // Render the PUG template
 });
 router.get('/app/ab-test-results', async (req, res) => {
   try {
