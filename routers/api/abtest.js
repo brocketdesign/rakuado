@@ -146,26 +146,33 @@ router.get('/register-click', async (req, res) => {
 router.get('/get-ab-test-results', async (req, res) => {
     const { affiliateId } = req.query;
 
-    if (!affiliateId) {
-        return res.status(400).json({ error: 'affiliateId parameter is required' });
-    }
-
     try {
-        // Get the date 7 days ago
+        // Get the current date and the date 6 days ago (to include today, making it 7 days)
         const today = new Date();
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(today.getDate() - 6); // Including today
 
-        const startDate = sevenDaysAgo.toISOString().split('T')[0];
-        const endDate = today.toISOString().split('T')[0];
+        const startDate = sevenDaysAgo.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+        const endDate = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
 
-        // Fetch the click counts per image per day
-        const results = await global.db.collection('abTestClicks').aggregate([
+        // Build the $match stage based on whether affiliateId is provided
+        let matchStage = {
+            date: { $gte: startDate, $lte: endDate }
+        };
+
+        if (affiliateId) {
+            // Validate affiliateId format
+            if (!ObjectId.isValid(affiliateId)) {
+                return res.status(400).json({ error: 'Invalid affiliateId format.' });
+            }
+
+            matchStage.affiliateId = new ObjectId(affiliateId);
+        }
+
+        // Build the aggregation pipeline
+        const pipeline = [
             {
-                $match: {
-                    affiliateId: new ObjectId(affiliateId),
-                    date: { $gte: startDate, $lte: endDate }
-                }
+                $match: matchStage
             },
             {
                 $group: {
@@ -192,12 +199,16 @@ router.get('/get-ab-test-results', async (req, res) => {
                     imageUrl: '$imageInfo.imageUrl',
                     imageName: '$imageInfo.imageName',
                     variant: '$imageInfo.variant',
-                  }
+                    affiliateId: affiliateId ? new ObjectId(affiliateId) : '$imageInfo.affiliateId' // Include affiliateId if provided
+                }
             },
             {
                 $sort: { date: 1 }
             }
-        ]).toArray();
+        ];
+
+        // Execute the aggregation pipeline
+        const results = await global.db.collection('abTestClicks').aggregate(pipeline).toArray();
 
         res.json(results);
     } catch (error) {

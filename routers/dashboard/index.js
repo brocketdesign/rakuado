@@ -25,12 +25,8 @@ router.get('/app/create-ab-test', (req, res) => {
   res.render('create-ab-test'); // Render the PUG template
 });
 router.get('/app/ab-test-results', async (req, res) => {
-  const affiliateId = req.user.affiliateId; // Assuming you have the affiliateId from the logged-in user
-
   try {
-      const response = await axios.get('https://app.rakuado.net/api/abtest/get-ab-test-results', {
-          params: { affiliateId }
-      });
+      const response = await axios.get('https://app.rakuado.net/api/abtest/get-ab-test-results');
 
       const results = response.data;
 
