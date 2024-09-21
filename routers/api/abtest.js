@@ -3,69 +3,96 @@ const router = express.Router();
 const axios = require('axios');
 const { ObjectId } = require('mongodb');
 const multer = require('multer');
+const path = require('path');
 
-// Set up Multer storage (you can customize the storage as needed)
+// Set up Multer storage (ensure the 'uploads/abTestImages/' directory exists)
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-      cb(null, 'uploads/abTestImages/'); // Make sure this directory exists
+        cb(null, 'uploads/abTestImages/');
     },
     filename: function (req, file, cb) {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      cb(null, uniqueSuffix + '-' + file.originalname);
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
     }
-  });
-  
-  const upload = multer({ storage: storage });
- 
-  
-  // Route to handle A/B test creation
-  router.post('/create-ab-test', upload.fields([{ name: 'imageA' }, { name: 'imageB' }]), async (req, res) => {
+});
+
+// File filter to accept only image files
+const fileFilter = (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif/;
+    const mimetype = allowedTypes.test(file.mimetype);
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    if (mimetype && extname) {
+        return cb(null, true);
+    }
+    cb(new Error('Only image files are allowed!'));
+};
+
+const upload = multer({ 
+    storage: storage,
+    fileFilter: fileFilter,
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB file size limit
+});
+
+// Route to handle A/B test creation
+router.post('/create-ab-test', upload.fields([
+    { name: 'imageA', maxCount: 1 }, 
+    { name: 'imageB', maxCount: 1 }
+]), async (req, res) => {
     try {
-      const { imageName } = req.body;
-      const imageAFile = req.files['imageA'] ? req.files['imageA'][0] : null;
-      const imageBFile = req.files['imageB'] ? req.files['imageB'][0] : null;
-  
-      if (!imageName || !imageAFile || !imageBFile) {
-        return res.status(400).json({ message: 'Image name and both images are required.' });
-      }
-  
-      // Generate unique IDs for images
-      const imageAId = new ObjectId();
-      const imageBId = new ObjectId();
-  
-      // Prepare image data
-      const imageAData = {
-        _id: imageAId,
-        imageId: imageAId.toString(),
-        imageName: imageName,
-        imageUrl: '/uploads/abTestImages/' + imageAFile.filename, // Adjust the path as needed
-        targetUrl: '', // You can set a default or allow the user to input
-        variant: 'A',
-        clickCount: 0,
-        uploadDate: new Date(),
-      };
-  
-      const imageBData = {
-        _id: imageBId,
-        imageId: imageBId.toString(),
-        imageName: imageName,
-        imageUrl: '/uploads/abTestImages/' + imageBFile.filename,
-        targetUrl: '',
-        variant: 'B',
-        clickCount: 0,
-        uploadDate: new Date(),
-      };
-  
-      // Insert images into the database
-      await global.db.collection('abTestImages').insertMany([imageAData, imageBData]);
-  
-      res.status(200).json({ message: 'A/B Test created successfully.' });
+        const {
+            imageAName,
+            imageATargetUrl,
+            imageBName,
+            imageBTargetUrl
+        } = req.body;
+
+        const imageAFile = req.files['imageA'] ? req.files['imageA'][0] : null;
+        const imageBFile = req.files['imageB'] ? req.files['imageB'][0] : null;
+
+        // Validate required fields
+        if (!imageAName || !imageATargetUrl || !imageBName || !imageBTargetUrl || !imageAFile || !imageBFile) {
+            return res.status(400).json({ message: 'Image names, target URLs, and both images are required.' });
+        }
+
+        // Generate unique IDs for images
+        const imageAId = new ObjectId();
+        const imageBId = new ObjectId();
+
+        // Prepare image data
+        const imageAData = {
+            _id: imageAId,
+            imageId: imageAId.toString(),
+            imageName: imageAName,
+            imageUrl: '/uploads/abTestImages/' + imageAFile.filename, // Adjust the path as needed
+            targetUrl: imageATargetUrl,
+            variant: 'A',
+            clickCount: 0,
+            viewCount: 0, // Initialize viewCount
+            uploadDate: new Date(),
+        };
+
+        const imageBData = {
+            _id: imageBId,
+            imageId: imageBId.toString(),
+            imageName: imageBName,
+            imageUrl: '/uploads/abTestImages/' + imageBFile.filename,
+            targetUrl: imageBTargetUrl,
+            variant: 'B',
+            clickCount: 0,
+            viewCount: 0, // Initialize viewCount
+            uploadDate: new Date(),
+        };
+
+        // Insert images into the database
+        await global.db.collection('abTestImages').insertMany([imageAData, imageBData]);
+
+        res.status(200).json({ message: 'A/B Test created successfully.' });
     } catch (error) {
-      console.error('Error creating A/B Test:', error);
-      res.status(500).json({ message: 'Failed to create A/B Test.', error: error.message });
+        console.error('Error creating A/B Test:', error);
+        res.status(500).json({ message: 'Failed to create A/B Test.', error: error.message });
     }
-  });
-  
+});
+
 // Endpoint to get A/B test image data
 router.get('/get-ab-test-image', async (req, res) => {
     const { affiliateId, abChoice } = req.query;
@@ -82,8 +109,6 @@ router.get('/get-ab-test-image', async (req, res) => {
         }
 
         // Fetch the images for the A/B test
-        // Assuming we have a collection 'abTestImages' where images are stored
-        // Let's say images have fields: imageId, imageUrl, targetUrl, variant ('A' or 'B')
         const imageData = await global.db.collection('abTestImages').aggregate([
             { $match: { variant: abChoice } },
             { $sample: { size: 1 } } // Randomly select one image from the variant
@@ -106,46 +131,6 @@ router.get('/get-ab-test-image', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Endpoint to register view event
-router.get('/register-view', async (req, res) => {
-    const { affiliateId, imageId } = req.query;
-
-    if (!affiliateId || !imageId) {
-        return res.status(400).json({ error: 'affiliateId and imageId parameters are required.' });
-    }
-
-    try {
-        // Validate affiliateId format
-        if (!ObjectId.isValid(affiliateId)) {
-            return res.status(400).json({ error: 'Invalid affiliateId format.' });
-        }
-
-        // Validate imageId format or existence as needed
-        // Assuming imageId is a string, and corresponds to abTestImages.imageId
-
-        // Get the current date in YYYY-MM-DD format
-        const today = new Date().toISOString().split('T')[0];
-
-        // Log the view event
-        await global.db.collection('abTestViews').insertOne({
-            affiliateId: new ObjectId(affiliateId),
-            imageId: imageId,
-            date: today,
-            timestamp: new Date(),
-        });
-
-        // Increment the view count in abTestImages
-        await global.db.collection('abTestImages').updateOne(
-            { imageId: imageId },
-            { $inc: { viewCount: 1 } } // Ensure 'viewCount' field exists; initialize to 0 if necessary
-        );
-
-        res.json({ message: 'View event registered successfully.' });
-    } catch (error) {
-        console.error('Failed to register view event:', error);
-        res.status(500).json({ error: 'Internal server error.' });
-    }
-});
 
 // Endpoint to register click event
 router.get('/register-click', async (req, res) => {
@@ -156,11 +141,18 @@ router.get('/register-click', async (req, res) => {
     }
 
     try {
-        // Record the click event in the database
-        // For example, we can have a collection 'abTestClicks'
-        // We can also update counts in 'abTestImages' if needed
+        // Validate affiliateId format
+        if (!ObjectId.isValid(affiliateId)) {
+            return res.status(400).json({ error: 'Invalid affiliateId format.' });
+        }
 
-        // First, get the current date
+        // Validate imageId existence
+        const image = await global.db.collection('abTestImages').findOne({ imageId: imageId });
+        if (!image) {
+            return res.status(404).json({ error: 'Image not found.' });
+        }
+
+        // Get the current date in YYYY-MM-DD format
         const today = new Date().toISOString().split('T')[0];
 
         // Log the click event
@@ -183,6 +175,51 @@ router.get('/register-click', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
+// Endpoint to register view event
+router.get('/register-view', async (req, res) => {
+    const { affiliateId, imageId } = req.query;
+
+    if (!affiliateId || !imageId) {
+        return res.status(400).json({ error: 'affiliateId and imageId parameters are required.' });
+    }
+
+    try {
+        // Validate affiliateId format
+        if (!ObjectId.isValid(affiliateId)) {
+            return res.status(400).json({ error: 'Invalid affiliateId format.' });
+        }
+
+        // Validate imageId existence
+        const image = await global.db.collection('abTestImages').findOne({ imageId: imageId });
+        if (!image) {
+            return res.status(404).json({ error: 'Image not found.' });
+        }
+
+        // Get the current date in YYYY-MM-DD format
+        const today = new Date().toISOString().split('T')[0];
+
+        // Log the view event
+        await global.db.collection('abTestViews').insertOne({
+            affiliateId: new ObjectId(affiliateId),
+            imageId: imageId,
+            date: today,
+            timestamp: new Date(),
+        });
+
+        // Increment the view count in abTestImages
+        await global.db.collection('abTestImages').updateOne(
+            { imageId: imageId },
+            { $inc: { viewCount: 1 } }
+        );
+
+        res.json({ message: 'View event registered successfully.' });
+    } catch (error) {
+        console.error('Failed to register view event:', error);
+        res.status(500).json({ error: 'Internal server error.' });
+    }
+});
+
 // Endpoint to get A/B test results for the last 7 days
 router.get('/get-ab-test-results', async (req, res) => {
     const { affiliateId } = req.query;
@@ -288,6 +325,5 @@ router.get('/get-ab-test-results', async (req, res) => {
         res.status(500).json({ error: 'Internal server error.' });
     }
 });
-
 
 module.exports = router;

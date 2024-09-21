@@ -25,12 +25,20 @@ router.get('/app/create-ab-test', (req, res) => {
   res.render('dashboard/app/abtest/create-ab-test'); // Render the PUG template
 });
 router.get('/app/ab-test-results', async (req, res) => {
-  try {
-      const response = await axios.get('https://app.rakuado.net/api/abtest/get-ab-test-results');
+  const { affiliateId } = req.query; // Optional query parameter
 
+  try {
+      // Build the API URL with or without affiliateId
+      let apiUrl = 'https://app.rakuado.net/api/abtest/get-ab-test-results';
+      if (affiliateId) {
+          apiUrl += `?affiliateId=${affiliateId}`;
+      }
+
+      // Fetch data from the API
+      const response = await axios.get(apiUrl);
       const results = response.data;
 
-      res.render('dashboard/app/abtest/list', { results });
+      res.render('ab-test-results', { results, affiliateId });
   } catch (error) {
       console.error('Failed to fetch A/B test results:', error);
       res.status(500).send('Failed to fetch A/B test results');

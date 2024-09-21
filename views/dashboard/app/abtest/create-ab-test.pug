@@ -3,30 +3,53 @@ extends ../../base
 block mainContent
   h1 Create New A/B Test
 
-  form#abTestForm(action="/api/affiliate/create-ab-test" method="POST" enctype="multipart/form-data")
-    .form-group
-      label(for="imageName") Image Name
-      input#imageName.form-control(type="text" name="imageName" required)
-
-    .form-row
-      .form-group.col-md-6
-        label Image A
-        #dropzoneA.dropzone
-          p Drop Image A here or click to upload.
-        input#imageA(type="file" name="imageA" accept="image/*" required hidden)
-      .form-group.col-md-6
-        label Image B
-        #dropzoneB.dropzone
-          p Drop Image B here or click to upload.
-        input#imageB(type="file" name="imageB" accept="image/*" required hidden)
-
-    button#submitBtn.btn.btn-primary(type="submit") Create A/B Test
+  form#abTestForm(method="POST" action="/api/abtest/create-ab-test" enctype="multipart/form-data")
+    //- Image A Section
+    .row
+      .col-md-6.mb-4
+        .card
+          .card-body
+            h5.card-title Image A
+            .form-group
+              label(for="imageAName") Image A Name
+              input#imageAName.form-control(type="text" name="imageAName" required placeholder="Enter name for Image A")
+            .form-group
+              label(for="imageATargetUrl") Image A Target URL
+              input#imageATargetUrl.form-control(type="url" name="imageATargetUrl" required placeholder="Enter target URL for Image A")
+            .form-group
+              label(for="dropzoneA") Upload Image A
+              #dropzoneA.dropzone.text-center.border.border-secondary.rounded.p-4(style="height: 200px; cursor: pointer; background-image: url('/path/to/placeholderA.png'); background-size: cover; background-position: center;")
+                p Drop Image A here or click to upload.
+              input#imageA(type="file" name="imageA" accept="image/*" required hidden)
+    
+    //- Image B Section
+    .row
+      .col-md-6.mb-4
+        .card
+          .card-body
+            h5.card-title Image B
+            .form-group
+              label(for="imageBName") Image B Name
+              input#imageBName.form-control(type="text" name="imageBName" required placeholder="Enter name for Image B")
+            .form-group
+              label(for="imageBTargetUrl") Image B Target URL
+              input#imageBTargetUrl.form-control(type="url" name="imageBTargetUrl" required placeholder="Enter target URL for Image B")
+            .form-group
+              label(for="dropzoneB") Upload Image B
+              #dropzoneB.dropzone.text-center.border.border-secondary.rounded.p-4(style="height: 200px; cursor: pointer; background-image: url('/path/to/placeholderB.png'); background-size: cover; background-position: center;")
+                p Drop Image B here or click to upload.
+              input#imageB(type="file" name="imageB" accept="image/*" required hidden)
+    
+    //- Submit Button
+    .row
+      .col-12.text-center
+        button#submitBtn.btn.btn-primary(type="submit") Create A/B Test
 
   // Include jQuery and any other scripts
   script(src="https://code.jquery.com/jquery-3.6.0.min.js")
   script.
     $(document).ready(function() {
-      function setupDropzone(dropzoneId, inputId) {
+      function setupDropzone(dropzoneId, inputId, placeholderUrl) {
         var dropzone = $(dropzoneId);
         var inputFile = $(inputId);
 
@@ -34,23 +57,28 @@ block mainContent
           e.preventDefault();
           e.stopPropagation();
           $(this).addClass('dragging');
+          $(this).css('background-image', 'none');
         });
 
         dropzone.on('dragleave', function(e) {
           e.preventDefault();
           e.stopPropagation();
           $(this).removeClass('dragging');
+          if (!inputFile.val()) {
+            $(this).css('background-image', `url('${placeholderUrl}')`);
+          }
         });
 
         dropzone.on('drop', function(e) {
           e.preventDefault();
           e.stopPropagation();
           $(this).removeClass('dragging');
+          $(this).css('background-image', 'none');
 
           var files = e.originalEvent.dataTransfer.files;
           if (files.length > 0) {
             inputFile[0].files = files;
-            $(this).text(files[0].name);
+            $(this).find('p').text(files[0].name);
           }
         });
 
@@ -60,13 +88,18 @@ block mainContent
 
         inputFile.on('change', function() {
           if (this.files && this.files[0]) {
-            dropzone.text(this.files[0].name);
+            dropzone.find('p').text(this.files[0].name);
+            dropzone.css('background-image', 'none');
+          } else {
+            dropzone.find('p').text('Drop image here or click to upload.');
+            dropzone.css('background-image', `url('${placeholderUrl}')`);
           }
         });
       }
 
-      setupDropzone('#dropzoneA', '#imageA');
-      setupDropzone('#dropzoneB', '#imageB');
+      // Initialize dropzones with placeholders
+      setupDropzone('#dropzoneA', '#imageA', '/path/to/placeholderA.png');
+      setupDropzone('#dropzoneB', '#imageB', '/path/to/placeholderB.png');
 
       $('#abTestForm').on('submit', function(e) {
         e.preventDefault();
