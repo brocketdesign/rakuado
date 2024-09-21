@@ -106,6 +106,47 @@ router.get('/get-ab-test-image', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+// Endpoint to register view event
+router.get('/register-view', async (req, res) => {
+    const { affiliateId, imageId } = req.query;
+
+    if (!affiliateId || !imageId) {
+        return res.status(400).json({ error: 'affiliateId and imageId parameters are required.' });
+    }
+
+    try {
+        // Validate affiliateId format
+        if (!ObjectId.isValid(affiliateId)) {
+            return res.status(400).json({ error: 'Invalid affiliateId format.' });
+        }
+
+        // Validate imageId format or existence as needed
+        // Assuming imageId is a string, and corresponds to abTestImages.imageId
+
+        // Get the current date in YYYY-MM-DD format
+        const today = new Date().toISOString().split('T')[0];
+
+        // Log the view event
+        await global.db.collection('abTestViews').insertOne({
+            affiliateId: new ObjectId(affiliateId),
+            imageId: imageId,
+            date: today,
+            timestamp: new Date(),
+        });
+
+        // Increment the view count in abTestImages
+        await global.db.collection('abTestImages').updateOne(
+            { imageId: imageId },
+            { $inc: { viewCount: 1 } } // Ensure 'viewCount' field exists; initialize to 0 if necessary
+        );
+
+        res.json({ message: 'View event registered successfully.' });
+    } catch (error) {
+        console.error('Failed to register view event:', error);
+        res.status(500).json({ error: 'Internal server error.' });
+    }
+});
+
 // Endpoint to register click event
 router.get('/register-click', async (req, res) => {
     const { affiliateId, imageId } = req.query;
@@ -169,7 +210,7 @@ router.get('/get-ab-test-results', async (req, res) => {
             matchStage.affiliateId = new ObjectId(affiliateId);
         }
 
-        // Build the aggregation pipeline
+        // Aggregation Pipeline
         const pipeline = [
             {
                 $match: matchStage
@@ -191,15 +232,46 @@ router.get('/get-ab-test-results', async (req, res) => {
             {
                 $unwind: '$imageInfo'
             },
+            // Lookup for views
+            {
+                $lookup: {
+                    from: 'abTestViews',
+                    let: { imageId: '$_id.imageId', date: '$_id.date' },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ['$imageId', '$$imageId'] },
+                                        { $eq: ['$date', '$$date'] }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            $count: 'views'
+                        }
+                    ],
+                    as: 'viewInfo'
+                }
+            },
+            {
+                $addFields: {
+                    views: { $ifNull: [{ $arrayElemAt: ['$viewInfo.views', 0] }, 0] }
+                }
+            },
             {
                 $project: {
                     date: '$_id.date',
                     imageId: '$_id.imageId',
                     clicks: 1,
+                    views: 1,
                     imageUrl: '$imageInfo.imageUrl',
                     imageName: '$imageInfo.imageName',
                     variant: '$imageInfo.variant',
-                    affiliateId: affiliateId ? new ObjectId(affiliateId) : '$imageInfo.affiliateId' // Include affiliateId if provided
+                    ...(affiliateId ? {} : { 
+                        affiliateId: '$imageInfo.affiliateId' // Include affiliateId if not filtered
+                    })
                 }
             },
             {
@@ -213,8 +285,9 @@ router.get('/get-ab-test-results', async (req, res) => {
         res.json(results);
     } catch (error) {
         console.error('Failed to get A/B test results:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Internal server error.' });
     }
 });
+
 
 module.exports = router;
