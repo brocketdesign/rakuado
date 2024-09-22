@@ -38,7 +38,7 @@ router.get('/app/ab-test-results', async (req, res) => {
       const response = await axios.get(apiUrl);
       const results = response.data;
 
-      res.render('ab-test-results', { results, affiliateId });
+      res.render('dashboard/app/abtest/list', { results, affiliateId });
   } catch (error) {
       console.error('Failed to fetch A/B test results:', error);
       res.status(500).send('Failed to fetch A/B test results');

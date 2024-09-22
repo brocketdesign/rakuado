@@ -7,7 +7,7 @@ const path = require('path');
 
 // Ensure that the upload directory exists
 const fs = require('fs');
-const uploadDir = path.join(__dirname, 'public/uploads/abTestImages');
+const uploadDir = path.join(__dirname, '../../public/uploads/abTestImages');
 
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
@@ -16,7 +16,7 @@ if (!fs.existsSync(uploadDir)) {
 // Set up Multer storage
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'public/uploads/abTestImages/');
+        cb(null, uploadDir);
     },
     filename: function (req, file, cb) {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -59,7 +59,7 @@ router.post('/create-ab-test', upload.fields([
         const imageBFile = req.files['imageB'] ? req.files['imageB'][0] : null;
 
         // Validate required fields
-        if (!imageAName || !imageATargetUrl || !imageBName || !imageBTargetUrl || !imageAFile || !imageBFile) {
+        if (!imageAName || !imageBName || !imageAFile || !imageBFile) {
             return res.status(400).json({ message: 'Image names, target URLs, and both images are required.' });
         }
 
