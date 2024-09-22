@@ -4,41 +4,39 @@ block mainContent
   h1 Create New A/B Test
 
   form#abTestForm(method="POST" action="/api/abtest/create-ab-test" enctype="multipart/form-data")
-    //- Image A Section
     .row
-      .col-md-6.mb-4
-        .card
-          .card-body
-            h5.card-title Image A
-            .form-group
-              label(for="imageAName") Image A Name
-              input#imageAName.form-control(type="text" name="imageAName" required placeholder="Enter name for Image A")
-            .form-group
-              label(for="imageATargetUrl") Image A Target URL
-              input#imageATargetUrl.form-control(type="url" name="imageATargetUrl" required placeholder="Enter target URL for Image A")
-            .form-group
-              label(for="dropzoneA") Upload Image A
-              #dropzoneA.dropzone.text-center.border.border-secondary.rounded.p-4(style="height: 200px; cursor: pointer; background-image: url('/path/to/placeholderA.png'); background-size: cover; background-position: center;")
-                p Drop Image A here or click to upload.
-              input#imageA(type="file" name="imageA" accept="image/*" required hidden)
-    
-    //- Image B Section
-    .row
-      .col-md-6.mb-4
-        .card
-          .card-body
-            h5.card-title Image B
-            .form-group
-              label(for="imageBName") Image B Name
-              input#imageBName.form-control(type="text" name="imageBName" required placeholder="Enter name for Image B")
-            .form-group
-              label(for="imageBTargetUrl") Image B Target URL
-              input#imageBTargetUrl.form-control(type="url" name="imageBTargetUrl" required placeholder="Enter target URL for Image B")
-            .form-group
-              label(for="dropzoneB") Upload Image B
-              #dropzoneB.dropzone.text-center.border.border-secondary.rounded.p-4(style="height: 200px; cursor: pointer; background-image: url('/path/to/placeholderB.png'); background-size: cover; background-position: center;")
-                p Drop Image B here or click to upload.
-              input#imageB(type="file" name="imageB" accept="image/*" required hidden)
+        .col-md-6.mb-4
+            .card
+                .card-body
+                    h5.card-title 画像 A
+                    .form-group
+                        label(for="imageAName") 画像 A の名前
+                        input#imageAName.form-control(type="text" name="imageAName" required placeholder="画像 A の名前を入力してください")
+                    .form-group
+                        label(for="imageATargetUrl") 画像 A のターゲット URL
+                        input#imageATargetUrl.form-control(type="url" name="imageATargetUrl" required placeholder="画像 A のターゲット URL を入力してください")
+                    .form-group
+                        label(for="dropzoneA") 画像 A をアップロード
+                        #dropzoneA.dropzone.text-center.border.border-secondary.rounded.p-4(style="height: 200px; cursor: pointer; background-image: url('/img/default-image.png'); background-size: cover; background-position: center;")
+                            p 画像 A をここにドロップするか、クリックしてアップロードしてください。
+                        input#imageA(type="file" name="imageA" accept="image/*" required hidden)
+
+        .col-md-6.mb-4
+            .card
+                .card-body
+                    h5.card-title 画像 B
+                    .form-group
+                        label(for="imageBName") 画像 B の名前
+                        input#imageBName.form-control(type="text" name="imageBName" required placeholder="画像 B の名前を入力してください")
+                    .form-group
+                        label(for="imageBTargetUrl") 画像 B のターゲット URL
+                        input#imageBTargetUrl.form-control(type="url" name="imageBTargetUrl" required placeholder="画像 B のターゲット URL を入力してください")
+                    .form-group
+                        label(for="dropzoneB") 画像 B をアップロード
+                        #dropzoneB.dropzone.text-center.border.border-secondary.rounded.p-4(style="height: 200px; cursor: pointer; background-image: url('/img/default-image.png'); background-size: cover; background-position: center;")
+                            p 画像 B をここにドロップするか、クリックしてアップロードしてください。
+                        input#imageB(type="file" name="imageB" accept="image/*" required hidden)
+
     
     //- Submit Button
     .row
