@@ -30,6 +30,7 @@ router.get('/app/ab-test-results', async (req, res) => {
   try {
       // Build the API URL with or without affiliateId
       let apiUrl = `${req.protocol}://${req.get('host')}/api/abtest/get-ab-test-results`;
+      console.log({apiUrl})
       if (affiliateId) {
           apiUrl += `?affiliateId=${affiliateId}`;
       }
