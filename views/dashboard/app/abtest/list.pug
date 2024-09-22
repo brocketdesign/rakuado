@@ -7,7 +7,7 @@ block mainContent
       a.btn.btn-primary(href="/dashboard/app/create-ab-test") 新規作成
 
     //- フィルタリングフォーム
-    form#filterForm(method="GET" action="/api/abtest/get-ab-test-results")
+    form#filterForm(method="GET" action="/app/ab-test-results")
       .form-row.align-items-end
         .form-group.col-md-4
           label(for="affiliateId") アフィリエイトIDでフィルタ
@@ -21,27 +21,98 @@ block mainContent
         table.table.table-bordered.table-hover.mt-4
           thead.thead-dark
             tr
-              th.scope.col 日付
+              th.scope.col テストID
+              th.scope.col 作成日
+              th.scope.col 画像ID
               th.scope.col 画像名
               th.scope.col バリアント
               th.scope.col 画像
               th.scope.col クリック数
               th.scope.col 表示数
-              if !affiliateId
-                th.scope.col アフィリエイト名
-                th.scope.col アフィリエイトID
+              th.scope.col アクション
+              th.scope.col 状態
           tbody
-            each result in results
-              tr
-                td= result.date
-                td= result.imageName
-                td= result.variant
-                td: img(src=result.imageUrl, width="100", alt=`${result.imageName}の画像`)
-                td= result.clicks
-                td= result.views
-                if !affiliateId
-                  td= result.affiliateName
-                  td= result.affiliateId
+            each test in results
+              each image in test.images
+                tr
+                  td= test.testId
+                  td= test.uploadDate
+                  td= image.imageId
+                  td= image.imageName
+                  td= image.variant
+                  td: img(src=image.imageUrl, width="100", alt=`${image.imageName}の画像`)
+                  td= image.clickCount
+                  td= image.viewCount
+                  td
+                    //- Activate/Deactivate Switch
+                    label.switch
+                      input(type="checkbox" class="activate-toggle" data-image-id=image.imageId checked=(image.active ? 'checked' : undefined))
+                      span.slider.round
+
+                    //- Delete Button
+                    button.btn.btn-danger.btn-sm.delete-button(type="button" data-test-id=test.testId) 削除
+                  td
+                    if image.active
+                      span.text-success アクティブ
+                    else
+                      span.text-danger 非アクティブ
     else
       .alert.alert-info.mt-4(role="alert")
         | 指定された条件に一致するA/Bテスト結果が見つかりませんでした。
+
+  script.
+    document.addEventListener('DOMContentLoaded', () => {
+      // Handle Activate/Deactivate Toggle
+      document.querySelectorAll('.activate-toggle').forEach(toggle => {
+        toggle.addEventListener('change', async (event) => {
+          const imageId = event.target.getAttribute('data-image-id');
+          const isActive = event.target.checked;
+
+          try {
+            const response = await fetch(`/api/abtest/activate-image`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ imageId, active: isActive })
+            });
+
+            const result = await response.json();
+            if (!response.ok) {
+              throw new Error(result.error || 'Failed to update status.');
+            }
+            // Optionally, show a success message
+            alert(`画像は${isActive ? 'アクティブ' : '非アクティブ'}に設定されました。`);
+          } catch (error) {
+            alert(`エラー: ${error.message}`);
+            // Revert the toggle if there's an error
+            event.target.checked = !isActive;
+          }
+        });
+      });
+
+      // Handle Delete Button
+      document.querySelectorAll('.delete-button').forEach(button => {
+        button.addEventListener('click', async (event) => {
+          const testId = event.target.getAttribute('data-test-id');
+          if (!confirm('本当にこのA/Bテストを削除しますか？')) return;
+
+          try {
+            const response = await fetch(`/api/abtest/delete-ab-test/${testId}`, {
+              method: 'DELETE'
+            });
+
+            const result = await response.json();
+            if (!response.ok) {
+              throw new Error(result.error || 'Failed to delete A/B test.');
+            }
+            // Optionally, reload the page or remove the rows from the table
+            // For simplicity, reload the page
+            alert('A/Bテストが正常に削除されました。');
+            location.reload();
+          } catch (error) {
+            alert(`エラー: ${error.message}`);
+          }
+        });
+      });
+    });

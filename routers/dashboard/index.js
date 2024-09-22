@@ -29,7 +29,7 @@ router.get('/app/ab-test-results', async (req, res) => {
 
   try {
       // Build the API URL with or without affiliateId
-      let apiUrl = 'https://app.rakuado.net/api/abtest/get-ab-test-results';
+      let apiUrl = `${req.protocol}://${req.get('host')}/api/abtest/get-ab-test-results`;
       if (affiliateId) {
           apiUrl += `?affiliateId=${affiliateId}`;
       }
@@ -44,6 +44,7 @@ router.get('/app/ab-test-results', async (req, res) => {
       res.status(500).send('Failed to fetch A/B test results');
   }
 });
+
 //Route for handling '/affiliate/'
 router.get('/app/affiliate/', ensureAuthenticated,ensureMembership, async (req, res) => {  
   res.render('dashboard/app/affiliate/list',{user:req.user,title:"RAKUBUN - Dashboard"});
