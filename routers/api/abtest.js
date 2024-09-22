@@ -21,7 +21,6 @@ const uploadToS3 = async (buffer, hash, filename) => {
         Bucket: process.env.AWS_S3_BUCKET_NAME,
         Key: `${hash}_${filename}`,
         Body: buffer,
-        ACL: 'public-read',
         ContentType: contentType
     };
     try {
