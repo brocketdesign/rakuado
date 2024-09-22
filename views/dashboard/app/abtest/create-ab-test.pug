@@ -14,10 +14,10 @@ block mainContent
                         input#imageAName.form-control(type="text" name="imageAName" required placeholder="画像 A の名前を入力してください")
                     .form-group
                         label(for="imageATargetUrl") 画像 A のターゲット URL
-                        input#imageATargetUrl.form-control(type="url" name="imageATargetUrl" required placeholder="画像 A のターゲット URL を入力してください")
+                        input#imageATargetUrl.form-control(type="url" name="imageATargetUrl" placeholder="画像 A のターゲット URL を入力してください")
                     .form-group
                         label(for="dropzoneA") 画像 A をアップロード
-                        #dropzoneA.dropzone.text-center.border.border-secondary.rounded.p-4(style="height: 200px; cursor: pointer; background-image: url('/img/default-image.png'); background-size: cover; background-position: center;")
+                        #dropzoneA.dropzone.d-flex.align-items-center.text-center.border.border-secondary.rounded.p-4(style="height: 200px; cursor: pointer; background-image: url('/img/default-image.png'); background-size: cover; background-position: center;")
                             p 画像 A をここにドロップするか、クリックしてアップロードしてください。
                         input#imageA(type="file" name="imageA" accept="image/*" required hidden)
 
@@ -30,10 +30,10 @@ block mainContent
                         input#imageBName.form-control(type="text" name="imageBName" required placeholder="画像 B の名前を入力してください")
                     .form-group
                         label(for="imageBTargetUrl") 画像 B のターゲット URL
-                        input#imageBTargetUrl.form-control(type="url" name="imageBTargetUrl" required placeholder="画像 B のターゲット URL を入力してください")
+                        input#imageBTargetUrl.form-control(type="url" name="imageBTargetUrl" placeholder="画像 B のターゲット URL を入力してください")
                     .form-group
                         label(for="dropzoneB") 画像 B をアップロード
-                        #dropzoneB.dropzone.text-center.border.border-secondary.rounded.p-4(style="height: 200px; cursor: pointer; background-image: url('/img/default-image.png'); background-size: cover; background-position: center;")
+                        #dropzoneB.dropzone.d-flex.align-items-center.text-center.border.border-secondary.rounded.p-4(style="height: 200px; cursor: pointer; background-image: url('/img/default-image.png'); background-size: cover; background-position: center;")
                             p 画像 B をここにドロップするか、クリックしてアップロードしてください。
                         input#imageB(type="file" name="imageB" accept="image/*" required hidden)
 

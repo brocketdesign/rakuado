@@ -122,6 +122,7 @@ router.get('/get-ab-test-image', async (req, res) => {
 
         res.json({
             imageUrl: image.imageUrl,
+            imageName: image.imageName,
             targetUrl: image.targetUrl,
             imageId: image.imageId,
             variant: abChoice,
