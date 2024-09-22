@@ -8,7 +8,7 @@ const path = require('path');
 // Set up Multer storage (ensure the 'uploads/abTestImages/' directory exists)
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'uploads/abTestImages/');
+        cb(null, 'public/uploads/abTestImages/');
     },
     filename: function (req, file, cb) {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
