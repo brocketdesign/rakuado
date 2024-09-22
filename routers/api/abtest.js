@@ -5,7 +5,15 @@ const { ObjectId } = require('mongodb');
 const multer = require('multer');
 const path = require('path');
 
-// Set up Multer storage (ensure the 'uploads/abTestImages/' directory exists)
+// Ensure that the upload directory exists
+const fs = require('fs');
+const uploadDir = path.join(__dirname, 'public/uploads/abTestImages');
+
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Set up Multer storage
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, 'public/uploads/abTestImages/');
@@ -15,6 +23,7 @@ const storage = multer.diskStorage({
         cb(null, uniqueSuffix + path.extname(file.originalname));
     }
 });
+
 
 // File filter to accept only image files
 const fileFilter = (req, file, cb) => {
