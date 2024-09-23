@@ -122,15 +122,12 @@ router.post('/create-ab-test', uploadMulter.fields([
         const imageAUrl = await handleFileUpload(imageAFile, global.db);
         const imageBUrl = await handleFileUpload(imageBFile, global.db);
 
-        // Generate unique IDs for images
-        const imageAId = new ObjectId();
-        const imageBId = new ObjectId();
+        // Prepare image data
+        const imageAId = new ObjectId().toString();
+        const imageBId = new ObjectId().toString();
 
-        // Prepare image data with testId
         const imageAData = {
-            _id: imageAId,
-            imageId: imageAId.toString(),
-            testId: testId,
+            imageId: imageAId,
             imageName: imageAName,
             imageUrl: imageAUrl,
             targetUrl: imageATargetUrl,
@@ -138,14 +135,10 @@ router.post('/create-ab-test', uploadMulter.fields([
             clickCount: 0,
             viewCount: 0,
             uploadDate: new Date(),
-            active: true,
-            affiliateId: affiliateObjectId
         };
 
         const imageBData = {
-            _id: imageBId,
-            imageId: imageBId.toString(),
-            testId: testId,
+            imageId: imageBId,
             imageName: imageBName,
             imageUrl: imageBUrl,
             targetUrl: imageBTargetUrl,
@@ -153,12 +146,16 @@ router.post('/create-ab-test', uploadMulter.fields([
             clickCount: 0,
             viewCount: 0,
             uploadDate: new Date(),
-            active: true,
-            affiliateId: affiliateObjectId
         };
 
-        // Insert images into the database
-        await global.db.collection('abTestImages').insertMany([imageAData, imageBData]);
+        // Insert the A/B test into the abTests collection
+        await global.db.collection('abTests').insertOne({
+            testId: testId,
+            affiliateId: affiliateObjectId,
+            uploadDate: new Date(),
+            active: true, // Default to active upon creation
+            images: [imageAData, imageBData]
+        });
 
         res.status(200).json({ message: 'A/B Test created successfully.' });
     } catch (error) {
@@ -167,9 +164,8 @@ router.post('/create-ab-test', uploadMulter.fields([
     }
 });
 
-// Endpoint to get A/B test image data
 router.get('/get-ab-test-image', async (req, res) => {
-    const { affiliateId, abChoice } = req.query;
+    const { affiliateId, abChoice, active } = req.query;
 
     if (!affiliateId || !abChoice) {
         return res.status(400).json({ error: 'affiliateId and abChoice parameters are required' });
@@ -182,22 +178,34 @@ router.get('/get-ab-test-image', async (req, res) => {
             return res.status(404).json({ error: 'Affiliate not found' });
         }
 
-        // Fetch the activated images for the A/B test
-        const imageData = await global.db.collection('abTestImages').aggregate([
-            { 
-                $match: { 
-                    variant: abChoice,
-                    active: true // Ensure only active images are fetched
-                } 
-            },
-            { $sample: { size: 1 } } // Randomly select one image from the variant
-        ]).toArray();
+        // Fetch active tests
+        const matchStage = {
+            testId: { $exists: true },
+            active: active === 'true' || active === true
+        };
 
-        if (imageData.length === 0) {
-            return res.status(404).json({ error: 'No active image found for the selected variant' });
+        if (affiliateId) {
+            matchStage.affiliateId = new ObjectId(affiliateId);
         }
 
-        const image = imageData[0];
+        // Fetch the activated images for the A/B test
+        const tests = await global.db.collection('abTests').aggregate([
+            { 
+                $match: matchStage
+            },
+            { $sample: { size: 1 } } // Randomly select one test
+        ]).toArray();
+
+        if (tests.length === 0) {
+            return res.status(404).json({ error: 'No active A/B Test found.' });
+        }
+
+        const test = tests[0];
+        const image = test.images.find(img => img.variant === abChoice);
+
+        if (!image) {
+            return res.status(404).json({ error: `No active image found for variant ${abChoice}.` });
+        }
 
         res.json({
             imageUrl: image.imageUrl,
@@ -208,44 +216,41 @@ router.get('/get-ab-test-image', async (req, res) => {
         });
     } catch (error) {
         console.error('Failed to get A/B test image:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Internal server error.' });
     }
 });
 
-// Endpoint to activate/deactivate an A/B test image
-router.patch('/activate-image', async (req, res) => {
-    const { imageId } = req.body;
-    let { active } = req.body;
+// Endpoint to activate/deactivate an A/B test
+router.patch('/activate-test', async (req, res) => {
+    const { testId, active } = req.body;
 
-    if (!imageId || typeof active === 'undefined') {
-        return res.status(400).json({ error: 'imageId and active parameters are required.' });
+    if (!testId || typeof active === 'undefined') {
+        return res.status(400).json({ error: 'testId and active parameters are required.' });
     }
 
-    // Convert active to boolean
-    active = active === true || active === 'true';
-
     try {
-        // Validate imageId format
-        if (!ObjectId.isValid(imageId)) {
-            return res.status(400).json({ error: 'Invalid imageId format.' });
+        // Validate testId format
+        if (!ObjectId.isValid(testId)) {
+            return res.status(400).json({ error: 'Invalid testId format.' });
         }
 
-        // Update the active status
-        const result = await global.db.collection('abTestImages').updateOne(
-            { imageId: imageId },
+        // Update the active status in the abTests collection
+        const result = await global.db.collection('abTests').updateOne(
+            { testId: testId },
             { $set: { active: active } }
         );
 
         if (result.matchedCount === 0) {
-            return res.status(404).json({ error: 'Image not found.' });
+            return res.status(404).json({ error: 'A/B Test not found.' });
         }
 
-        res.json({ message: `Image ${active ? 'activated' : 'deactivated'} successfully.` });
+        res.json({ message: `A/B Test has been ${active ? 'activated' : 'deactivated'} successfully.` });
     } catch (error) {
-        console.error('Failed to update image status:', error);
+        console.error('Failed to update A/B Test status:', error);
         res.status(500).json({ error: 'Internal server error.' });
     }
 });
+
 
 // Endpoint to delete an A/B test by testId
 router.delete('/delete-ab-test/:testId', async (req, res) => {
@@ -256,15 +261,19 @@ router.delete('/delete-ab-test/:testId', async (req, res) => {
             return res.status(400).json({ error: 'testId parameter is required.' });
         }
 
-        // Find all images associated with the testId
-        const images = await global.db.collection('abTestImages').find({ testId: testId }).toArray();
+        // Validate testId format
+        if (!ObjectId.isValid(testId)) {
+            return res.status(400).json({ error: 'Invalid testId format.' });
+        }
 
-        if (images.length === 0) {
+        // Find the test
+        const test = await global.db.collection('abTests').findOne({ testId: testId });
+        if (!test) {
             return res.status(404).json({ error: 'Specified A/B Test not found.' });
         }
 
         // Delete images from S3
-        for (const img of images) {
+        for (const img of test.images) {
             const key = img.imageUrl.split('/').slice(-1)[0];
             await s3.deleteObject({
                 Bucket: process.env.AWS_S3_BUCKET_NAME,
@@ -272,12 +281,13 @@ router.delete('/delete-ab-test/:testId', async (req, res) => {
             }).promise();
         }
 
-        // Delete images from abTestImages collection
-        await global.db.collection('abTestImages').deleteMany({ testId: testId });
+        // Delete the test from abTests collection
+        await global.db.collection('abTests').deleteOne({ testId: testId });
 
-        // Delete related entries from awsimages
-        const awsKeys = images.map(img => img.imageUrl.split('/').slice(-1)[0]);
-        await global.db.collection('awsimages').deleteMany({ key: { $in: awsKeys } });
+        // Delete related entries from awsimages if still used
+        // Assuming awsimages are no longer needed if using abTests
+        // Otherwise, modify accordingly
+        await global.db.collection('awsimages').deleteMany({ key: { $in: test.images.map(img => img.imageUrl.split('/').slice(-1)[0]) } });
 
         // Delete related clicks and views
         await global.db.collection('abTestClicks').deleteMany({ testId: testId });
@@ -289,6 +299,7 @@ router.delete('/delete-ab-test/:testId', async (req, res) => {
         res.status(500).json({ error: 'Internal server error.' });
     }
 });
+
 
 // Endpoint to register click event
 router.get('/register-click', async (req, res) => {
@@ -415,25 +426,6 @@ router.get('/get-ab-test-results', async (req, res) => {
                 $match: matchStage
             },
             {
-                $group: {
-                    _id: '$testId',
-                    uploadDate: { $first: '$uploadDate' },
-                    affiliateId: { $first: '$affiliateId' },
-                    images: {
-                        $push: {
-                            imageId: '$imageId',
-                            imageUrl: '$imageUrl',
-                            imageName: '$imageName',
-                            variant: '$variant',
-                            targetUrl: '$targetUrl',
-                            clickCount: '$clickCount',
-                            viewCount: '$viewCount',
-                            active: '$active'
-                        }
-                    }
-                }
-            },
-            {
                 $lookup: {
                     from: 'affiliate',
                     localField: 'affiliateId',
@@ -450,7 +442,7 @@ router.get('/get-ab-test-results', async (req, res) => {
             {
                 $lookup: {
                     from: 'abTestClicks',
-                    let: { testId: '$_id' },
+                    let: { testId: '$testId' },
                     pipeline: [
                         {
                             $match: {
@@ -472,7 +464,7 @@ router.get('/get-ab-test-results', async (req, res) => {
             {
                 $lookup: {
                     from: 'abTestViews',
-                    let: { testId: '$_id' },
+                    let: { testId: '$testId' },
                     pipeline: [
                         {
                             $match: {
@@ -493,7 +485,6 @@ router.get('/get-ab-test-results', async (req, res) => {
             },
             {
                 $addFields: {
-                    testId: '$_id',
                     totalClicks: { $ifNull: [{ $arrayElemAt: ['$clickData.totalClicks', 0] }, 0] },
                     totalViews: { $ifNull: [{ $arrayElemAt: ['$viewData.totalViews', 0] }, 0] },
                     affiliateName: { $ifNull: ['$affiliateInfo.name', 'N/A'] },
@@ -509,7 +500,8 @@ router.get('/get-ab-test-results', async (req, res) => {
                     affiliateName: 1,
                     affiliateIdStr: 1,
                     totalClicks: 1,
-                    totalViews: 1
+                    totalViews: 1,
+                    active: 1
                 }
             },
             {
@@ -518,7 +510,7 @@ router.get('/get-ab-test-results', async (req, res) => {
         ];
 
         // Execute the aggregation pipeline
-        const results = await global.db.collection('abTestImages').aggregate(pipeline).toArray();
+        const results = await global.db.collection('abTests').aggregate(pipeline).toArray();
 
         res.json(results);
     } catch (error) {

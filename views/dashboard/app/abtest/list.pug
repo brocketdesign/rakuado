@@ -22,30 +22,39 @@ block mainContent
           thead.thead-dark
             tr
               th.scope.col 作成日
-              th.scope.col 画像名
-              th.scope.col バリアント
-              th.scope.col 画像
+              th.scope.col アフィリエイト名
+              th.scope.col バリアントA
+              th.scope.col バリアントB
               th.scope.col クリック数
               th.scope.col 表示数
               th.scope.col アクション
           tbody
             each test in results
-              each image in test.images
-                tr
-                  td= test.uploadDate
-                  td= image.imageName
-                  td= image.variant
-                  td: img(src=image.imageUrl, width="100", alt=`${image.imageName}の画像`)
-                  td= image.clickCount
-                  td= image.viewCount
-                  td
-                    //- Activate/Deactivate Switch
-                    label.switch
-                      input(type="checkbox" class="activate-toggle" data-image-id=image.imageId checked=(image.active ? 'checked' : undefined))
-                      span.slider.round
+              tr
+                td= new Date(test.uploadDate).toLocaleDateString('ja-JP')
+                td= test.affiliateName
+                td
+                  ul
+                    each image in test.images
+                      li
+                        | #{image.variant}: #{image.imageName}
+                        br
+                        img(src=image.imageUrl, width="100", alt=`${image.imageName}の画像`)
+                td
+                  ul
+                    each image in test.images
+                      li
+                        a(href=image.targetUrl, target="_blank") #{image.targetUrl}
+                td= test.totalClicks
+                td= test.totalViews
+                td
+                  //- Activate/Deactivate Switch
+                  label.switch
+                    input(type="checkbox" class="activate-toggle" data-test-id=test.testId checked=(test.active ? 'checked' : undefined))
+                    span.slider.round
 
-                    //- Delete Button
-                    button.btn.btn-danger.btn-sm.delete-button.mx-2(type="button" data-test-id=test.testId) 削除
+                  //- Delete Button
+                  button.btn.btn-danger.btn-sm.delete-button.mt-2(type="button" data-test-id=test.testId) 削除
     else
       .alert.alert-info.mt-4(role="alert")
         | 指定された条件に一致するA/Bテスト結果が見つかりませんでした。
@@ -55,16 +64,16 @@ block mainContent
       // Handle Activate/Deactivate Toggle
       document.querySelectorAll('.activate-toggle').forEach(toggle => {
         toggle.addEventListener('change', async (event) => {
-          const imageId = event.target.getAttribute('data-image-id');
+          const testId = event.target.getAttribute('data-test-id');
           const isActive = event.target.checked;
 
           try {
-            const response = await fetch(`/api/abtest/activate-image`, {
+            const response = await fetch(`/api/abtest/activate-test`, {
               method: 'PATCH',
               headers: {
                 'Content-Type': 'application/json'
               },
-              body: JSON.stringify({ imageId, active: isActive })
+              body: JSON.stringify({ testId, active: isActive })
             });
 
             const result = await response.json();
@@ -72,7 +81,7 @@ block mainContent
               throw new Error(result.error || 'Failed to update status.');
             }
             // Optionally, show a success message
-            alert(`画像は${isActive ? 'アクティブ' : '非アクティブ'}に設定されました。`);
+            alert(`A/Bテストは${isActive ? 'アクティブ' : '非アクティブ'}に設定されました。`);
           } catch (error) {
             alert(`エラー: ${error.message}`);
             // Revert the toggle if there's an error
@@ -96,7 +105,7 @@ block mainContent
             if (!response.ok) {
               throw new Error(result.error || 'Failed to delete A/B test.');
             }
-            // Optionally, reload the page or remove the rows from the table
+            // Optionally, reload the page or remove the row from the table
             // For simplicity, reload the page
             alert('A/Bテストが正常に削除されました。');
             location.reload();
