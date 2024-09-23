@@ -372,6 +372,8 @@ router.get('/register-view', async (req, res) => {
             { imageId: imageId },
             { $inc: { viewCount: 1 } }
         );
+        
+        console.log(`View registered for Image ID: ${imageId}, Variant: ${image.variant}, Test ID: ${image.testId}`);
 
         res.json({ message: 'View event registered successfully.' });
     } catch (error) {
