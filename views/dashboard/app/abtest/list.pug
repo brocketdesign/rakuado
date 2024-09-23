@@ -6,59 +6,127 @@ block mainContent
     .text-right.mb-3
       a.btn.btn-primary(href="/dashboard/app/create-ab-test") 新規作成
 
-    //- フィルタリングフォーム
-    form#filterForm(method="GET" action="/app/ab-test-results")
-      .form-row.align-items-end
-        .form-group.col-md-4
-          label(for="affiliateId") アフィリエイトIDでフィルタ
-          input#affiliateId.form-control(type="text" name="affiliateId" placeholder="アフィリエイトIDを入力（任意）" value=affiliateId)
-        .form-group.col-md-2
-          button.btn.btn-secondary(type="submit") フィルタ
+    //- フィルタリングフォーム (Removed Affiliate ID filter as per your request)
+    //- You can add other filters here if needed in the future
 
-    //- 結果表示テーブル
+    //- Results Display
     if results.length > 0
-      .table-responsive
-        table.table.table-bordered.table-hover.mt-4
-          thead.thead-dark
-            tr
-              th.scope.col 作成日
-              th.scope.col アフィリエイト名
-              th.scope.col バリアントA
-              th.scope.col バリアントB
-              th.scope.col クリック数
-              th.scope.col 表示数
-              th.scope.col アクション
-          tbody
-            each test in results
-              tr
-                td= new Date(test.uploadDate).toLocaleDateString('ja-JP')
-                td= test.affiliateName
-                td
-                  ul
-                    each image in test.images
-                      li
-                        | #{image.variant}: #{image.imageName}
-                        br
-                        img(src=image.imageUrl, width="100", alt=`${image.imageName}の画像`)
-                td
-                  ul
-                    each image in test.images
-                      li
-                        a(href=image.targetUrl, target="_blank") #{image.targetUrl}
-                td= test.totalClicks
-                td= test.totalViews
-                td
-                  //- Activate/Deactivate Switch
-                  label.switch
-                    input(type="checkbox" class="activate-toggle" data-test-id=test.testId checked=(test.active ? 'checked' : undefined))
-                    span.slider.round
+      .row
+        each test in results
+          .col-md-6.mb-4
+            .card.shadow-sm
+              .card-header.d-flex.justify-content-between.align-items-center.bg-dark.text-white
+                span 作成日: #{new Date(test.uploadDate).toLocaleDateString('ja-JP')}
+                //- Activate/Deactivate Switch
+                label.switch
+                  input(type="checkbox" class="activate-toggle" data-test-id=test.testId checked=(test.active ? 'checked' : undefined))
+                  span.slider.round
 
-                  //- Delete Button
-                  button.btn.btn-danger.btn-sm.delete-button.mt-2(type="button" data-test-id=test.testId) 削除
+              .card-body
+                //- Variants Display
+                .row
+                  //- Variant A
+                  .col-md-6.mb-3
+                    h5.text-center バリアント A
+                    img(src=test.images[0].imageUrl, class="img-fluid mb-2 rounded", alt=`${test.images[0].imageName}の画像`)
+                    p.font-weight-bold.text-center #{test.images[0].imageName}
+                    p.text-center
+                      | クリック数: #{test.images[0].clickCount}
+                      br
+                      | 表示数: #{test.images[0].viewCount}
+                      br
+                      - var conversionA = test.images[0].viewCount > 0 ? ((test.images[0].clickCount / test.images[0].viewCount) * 100).toFixed(2) : '0.00';
+                      | コンバージョン率: #{conversionA}%
+                    a.btn.btn-sm.btn-outline-primary.mt-2.w-100(href=test.images[0].targetUrl, target="_blank") ターゲットURLを見る
+
+                  //- Variant B
+                  .col-md-6.mb-3
+                    h5.text-center バリアント B
+                    img(src=test.images[1].imageUrl, class="img-fluid mb-2 rounded", alt=`${test.images[1].imageName}の画像`)
+                    p.font-weight-bold.text-center #{test.images[1].imageName}
+                    p.text-center
+                      | クリック数: #{test.images[1].clickCount}
+                      br
+                      | 表示数: #{test.images[1].viewCount}
+                      br
+                      - var conversionB = test.images[1].viewCount > 0 ? ((test.images[1].clickCount / test.images[1].viewCount) * 100).toFixed(2) : '0.00';
+                      | コンバージョン率: #{conversionB}%
+                    a.btn.btn-sm.btn-outline-primary.mt-2.w-100(href=test.images[1].targetUrl, target="_blank") ターゲットURLを見る
+
+              .card-footer.d-flex.justify-content-between
+                //- Delete Button
+                button.btn.btn-danger.btn-sm.delete-button(type="button" data-test-id=test.testId)
+                  | 削除
+
     else
       .alert.alert-info.mt-4(role="alert")
         | 指定された条件に一致するA/Bテスト結果が見つかりませんでした。
 
+  //- Optional: Add some spacing at the bottom
+  .mb-5
+
+  //- Custom CSS for the toggle switch
+  style.
+    /* Toggle Switch Styles */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 24px;
+    }
+
+    .switch input { 
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: #28a745;
+    }
+
+    input:focus + .slider {
+      box-shadow: 0 0 1px #28a745;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+
+    /* Rounded sliders */
+    .slider.round {
+      border-radius: 24px;
+    }
+
+    .slider.round:before {
+      border-radius: 50%;
+    }
+
+  //- JavaScript for handling activation/deactivation and deletion
   script.
     document.addEventListener('DOMContentLoaded', () => {
       // Handle Activate/Deactivate Toggle
@@ -105,10 +173,13 @@ block mainContent
             if (!response.ok) {
               throw new Error(result.error || 'Failed to delete A/B test.');
             }
-            // Optionally, reload the page or remove the row from the table
-            // For simplicity, reload the page
+            // Optionally, remove the card from the DOM without reloading
             alert('A/Bテストが正常に削除されました。');
-            location.reload();
+            // Remove the card
+            const card = button.closest('.col-md-6');
+            if (card) {
+              card.remove();
+            }
           } catch (error) {
             alert(`エラー: ${error.message}`);
           }
