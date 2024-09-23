@@ -184,10 +184,6 @@ router.get('/get-ab-test-image', async (req, res) => {
             active: active === 'true' || active === true
         };
 
-        if (affiliateId) {
-            matchStage.affiliateId = new ObjectId(affiliateId);
-        }
-
         // Fetch the activated images for the A/B test
         const tests = await global.db.collection('abTests').aggregate([
             { 
