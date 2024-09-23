@@ -209,6 +209,7 @@ router.get('/get-ab-test-image', async (req, res) => {
             targetUrl: image.targetUrl,
             imageId: image.imageId,
             variant: abChoice,
+            testId: test.testId,
         });
     } catch (error) {
         console.error('Failed to get A/B test image:', error);
@@ -296,13 +297,12 @@ router.delete('/delete-ab-test/:testId', async (req, res) => {
     }
 });
 
-
 // Endpoint to register click event
 router.get('/register-click', async (req, res) => {
-    const { affiliateId, imageId } = req.query;
+    const { affiliateId, testId, imageId } = req.query;
 
-    if (!affiliateId || !imageId) {
-        return res.status(400).json({ error: 'affiliateId and imageId parameters are required' });
+    if (!affiliateId || !testId || !imageId) {
+        return res.status(400).json({ error: 'affiliateId, testId, and imageId parameters are required.' });
     }
 
     try {
@@ -311,10 +311,37 @@ router.get('/register-click', async (req, res) => {
             return res.status(400).json({ error: 'Invalid affiliateId format.' });
         }
 
-        // Validate imageId existence
-        const image = await global.db.collection('abTestImages').findOne({ imageId: imageId });
+        // Validate testId format
+        if (!ObjectId.isValid(testId)) {
+            return res.status(400).json({ error: 'Invalid testId format.' });
+        }
+
+        // Validate imageId (assuming imageId is a string)
+        if (typeof imageId !== 'string' || imageId.trim() === '') {
+            return res.status(400).json({ error: 'Invalid imageId format.' });
+        }
+
+        // Verify that the affiliate exists
+        const affiliate = await global.db.collection('affiliate').findOne({ _id: new ObjectId(affiliateId) });
+        if (!affiliate) {
+            return res.status(404).json({ error: 'Affiliate not found.' });
+        }
+
+        // Find the A/B test by testId
+        const test = await global.db.collection('abTests').findOne({ testId: testId });
+        if (!test) {
+            return res.status(404).json({ error: 'A/B Test not found.' });
+        }
+
+        // Find the specific image within the test
+        const image = test.images.find(img => img.imageId === imageId);
         if (!image) {
-            return res.status(404).json({ error: 'Image not found.' });
+            return res.status(404).json({ error: 'Image not found in the specified A/B Test.' });
+        }
+
+        // Check if the test is active
+        if (!test.active) {
+            return res.status(403).json({ error: 'A/B Test is not active.' });
         }
 
         // Get the current date in YYYY-MM-DD format
@@ -324,30 +351,35 @@ router.get('/register-click', async (req, res) => {
         await global.db.collection('abTestClicks').insertOne({
             affiliateId: new ObjectId(affiliateId),
             imageId: imageId,
-            testId: image.testId,
+            testId: testId,
             date: today,
             timestamp: new Date(),
         });
 
-        // Increment the click count in abTestImages
-        await global.db.collection('abTestImages').updateOne(
-            { imageId: imageId },
-            { $inc: { clickCount: 1 } }
+        // Increment the click count for the specific image within the test
+        const updateResult = await global.db.collection('abTests').updateOne(
+            { testId: testId, "images.imageId": imageId },
+            { $inc: { "images.$.clickCount": 1 } }
         );
 
-        res.json({ message: 'Click event registered successfully' });
+        if (updateResult.modifiedCount === 0) {
+            return res.status(500).json({ error: 'Failed to increment click count.' });
+        }
+
+        res.json({ message: 'Click event registered successfully.' });
     } catch (error) {
         console.error('Failed to register click event:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Internal server error.' });
     }
 });
 
+
 // Endpoint to register view event
 router.get('/register-view', async (req, res) => {
-    const { affiliateId, imageId } = req.query;
+    const { affiliateId, testId, imageId } = req.query;
 
-    if (!affiliateId || !imageId) {
-        return res.status(400).json({ error: 'affiliateId and imageId parameters are required.' });
+    if (!affiliateId || !testId || !imageId) {
+        return res.status(400).json({ error: 'affiliateId, testId, and imageId parameters are required.' });
     }
 
     try {
@@ -356,10 +388,37 @@ router.get('/register-view', async (req, res) => {
             return res.status(400).json({ error: 'Invalid affiliateId format.' });
         }
 
-        // Validate imageId existence
-        const image = await global.db.collection('abTestImages').findOne({ imageId: imageId });
+        // Validate testId format
+        if (!ObjectId.isValid(testId)) {
+            return res.status(400).json({ error: 'Invalid testId format.' });
+        }
+
+        // Validate imageId (assuming imageId is a string)
+        if (typeof imageId !== 'string' || imageId.trim() === '') {
+            return res.status(400).json({ error: 'Invalid imageId format.' });
+        }
+
+        // Verify that the affiliate exists
+        const affiliate = await global.db.collection('affiliate').findOne({ _id: new ObjectId(affiliateId) });
+        if (!affiliate) {
+            return res.status(404).json({ error: 'Affiliate not found.' });
+        }
+
+        // Find the A/B test by testId
+        const test = await global.db.collection('abTests').findOne({ testId: testId });
+        if (!test) {
+            return res.status(404).json({ error: 'A/B Test not found.' });
+        }
+
+        // Find the specific image within the test
+        const image = test.images.find(img => img.imageId === imageId);
         if (!image) {
-            return res.status(404).json({ error: 'Image not found.' });
+            return res.status(404).json({ error: 'Image not found in the specified A/B Test.' });
+        }
+
+        // Check if the test is active
+        if (!test.active) {
+            return res.status(403).json({ error: 'A/B Test is not active.' });
         }
 
         // Get the current date in YYYY-MM-DD format
@@ -369,18 +428,20 @@ router.get('/register-view', async (req, res) => {
         await global.db.collection('abTestViews').insertOne({
             affiliateId: new ObjectId(affiliateId),
             imageId: imageId,
-            testId: image.testId,
+            testId: testId,
             date: today,
             timestamp: new Date(),
         });
 
-        // Increment the view count in abTestImages
-        await global.db.collection('abTestImages').updateOne(
-            { imageId: imageId },
-            { $inc: { viewCount: 1 } }
+        // Increment the view count for the specific image within the test
+        const updateResult = await global.db.collection('abTests').updateOne(
+            { testId: testId, "images.imageId": imageId },
+            { $inc: { "images.$.viewCount": 1 } }
         );
 
-        //console.log(`View registered for Image ID: ${imageId}, Variant: ${image.variant}, Test ID: ${image.testId}`);
+        if (updateResult.modifiedCount === 0) {
+            return res.status(500).json({ error: 'Failed to increment view count.' });
+        }
 
         res.json({ message: 'View event registered successfully.' });
     } catch (error) {
@@ -388,6 +449,7 @@ router.get('/register-view', async (req, res) => {
         res.status(500).json({ error: 'Internal server error.' });
     }
 });
+
 
 // Endpoint to get A/B test results (including tests with no data)
 router.get('/get-ab-test-results', async (req, res) => {

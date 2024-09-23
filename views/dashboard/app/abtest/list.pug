@@ -7,7 +7,9 @@ block mainContent
       a.btn.btn-primary(href="/dashboard/app/create-ab-test") 新規作成
 
     //- フィルタリングフォーム (Removed Affiliate ID filter as per your request)
-    //- You can add other filters here if needed in the future
+    form#filterForm(method="GET" action="/app/ab-test-results")
+      .form-row.align-items-end
+        //- You can add other filters here if needed in the future
 
     //- Results Display
     if results.length > 0
@@ -37,7 +39,11 @@ block mainContent
                       br
                       - var conversionA = test.images[0].viewCount > 0 ? ((test.images[0].clickCount / test.images[0].viewCount) * 100).toFixed(2) : '0.00';
                       | コンバージョン率: #{conversionA}%
-                    a.btn.btn-sm.btn-outline-primary.mt-2.w-100(href=test.images[0].targetUrl, target="_blank") ターゲットURLを見る
+                    a.btn.btn-sm.btn-outline-primary.mt-2.w-100(
+                        href=test.images[0].targetUrl, 
+                        target="_blank",
+                        onclick=`registerClickAndView('${test.testId}', '${test.images[0].imageId}')`
+                    ) ターゲットURLを見る
 
                   //- Variant B
                   .col-md-6.mb-3
@@ -51,7 +57,11 @@ block mainContent
                       br
                       - var conversionB = test.images[1].viewCount > 0 ? ((test.images[1].clickCount / test.images[1].viewCount) * 100).toFixed(2) : '0.00';
                       | コンバージョン率: #{conversionB}%
-                    a.btn.btn-sm.btn-outline-primary.mt-2.w-100(href=test.images[1].targetUrl, target="_blank") ターゲットURLを見る
+                    a.btn.btn-sm.btn-outline-primary.mt-2.w-100(
+                        href=test.images[1].targetUrl, 
+                        target="_blank",
+                        onclick=`registerClickAndView('${test.testId}', '${test.images[1].imageId}')`
+                    ) ターゲットURLを見る
 
               .card-footer.d-flex.justify-content-between
                 //- Delete Button
@@ -128,6 +138,29 @@ block mainContent
 
   //- JavaScript for handling activation/deactivation and deletion
   script.
+    // Function to register click and view events
+    function registerClickAndView(testId, imageId) {
+      const affiliateId = document.body.getAttribute('data-affiliate-id');
+
+      // Register the view event
+      fetch(`/api/abtest/register-view?affiliateId=${affiliateId}&testId=${testId}&imageId=${imageId}`, {
+        method: 'GET',
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (!response.ok) {
+          console.error('View registration failed:', data.error);
+        }
+        // Optionally handle success
+      })
+      .catch(error => console.error('Error registering view:', error));
+
+      // Register the click event using sendBeacon
+      window.addEventListener('beforeunload', function() {
+        navigator.sendBeacon(`/api/abtest/register-click?affiliateId=${affiliateId}&testId=${testId}&imageId=${imageId}`);
+      });
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       // Handle Activate/Deactivate Toggle
       document.querySelectorAll('.activate-toggle').forEach(toggle => {
