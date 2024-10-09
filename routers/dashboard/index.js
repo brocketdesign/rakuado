@@ -14,7 +14,7 @@ const axios = require('axios');
 // Route for handling '/dashboard/'
 router.get('/', ensureAuthenticated, ensureMembership, async (req, res) => {
   try {
-    res.render('dashboard/top');
+    res.render('dashboard/top',{user:req.user,});
     //res.redirect('/dashboard/app/affiliate/');
   } catch (error) {
     res.status(500).send('Server Error');

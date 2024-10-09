@@ -3,6 +3,14 @@ main#dashboard {
 }
 #sidebarMenu.open{
   width: auto !important;
+}  
+.custom-gradient-bg {
+  background: linear-gradient(45deg, #007bff, #00d4ff);
+  color: #fff;
+  transition: background 0.3s ease;
+}
+.custom-gradient-bg:hover {
+  background: linear-gradient(45deg, #0056b3, #00a6cc);
 }
 .generate-text{
   opacity: 0.8;
