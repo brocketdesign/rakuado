@@ -341,4 +341,36 @@ router.post('/reset', async (req, res) => {
 
 });
 
+// Endpoint to get the current user's credits
+router.get('/credits', async (req, res) => {
+  try {
+      const userId = req.user._id;
+      const user = await global.db.collection('users').findOne({ _id: userId }, { projection: { credits: 1 } });
+
+      if (!user) {
+          return res.status(404).json({ error: 'User not found.' });
+      }
+      const userCredit = user.credits ? user.credits : 0
+      res.json({ credits: userCredit });
+  } catch (error) {
+      console.error('Failed to get user credits:', error);
+      res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+// Endpoint to check if the current user is an administrator
+router.get('/is-admin', async (req, res) => {
+  try {
+      const adminEmails = ["japanclassicstore@gmail.com"]; // List of administrator emails
+      const userEmail = req.user.email;
+
+      if (adminEmails.includes(userEmail)) {
+          return res.json({ isAdmin: true });
+      } else {
+          return res.json({ isAdmin: false });
+      }
+  } catch (error) {
+      console.error('Failed to check if user is admin:', error);
+      res.status(500).json({ error: 'Internal server error.' });
+  }
+});
 module.exports = router;

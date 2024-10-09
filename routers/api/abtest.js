@@ -246,10 +246,11 @@ router.patch('/activate-test', async (req, res) => {
             if (!user) {
                 return res.status(404).json({ error: 'User not found.' });
             }
-            const minimumCredits = 500; // Set your minimum credit threshold here
-            console.log(user.credits)
-            if (user.credits && user.credits < minimumCredits) {
-                return res.status(403).json({ error: 'Insufficient credits to activate the A/B Test.' });
+            const minimumCredits = 500;
+            const userCredit = user.credits ? user.credits : 0 
+            console.log({userCredit,minimumCredits,test:(userCredit < minimumCredits)})
+            if (userCredit < minimumCredits) {
+                return res.status(403).json({ error: 'A/Bテストをアクティブにするためのクレジットが不足しています。' });
             }
         }
 
@@ -263,7 +264,7 @@ router.patch('/activate-test', async (req, res) => {
             return res.status(404).json({ error: 'A/B Test not found.' });
         }
 
-        res.json({ message: `A/B Test has been ${active ? 'activated' : 'deactivated'} successfully.` });
+        return res.json({ message: `A/B Test has been ${active ? 'activated' : 'deactivated'} successfully.` });
     } catch (error) {
         console.error('Failed to update A/B Test status:', error);
         res.status(500).json({ error: 'Internal server error.' });
@@ -507,7 +508,7 @@ router.get('/get-ab-test-results', async (req, res) => {
 
         // Build the match stage
         let matchStage = {
-            uploadDate: { $gte: startDate, $lte: endDate }
+            //uploadDate: { $gte: startDate, $lte: endDate }
         };
 
         if (affiliateId) {

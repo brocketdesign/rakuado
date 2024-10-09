@@ -48,7 +48,7 @@ $(document).ready(function() {
                     .done((data) => {
                         // Update the table cells for daily and monthly data
                         $(`#row-${affiliate._id} .analytics-${action}`).html(`  
-                            <div class="h-100 d-flex justify-content-center align-items-center">
+                            <div class="h-100 d-flex justify-content-start align-items-center">
                                 本日: ${data.daily} | 今月: ${data.monthly}
                             </div>
                         `);
@@ -77,7 +77,7 @@ $(document).ready(function() {
                             ${affiliate.wordpressUrl.replace('https://','').slice(0,10)}
                         </a>
                     </td>
-                    <td class="analytics-opened"></td>
+                    <td class="d-none analytics-opened"></td>
                     <td class="analytics-interacted"></td>
                     <td class="text-center">
                         <div class="form-check form-switch">

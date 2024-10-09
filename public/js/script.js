@@ -2,6 +2,27 @@
 const logout = () => window.location.href = '/user/logout';
 const YOUR_LARGE_SCREEN_BREAKPOINT = 992
 
+function checkIfAdmin() {
+    $.ajax({
+      url: '/user/is-admin',
+      type: 'GET',
+      success: function(response) {
+        console.log({isadmin:response.isAdmin})
+        if (response.isAdmin) {
+          $('.isAdmin').show();
+        } else {
+          $('.isAdmin').hide();
+        }
+      },
+      error: function(xhr) {
+        console.error('Failed to check if user is admin:', xhr.responseJSON.error);
+      }
+    });
+  }
+
+  $(document).ready(function() {
+    checkIfAdmin();
+  });
 const checkFormChange = (initialData, form) => {
     return Array.from(form.entries()).some(([name, value]) => value !== initialData.get(name));
 }
@@ -38,6 +59,24 @@ window.showNotification = function(message, icon) {
         }
     });
 }
+window.updateUserCredits = function() {
+    $.ajax({
+      url: '/user/credits',
+      type: 'GET',
+      success: function(response) {
+        if (response.credits !== undefined) {
+          $('.user-credits').text(response.credits);
+        }
+      },
+      error: function(xhr) {
+        console.error('Failed to fetch user credits:', xhr.responseJSON.error);
+      }
+    });
+}
+
+$(document).ready(function() {
+updateUserCredits();
+});
 $(document).ready(function() {
     // Function to check for payment query parameters in the URL
     function getQueryParams(param) {
@@ -1238,10 +1277,10 @@ const handleUserProfile = () => {
     
     if (profileImageInput && bannerImageInput ) {
       inputTrigger(profileImageInput, document.querySelector('.profile-image'));
-      inputTrigger(bannerImageInput, document.querySelector('.banner-image'));
+      //inputTrigger(bannerImageInput, document.querySelector('.banner-image'));
   
       previewImage(profileImageInput, document.querySelector('.profile-image img'));
-      previewImage(bannerImageInput, document.querySelector('.header img'));
+      //previewImage(bannerImageInput, document.querySelector('.header img'));
   
     }
     // Active Tab

@@ -1,6 +1,9 @@
 main#dashboard {
   display:none;
 }
+.isAdmin {
+  display:none;
+}
 #sidebarMenu.open{
   width: auto !important;
 }  

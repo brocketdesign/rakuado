@@ -10,18 +10,14 @@
           a(href="/user/setting")
             i.fas.fa-user-circle
             span.hide-text.ms-3 アカウント
-      li.list-group-item.list-group-item-action.p-3.ripple(data-bs-toggle="tooltip" title="アップグレード")
-        a(href='/payment/subscription')
-          i.fas.fa-arrow-up
-          span.hide-text.ms-3=user && user.subscriptionId ? "サブスクリプション" : "アップグレード"
       li.list-group-item.list-group-item-action.p-3.ripple(data-bs-toggle="tooltip" title="お問い合わせ")
-        a(href="/contact")
+        a(target="_blank" href="https://hatoltd.com/contact/")
           i.fas.fa-question
           span.hide-text.ms-3 お問い合わせ
-      li.list-group-item.list-group-item-action.p-3.ripple(data-bs-toggle="tooltip" title="クレジットショップ")
-        button#showCreditShopButton.btn.btn-primary.btn-sm.shadow-sm.custom-gradient-bg(style="border-radius: 20px; width:100%; padding:10px;")
+      li.list-group-item.list-group-item-action.p-3.ripple.custom-gradient-bg(data-bs-toggle="tooltip" title="クレジットショップ")
+        button#showCreditShopButton.btn.btn-primary.btn-sm.shadow-none.bg-transparent(style="border-radius: 20px; width:100%; padding:10px;")
           i.fas.fa-credit-card
-          span.hide-text.ms-3 クレジットショップ
+          span.hide-text.ms-3 クレジットを追加する
       li.list-group-item.list-group-item-action.p-3.ripple(data-bs-toggle="tooltip" title="ログアウト" style="color: red;")
         if user
           a.text-danger(href='#', onclick='logout()')

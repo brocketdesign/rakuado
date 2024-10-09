@@ -1,6 +1,8 @@
 const STRIPE_PUBLIC_KEY = 'pk_test_51Grb83C8xKGwQm6J0yFqNpWwgFu8MF582uq74ktVViobsBzM2hjVT2fXFvW5JQwLQnoaAmXBWtGevNodYi0bT5uv00sjuMNw1n'
 var stripe = Stripe(STRIPE_PUBLIC_KEY); // Replace with your public key
 
+
+
 window.showCreditShop = function(el) {
   if (el && $(el).hasClass('open')) {
       return;
@@ -45,7 +47,8 @@ window.showCreditShop = function(el) {
             if (credits == 0) { // Custom amount
                 credits = $('#custom-credits').val();
             }
-            credits = parseInt(credits);
+            credits = parseInt(credits) || 0;
+
             if (credits < 500) {
                 showNotification('最小購入クレジット数は500です。', 'error');
                 return;
@@ -60,7 +63,9 @@ window.showCreditShop = function(el) {
       }
   });
 };
-
+$(document).on('click','.showCreditShopButton', function() {
+  showCreditShop(this);
+});
 function initiateCheckout(credits) {
   $.ajax({
       url: '/payment/create-checkout-session',
@@ -123,30 +128,3 @@ function updatePaymentMethod(e) {
     console.error('Error:', error);
   });
 }
-
-$(document).ready(function() {
-  function checkUserSubscription() {
-      $.ajax({
-          type: "GET",
-          url: "/payment/check-subscription",
-          dataType: "json",
-          success: function(response) {
-              if (response.success) {
-                  console.log("Success:", response.message);
-                  // Handle success case, e.g., display a message or update UI
-              } else {
-                  console.log("Error:", response.message);
-                  // Handle error case, e.g., display an error message or update UI
-              }
-          },
-          error: function(jqXHR, textStatus, errorThrown) {
-              console.error("Request failed:", textStatus, errorThrown);
-              // Handle the failure case, e.g., display an error message or update UI
-          }
-      });
-  }
-
-  // You can now call the function wherever needed in your code
-  // For instance, you might want to check the subscription when the page loads:
-   checkUserSubscription();
-});

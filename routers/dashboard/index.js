@@ -14,7 +14,7 @@ const axios = require('axios');
 // Route for handling '/dashboard/'
 router.get('/', ensureAuthenticated, ensureMembership, async (req, res) => {
   try {
-    res.render('dashboard/top',{user:req.user,});
+    res.render('dashboard/top',{user:req.user});
     //res.redirect('/dashboard/app/affiliate/');
   } catch (error) {
     res.status(500).send('Server Error');
@@ -22,7 +22,7 @@ router.get('/', ensureAuthenticated, ensureMembership, async (req, res) => {
 }); 
 // Route to render the A/B test creation page
 router.get('/app/create-ab-test', (req, res) => {
-  res.render('dashboard/app/abtest/create-ab-test'); // Render the PUG template
+  res.render('dashboard/app/abtest/create-ab-test',{user:req.user}); // Render the PUG template
 });
 router.get('/app/ab-test-results', async (req, res) => {
   const { affiliateId } = req.query; // Optional query parameter
@@ -38,7 +38,7 @@ router.get('/app/ab-test-results', async (req, res) => {
       const response = await axios.get(apiUrl);
       const results = response.data;
 
-      res.render('dashboard/app/abtest/list', { results, affiliateId });
+      res.render('dashboard/app/abtest/list', { user:req.user, results, affiliateId });
   } catch (error) {
       console.error('Failed to fetch A/B test results:', error);
       res.status(500).send('Failed to fetch A/B test results');

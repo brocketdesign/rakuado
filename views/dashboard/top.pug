@@ -7,7 +7,7 @@ block mainContent
     
     section.my-5
         .row.row-cols-1.row-cols-md-3.my-5
-            .col.mb-3
+            .col.mb-3.isAdmin
                 a.card.btn.bg-white.px-2(href=`/dashboard/app/affiliate/`)
                     .card-body.row.justify-start.items-start.px-2
                         div.col-2.d-flex.align-items-center
@@ -46,8 +46,8 @@ block mainContent
                     .col.my-1
                         a.btn.btn-primary.w-100(href="/user/setting") アカウント設定
                     .col.my-1
-                        a.btn.btn-primary.w-100(href="/about-us") 会社概要
-                    .col.my-1
+                        a.btn.btn-primary.w-100(target="_blank" href="https://hatoltd.com/sell-or-advertise/") 会社概要
+                    .col.my-1.d-none
                         a.btn.btn-outline-primary.w-100(href="#") 使い方ガイド
                     .col.my-1
-                        a.btn.btn-outline-primary.w-100(href="/contact") お問い合わせ
+                        a.btn.btn-outline-primary.w-100(target="_blank" href="https://hatoltd.com/contact/") お問い合わせ
