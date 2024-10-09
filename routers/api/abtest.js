@@ -114,6 +114,7 @@ router.post('/create-ab-test', uploadMulter.fields([
             }
             affiliateObjectId = new ObjectId(affiliateId);
         }
+        const userId = new ObjectId(req.user._id);
 
         // Create a unique testId
         const testId = new ObjectId().toString();
@@ -150,10 +151,11 @@ router.post('/create-ab-test', uploadMulter.fields([
 
         // Insert the A/B test into the abTests collection
         await global.db.collection('abTests').insertOne({
-            testId: testId,
+            testId,
+            userId,
             affiliateId: affiliateObjectId,
             uploadDate: new Date(),
-            active: true, // Default to active upon creation
+            active: false, // Default to active upon creation
             images: [imageAData, imageBData]
         });
 
@@ -186,10 +188,11 @@ router.get('/get-ab-test-image', async (req, res) => {
 
         // Fetch the activated images for the A/B test
         const tests = await global.db.collection('abTests').aggregate([
-            { 
-                $match: matchStage
-            },
-            { $sample: { size: 1 } } // Randomly select one test
+            { $match: matchStage },
+            { $lookup: { from: 'users', localField: 'userId', foreignField: '_id', as: 'user' } },
+            { $unwind: '$user' },
+            { $match: { 'user.credits': { $gte: 0.3 } } },
+            { $sample: { size: 1 } },
         ]).toArray();
 
         if (tests.length === 0) {
@@ -231,6 +234,26 @@ router.patch('/activate-test', async (req, res) => {
             return res.status(400).json({ error: 'Invalid testId format.' });
         }
 
+        // If activating, check if user has enough credits
+        if (active) {
+            const abTest = await global.db.collection('abTests').findOne({ testId: testId });
+            if (!abTest) {
+                return res.status(404).json({ error: 'A/B Test not found.' });
+            }
+            
+            const userId = abTest.userId ? new ObjectId(abTest.userId) : req.user._id;
+            const user = await global.db.collection('users').findOne({ _id: userId });
+            if (!user) {
+                return res.status(404).json({ error: 'User not found.' });
+            }
+            const minimumCredits = 500;
+            const userCredit = user.credits ? user.credits : 0 
+            console.log({userCredit,minimumCredits,test:(userCredit < minimumCredits)})
+            if (userCredit < minimumCredits) {
+                return res.status(403).json({ error: 'A/Bテストをアクティブにするためのクレジットが不足しています。' });
+            }
+        }
+
         // Update the active status in the abTests collection
         const result = await global.db.collection('abTests').updateOne(
             { testId: testId },
@@ -241,7 +264,7 @@ router.patch('/activate-test', async (req, res) => {
             return res.status(404).json({ error: 'A/B Test not found.' });
         }
 
-        res.json({ message: `A/B Test has been ${active ? 'activated' : 'deactivated'} successfully.` });
+        return res.json({ message: `A/B Test has been ${active ? 'activated' : 'deactivated'} successfully.` });
     } catch (error) {
         console.error('Failed to update A/B Test status:', error);
         res.status(500).json({ error: 'Internal server error.' });
@@ -333,6 +356,15 @@ router.get('/register-click', async (req, res) => {
             return res.status(404).json({ error: 'A/B Test not found.' });
         }
 
+        //Deduct 1 credit and deactivate ads if necessary
+        const advertiserId = new ObjectId(test.userId);
+        const user = await global.db.collection('users').findOne({ _id: advertiserId });
+        if (user.credits < 1) {
+          await global.db.collection('abTests').updateMany({ userId: advertiserId }, { $set: { active: false } });
+          return res.status(403).json({ error: 'Insufficient credits.' });
+        }
+        await global.db.collection('users').updateOne({ _id: advertiserId }, { $inc: { credits: -1 } });
+
         // Find the specific image within the test
         const image = test.images.find(img => img.imageId === imageId);
         if (!image) {
@@ -410,6 +442,15 @@ router.get('/register-view', async (req, res) => {
             return res.status(404).json({ error: 'A/B Test not found.' });
         }
 
+        //Deduct 0.3 credits and deactivate ads if necessary
+        const advertiserId = new ObjectId(test.userId);
+        const user = await global.db.collection('users').findOne({ _id: advertiserId });
+        if (user.credits < 0.3) {
+          await global.db.collection('abTests').updateMany({ userId: advertiserId }, { $set: { active: false } });
+          return res.status(403).json({ error: 'Insufficient credits.' });
+        }
+        await global.db.collection('users').updateOne({ _id: advertiserId }, { $inc: { credits: -0.3 } });
+
         // Find the specific image within the test
         const image = test.images.find(img => img.imageId === imageId);
         if (!image) {
@@ -467,7 +508,7 @@ router.get('/get-ab-test-results', async (req, res) => {
 
         // Build the match stage
         let matchStage = {
-            uploadDate: { $gte: startDate, $lte: endDate }
+            //uploadDate: { $gte: startDate, $lte: endDate }
         };
 
         if (affiliateId) {

@@ -1,7 +1,7 @@
 extends ../../base
 
 block mainContent
-  h1 Create New A/B Test
+  h1 新しいA/Bテストを作成する
 
   form#abTestForm(method="POST" action="/api/abtest/create-ab-test" enctype="multipart/form-data")
     .row
@@ -14,7 +14,7 @@ block mainContent
                         input#imageAName.form-control(type="text" name="imageAName" required placeholder="画像 A の名前を入力してください")
                     .form-group
                         label(for="imageATargetUrl") 画像 A のターゲット URL
-                        input#imageATargetUrl.form-control(type="url" name="imageATargetUrl" placeholder="画像 A のターゲット URL を入力してください")
+                        input#imageATargetUrl.form-control(type="url" name="imageATargetUrl" placeholder="https://...")
                     .form-group
                         label(for="dropzoneA") 画像 A をアップロード
                         #dropzoneA.dropzone.d-flex.align-items-center.text-center.border.border-secondary.rounded.p-4(style="height: 200px; cursor: pointer; background-image: url('/img/default-image.png'); background-size: cover; background-position: center;")
@@ -30,7 +30,7 @@ block mainContent
                         input#imageBName.form-control(type="text" name="imageBName" required placeholder="画像 B の名前を入力してください")
                     .form-group
                         label(for="imageBTargetUrl") 画像 B のターゲット URL
-                        input#imageBTargetUrl.form-control(type="url" name="imageBTargetUrl" placeholder="画像 B のターゲット URL を入力してください")
+                        input#imageBTargetUrl.form-control(type="url" name="imageBTargetUrl" placeholder="https://...")
                     .form-group
                         label(for="dropzoneB") 画像 B をアップロード
                         #dropzoneB.dropzone.d-flex.align-items-center.text-center.border.border-secondary.rounded.p-4(style="height: 200px; cursor: pointer; background-image: url('/img/default-image.png'); background-size: cover; background-position: center;")
@@ -41,8 +41,12 @@ block mainContent
     //- Submit Button
     .row
       .col-12.text-center
-        button#submitBtn.btn.btn-primary(type="submit") Create A/B Test
-
+        button#submitBtn.btn.btn-primary(type="submit") 新しいA/Bテストを作成する
+  style.
+    label{
+      color:#ccc;
+      font-size:14px;
+    }
   // Include jQuery and any other scripts
   script(src="https://code.jquery.com/jquery-3.6.0.min.js")
   script.

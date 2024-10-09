@@ -2,6 +2,27 @@
 const logout = () => window.location.href = '/user/logout';
 const YOUR_LARGE_SCREEN_BREAKPOINT = 992
 
+function checkIfAdmin() {
+    $.ajax({
+      url: '/user/is-admin',
+      type: 'GET',
+      success: function(response) {
+        console.log({isadmin:response.isAdmin})
+        if (response.isAdmin) {
+          $('.isAdmin').show();
+        } else {
+          $('.isAdmin').hide();
+        }
+      },
+      error: function(xhr) {
+        console.error('Failed to check if user is admin:', xhr.responseJSON.error);
+      }
+    });
+  }
+
+  $(document).ready(function() {
+    checkIfAdmin();
+  });
 const checkFormChange = (initialData, form) => {
     return Array.from(form.entries()).some(([name, value]) => value !== initialData.get(name));
 }
@@ -18,6 +39,65 @@ const previewImage = (imageInput, imagePreview) => {
 const inputTrigger = (inputElement, triggerElement) => {
     triggerElement.addEventListener('click', () => inputElement.click());
 }
+window.showNotification = function(message, icon) {
+    Swal.fire({
+        position: 'top-end',
+        icon: icon,
+        title: message,
+        showConfirmButton: false,
+        timer: 3000,
+        toast: true,
+        customClass: {
+            title: 'swal2-custom-title',
+            popup: 'swal2-custom-popup'
+        },
+        showClass: {
+            popup: 'animate__animated animate__slideInRight'
+        },
+        hideClass: {
+            popup: 'animate__animated animate__slideOutRight'
+        }
+    });
+}
+window.updateUserCredits = function() {
+    $.ajax({
+      url: '/user/credits',
+      type: 'GET',
+      success: function(response) {
+        if (response.credits !== undefined) {
+          $('.user-credits').text(response.credits);
+        }
+      },
+      error: function(xhr) {
+        console.error('Failed to fetch user credits:', xhr.responseJSON.error);
+      }
+    });
+}
+
+$(document).ready(function() {
+updateUserCredits();
+});
+$(document).ready(function() {
+    // Function to check for payment query parameters in the URL
+    function getQueryParams(param) {
+        let urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(param);
+    }
+
+    // Check for 'payment' and 'message' query parameters
+    const paymentStatus = getQueryParams('payment');
+    const message = getQueryParams('message');
+
+    if (paymentStatus && message) {
+        // Determine icon based on payment status
+        let icon = (paymentStatus === 'success') ? 'success' : 'error';
+        showNotification(message, icon);
+
+        // Remove query parameters from URL without reloading the page
+        const newUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+    }
+});
 $(document).ready(function() {
 
     handleLoginForm()
@@ -669,10 +749,10 @@ function scrollToTop() {
 // Function to handle the appearance of the sidebar menu based on the isSidebarMenuVisible value
 function adjustSidebarAppearance(isVisible) {
     if (isVisible) {
+        $('#sidebarMenu').hide()
         $('#sidebarMenu').find('.hide-text').hide()
         $('#sidebarMenu').find('.collapse').removeClass('show').end()
         //iconAnimation();
-        $('#sidebarMenu').hide()
         $('#sidebarMenu').removeClass('open')
         /*
         $('#sidebarMenu').animate({ width: '60px' }, 100, function() {
@@ -683,10 +763,14 @@ function adjustSidebarAppearance(isVisible) {
         });
         */
     } else {
-        $('#sidebarMenu').show()
-        $('#sidebarMenu').find('.list-group-item').removeClass('text-center').end()
-        $('#sidebarMenu').find('.hide-text').show();
-        $('#sidebarMenu').addClass('open')
+
+            $('#sidebarMenu').fadeIn()
+            $('#sidebarMenu').find('.list-group-item').removeClass('text-center').end()
+            $('#sidebarMenu').find('.hide-text').show();
+            $('#sidebarMenu').addClass('open')
+            $('#sidebarMenu').animate({ 'max-height': '100vh' }, 500, function() {});
+        
+
         /*
         $('#sidebarMenu').animate({ width: '250px' }, 100, function() {
             $('#sidebarMenu').find('.hide-text').fadeIn();
@@ -728,7 +812,6 @@ function handleSideBar() {
 }
 
 function adjustSidebarAppearance2(){
-
     if ($('#sidebarMenu').is(':visible')) {
         enableTrackScroll()
         $('#sidebarMenu').find('.collapse').removeClass('show').end()
@@ -746,7 +829,7 @@ function adjustSidebarAppearance2(){
 }
 function handleSideBar2(){
     $('#sidebarMenu').hide()
-    $('#sidebarMenu').css({ 'max-height': '0' ,width:"100%"})
+    $('#sidebarMenu').css({ 'max-height': '0','left': '10px' ,width:"auto"})
     $('main#dashboard').show();
     $('#sidebarMenuToggleSmall').on('click', adjustSidebarAppearance2);
 }
@@ -1194,10 +1277,10 @@ const handleUserProfile = () => {
     
     if (profileImageInput && bannerImageInput ) {
       inputTrigger(profileImageInput, document.querySelector('.profile-image'));
-      inputTrigger(bannerImageInput, document.querySelector('.banner-image'));
+      //inputTrigger(bannerImageInput, document.querySelector('.banner-image'));
   
       previewImage(profileImageInput, document.querySelector('.profile-image img'));
-      previewImage(bannerImageInput, document.querySelector('.header img'));
+      //previewImage(bannerImageInput, document.querySelector('.header img'));
   
     }
     // Active Tab

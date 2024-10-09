@@ -1,29 +1,34 @@
-#sidebarMenu.bg-white.position-fixed.col-md-2.p-0.shadow(style="right:10px;z-index:10;width:60px; overflow-y: auto; max-height: 100vh;display:none")
+#sidebarMenu.bg-white.position-fixed.col-md-2.p-0.shadow(style="right:10px; margin-top: 10px; z-index:10; min-width:80px; width:auto; overflow-y:auto; max-height:100vh; display:none; border-radius:20px;")
   .position-sticky
     .list-group.list-group-flush
-      li#sidebarMenuToggle.list-group-item.list-group-item-action.p-3.ripple.toggler.align-items-center.d-none(type="button")
+      li#sidebarMenuToggle.list-group-item.list-group-item-action.p-3.ripple.toggler.align-items-center.d-flex.justify-content-center.align-items-center(type="button")
         i.fas.fa-bars
         .hide-text.mx-2
-          | RAKUBUN
-      li.list-group-item.list-group-item-action.p-3(data-bs-toggle="tooltip" title="Setting")
+          | ラクブン (RAKUBUN)
+      li.list-group-item.list-group-item-action.p-3(data-bs-toggle="tooltip" title="設定")
         if user
-          a(href="/user/setting") 
+          a(href="/user/setting")
             i.fas.fa-user-circle
-            span.hide-text.ms-3 Account
-      li.list-group-item.list-group-item-action.p-3.ripple(data-bs-toggle="tooltip" title="Upgrade")
-        a(href='/payment/subscription')
-          i.fas.fa-arrow-up
-          span.hide-text.ms-3=user && user.subscriptionId?"Subscription":"Upgrade" 
-      li.list-group-item.list-group-item-action.p-3.ripple(data-bs-toggle="tooltip" title="Contact Us")
-        a(href="/contact") 
+            span.hide-text.ms-3 アカウント
+      li.list-group-item.list-group-item-action.p-3.ripple(data-bs-toggle="tooltip" title="お問い合わせ")
+        a(target="_blank" href="https://hatoltd.com/contact/")
           i.fas.fa-question
-          span.hide-text.ms-3 Contact Us
-      li.list-group-item.list-group-item-action.p-3(data-bs-toggle="tooltip" title="Logout")
+          span.hide-text.ms-3 お問い合わせ
+      li.list-group-item.list-group-item-action.p-3.ripple.custom-gradient-bg(data-bs-toggle="tooltip" title="クレジットショップ")
+        button#showCreditShopButton.btn.btn-primary.btn-sm.shadow-none.bg-transparent(style="border-radius: 20px; width:100%; padding:10px;")
+          i.fas.fa-credit-card
+          span.hide-text.ms-3 クレジットを追加する
+      li.list-group-item.list-group-item-action.p-3.ripple(data-bs-toggle="tooltip" title="ログアウト" style="color: red;")
         if user
-          a(href='#', onclick='logout()') 
+          a.text-danger(href='#', onclick='logout()')
             i.fas.fa-sign-out-alt
-            span.hide-text.ms-3 Logout
+            span.hide-text.ms-3 ログアウト
         else
-          a(href='/user/login') 
+          a(href='/user/login')
             i.fas.fa-sign-in-alt
-            span.hide-text.ms-3 Login
+            span.hide-text.ms-3 ログイン
+  script(src='/js/stripe.js')      
+  script.
+    $('#showCreditShopButton').on('click', function() {
+      showCreditShop(this);
+    });

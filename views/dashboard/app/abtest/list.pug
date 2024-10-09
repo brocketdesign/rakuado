@@ -3,8 +3,13 @@ extends ../../base
 block mainContent
   .container.mt-5
     h1.text-center.mb-4 A/Bテスト結果
-    .text-right.mb-3
-      a.btn.btn-primary(href="/dashboard/app/create-ab-test") 新規作成
+    .d-flex.justify-content-between.align-items-center
+      .text-right.mb-3
+        a.btn.btn-primary.shadow-0(href="/dashboard/app/create-ab-test") 新規作成
+      .text-right.mb-3
+        button.btn.btn-primary.shadow-0.showCreditShopButton(type="button") 
+          span.user-credits.me-2 0
+          | クレジット
 
     //- フィルタリングフォーム (Removed Affiliate ID filter as per your request)
     form#filterForm(method="GET" action="/app/ab-test-results")
@@ -182,9 +187,9 @@ block mainContent
               throw new Error(result.error || 'Failed to update status.');
             }
             // Optionally, show a success message
-            alert(`A/Bテストは${isActive ? 'アクティブ' : '非アクティブ'}に設定されました。`);
+            showNotification(`A/Bテストは${isActive ? 'アクティブ' : '非アクティブ'}に設定されました。`,'success');
           } catch (error) {
-            alert(`エラー: ${error.message}`);
+            showNotification(`エラー: ${error.message}`,'error');
             // Revert the toggle if there's an error
             event.target.checked = !isActive;
           }
