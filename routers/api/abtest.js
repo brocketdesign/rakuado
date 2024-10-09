@@ -155,7 +155,7 @@ router.post('/create-ab-test', uploadMulter.fields([
             userId,
             affiliateId: affiliateObjectId,
             uploadDate: new Date(),
-            active: true, // Default to active upon creation
+            active: false, // Default to active upon creation
             images: [imageAData, imageBData]
         });
 
@@ -232,6 +232,25 @@ router.patch('/activate-test', async (req, res) => {
         // Validate testId format
         if (!ObjectId.isValid(testId)) {
             return res.status(400).json({ error: 'Invalid testId format.' });
+        }
+
+        // If activating, check if user has enough credits
+        if (active) {
+            const abTest = await global.db.collection('abTests').findOne({ testId: testId });
+            if (!abTest) {
+                return res.status(404).json({ error: 'A/B Test not found.' });
+            }
+            
+            const userId = abTest.userId ? new ObjectId(abTest.userId) : req.user._id;
+            const user = await global.db.collection('users').findOne({ _id: userId });
+            if (!user) {
+                return res.status(404).json({ error: 'User not found.' });
+            }
+            const minimumCredits = 500; // Set your minimum credit threshold here
+            console.log(user.credits)
+            if (user.credits && user.credits < minimumCredits) {
+                return res.status(403).json({ error: 'Insufficient credits to activate the A/B Test.' });
+            }
         }
 
         // Update the active status in the abTests collection
