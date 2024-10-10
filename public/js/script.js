@@ -65,7 +65,7 @@ window.updateUserCredits = function() {
       type: 'GET',
       success: function(response) {
         if (response.credits !== undefined) {
-          $('.user-credits').text(response.credits);
+          $('.user-credits').text(parseFloat(response.credits).toFixed(1));
         }
       },
       error: function(xhr) {
