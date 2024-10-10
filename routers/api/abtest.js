@@ -491,52 +491,29 @@ router.get('/register-view', async (req, res) => {
     }
 });
 
-
-// Endpoint to get A/B test results (including tests with no data)
+// Endpoint to get A/B test results for the current user
 router.get('/get-ab-test-results', async (req, res) => {
-    const { affiliateId } = req.query;
-
     try {
+        const userId = new ObjectId(req.query.userId)
+
         // Define the date range (last 7 days)
         const today = new Date();
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(today.getDate() - 6); // Including today
 
         // Adjust start and end dates
-        const startDate = new Date(sevenDaysAgo.setHours(0,0,0,0));
-        const endDate = new Date(today.setHours(23,59,59,999));
+        const startDate = new Date(sevenDaysAgo.setHours(0, 0, 0, 0));
+        const endDate = new Date(today.setHours(23, 59, 59, 999));
 
-        // Build the match stage
+        // Build the match stage to match A/B tests belonging to the current user
         let matchStage = {
-            //uploadDate: { $gte: startDate, $lte: endDate }
+            userId: userId
         };
-
-        if (affiliateId) {
-            // Validate affiliateId format
-            if (!ObjectId.isValid(affiliateId)) {
-                return res.status(400).json({ error: 'Invalid affiliateId format.' });
-            }
-            matchStage.affiliateId = new ObjectId(affiliateId);
-        }
 
         // Aggregation pipeline
         const pipeline = [
             {
                 $match: matchStage
-            },
-            {
-                $lookup: {
-                    from: 'affiliate',
-                    localField: 'affiliateId',
-                    foreignField: '_id',
-                    as: 'affiliateInfo'
-                }
-            },
-            {
-                $unwind: { 
-                    path: '$affiliateInfo',
-                    preserveNullAndEmptyArrays: true
-                }
             },
             {
                 $lookup: {
@@ -585,9 +562,7 @@ router.get('/get-ab-test-results', async (req, res) => {
             {
                 $addFields: {
                     totalClicks: { $ifNull: [{ $arrayElemAt: ['$clickData.totalClicks', 0] }, 0] },
-                    totalViews: { $ifNull: [{ $arrayElemAt: ['$viewData.totalViews', 0] }, 0] },
-                    affiliateName: { $ifNull: ['$affiliateInfo.name', 'N/A'] },
-                    affiliateIdStr: { $cond: [{ $ifNull: ['$affiliateInfo._id', false] }, { $toString: '$affiliateInfo._id' }, 'N/A'] }
+                    totalViews: { $ifNull: [{ $arrayElemAt: ['$viewData.totalViews', 0] }, 0] }
                 }
             },
             {
@@ -596,8 +571,6 @@ router.get('/get-ab-test-results', async (req, res) => {
                     testId: 1,
                     uploadDate: 1,
                     images: 1,
-                    affiliateName: 1,
-                    affiliateIdStr: 1,
                     totalClicks: 1,
                     totalViews: 1,
                     active: 1
@@ -613,7 +586,7 @@ router.get('/get-ab-test-results', async (req, res) => {
 
         res.json(results);
     } catch (error) {
-        console.error('Failed to get A/B test results:', error);
+        console.log('Failed to get A/B test results:', error);
         res.status(500).json({ error: 'Internal server error.' });
     }
 });
