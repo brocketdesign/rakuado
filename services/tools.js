@@ -150,7 +150,9 @@ async function updateFavicon() {
       console.error('Error updating favicons:', error);
   }
 }
-
+async function checkIfAdmin(user){
+  return ['japanclassicstore@gmail.com'].includes(user.email)
+}
 
 module.exports = {
   addUsertoFreePlan,
@@ -158,5 +160,6 @@ module.exports = {
   getSearchResult,
   getImageSearchResult,
   updateFavicon,
-  fetchFavicon
+  fetchFavicon,
+  checkIfAdmin
 };

@@ -6,6 +6,7 @@ const path = require('path');
 const aws = require('aws-sdk');
 const { createHash } = require('crypto');
 const mime = require('mime-types');
+const { checkIfAdmin } = require('../../services/tools')
 
 // AWS S3 Configuration
 const s3 = new aws.S3({
@@ -235,7 +236,9 @@ router.patch('/activate-test', async (req, res) => {
         }
 
         // If activating, check if user has enough credits
-        if (active) {
+
+        const isAdmin = await checkIfAdmin(req.user)
+        if (active && !isAdmin) {
             const abTest = await global.db.collection('abTests').findOne({ testId: testId });
             if (!abTest) {
                 return res.status(404).json({ error: 'A/B Test not found.' });
@@ -248,7 +251,6 @@ router.patch('/activate-test', async (req, res) => {
             }
             const minimumCredits = 500;
             const userCredit = user.credits ? user.credits : 0 
-            console.log({userCredit,minimumCredits,test:(userCredit < minimumCredits)})
             if (userCredit < minimumCredits) {
                 return res.status(403).json({ error: 'A/Bテストをアクティブにするためのクレジットが不足しています。' });
             }
@@ -359,11 +361,14 @@ router.get('/register-click', async (req, res) => {
         //Deduct 1 credit and deactivate ads if necessary
         const advertiserId = new ObjectId(test.userId);
         const user = await global.db.collection('users').findOne({ _id: advertiserId });
-        if (user.credits < 1) {
-          await global.db.collection('abTests').updateMany({ userId: advertiserId }, { $set: { active: false } });
-          return res.status(403).json({ error: 'Insufficient credits.' });
+        const isAdmin = await checkIfAdmin(user)
+        if(!isAdmin){
+            if (user.credits < 1) {
+            await global.db.collection('abTests').updateMany({ userId: advertiserId }, { $set: { active: false } });
+            return res.status(403).json({ error: 'Insufficient credits.' });
+            }
+            await global.db.collection('users').updateOne({ _id: advertiserId }, { $inc: { credits: -1 } });
         }
-        await global.db.collection('users').updateOne({ _id: advertiserId }, { $inc: { credits: -1 } });
 
         // Find the specific image within the test
         const image = test.images.find(img => img.imageId === imageId);
@@ -445,11 +450,14 @@ router.get('/register-view', async (req, res) => {
         //Deduct 0.3 credits and deactivate ads if necessary
         const advertiserId = new ObjectId(test.userId);
         const user = await global.db.collection('users').findOne({ _id: advertiserId });
-        if (user.credits < 0.3) {
-          await global.db.collection('abTests').updateMany({ userId: advertiserId }, { $set: { active: false } });
-          return res.status(403).json({ error: 'Insufficient credits.' });
+        const isAdmin = await checkIfAdmin(user)
+        if(!isAdmin){
+            if (user.credits < 0.3) {
+            await global.db.collection('abTests').updateMany({ userId: advertiserId }, { $set: { active: false } });
+            return res.status(403).json({ error: 'Insufficient credits.' });
+            }
+            await global.db.collection('users').updateOne({ _id: advertiserId }, { $inc: { credits: -0.3 } });
         }
-        await global.db.collection('users').updateOne({ _id: advertiserId }, { $inc: { credits: -0.3 } });
 
         // Find the specific image within the test
         const image = test.images.find(img => img.imageId === imageId);
