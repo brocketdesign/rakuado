@@ -177,32 +177,40 @@ router.get('/get-ab-test-image', async (req, res) => {
     try {
         // Fetch the affiliate from the database
         const affiliate = await global.db.collection('affiliate').findOne({ _id: new ObjectId(affiliateId) });
+        console.log({ affiliate });
         if (!affiliate) {
             return res.status(404).json({ error: 'Affiliate not found' });
         }
 
-        // Fetch active tests
+        // Fetch active tests without checking for credits
         const matchStage = {
             testId: { $exists: true },
             active: active === 'true' || active === true
         };
 
-        const isAdmin = await checkIfAdmin(user)
-        // Fetch the activated images for the A/B test
         const tests = await global.db.collection('abTests').aggregate([
             { $match: matchStage },
-            { $lookup: { from: 'users', localField: 'userId', foreignField: '_id', as: 'user' } },
-            { $unwind: '$user' },
-            { $match: isAdmin ? {} : { 'user.credits': { $gte: 0.3 } } },  // Check credits only for non-admin users
             { $sample: { size: 1 } },
         ]).toArray();
-
 
         if (tests.length === 0) {
             return res.status(404).json({ error: 'No active A/B Test found.' });
         }
 
         const test = tests[0];
+
+        // Get the userId from the test and find the user
+        const user = await global.db.collection('users').findOne({ _id: new ObjectId(test.userId) });
+
+        const isAdmin = await checkIfAdmin(user);
+
+        // If the user is not an admin, verify credits
+        if (!isAdmin) {
+            if (user.credits < 0.3) {
+                return res.status(403).json({ error: 'Insufficient credits.' });
+            }
+        }
+
         const image = test.images.find(img => img.variant === abChoice);
 
         if (!image) {
@@ -222,6 +230,7 @@ router.get('/get-ab-test-image', async (req, res) => {
         res.status(500).json({ error: 'Internal server error.' });
     }
 });
+
 
 // Endpoint to activate/deactivate an A/B test
 router.patch('/activate-test', async (req, res) => {
