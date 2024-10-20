@@ -177,7 +177,6 @@ router.get('/get-ab-test-image', async (req, res) => {
     try {
         // Fetch the affiliate from the database
         const affiliate = await global.db.collection('affiliate').findOne({ _id: new ObjectId(affiliateId) });
-        console.log({ affiliate });
         if (!affiliate) {
             return res.status(404).json({ error: 'Affiliate not found' });
         }
