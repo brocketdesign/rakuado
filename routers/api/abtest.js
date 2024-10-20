@@ -169,7 +169,7 @@ router.post('/create-ab-test', uploadMulter.fields([
 
 router.get('/get-ab-test-image', async (req, res) => {
     const { affiliateId, abChoice, active } = req.query;
-
+console.log({ affiliateId, abChoice, active })
     if (!affiliateId || !abChoice) {
         return res.status(400).json({ error: 'affiliateId and abChoice parameters are required' });
     }
@@ -178,6 +178,7 @@ router.get('/get-ab-test-image', async (req, res) => {
         // Fetch the affiliate from the database
         const affiliate = await global.db.collection('affiliate').findOne({ _id: new ObjectId(affiliateId) });
         if (!affiliate) {
+            console.log('Affiliate not found')
             return res.status(404).json({ error: 'Affiliate not found' });
         }
 
