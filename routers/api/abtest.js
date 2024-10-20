@@ -169,7 +169,7 @@ router.post('/create-ab-test', uploadMulter.fields([
 
 router.get('/get-ab-test-image', async (req, res) => {
     const { affiliateId, abChoice, active } = req.query;
-console.log({ affiliateId, abChoice, active })
+
     if (!affiliateId || !abChoice) {
         return res.status(400).json({ error: 'affiliateId and abChoice parameters are required' });
     }
@@ -178,7 +178,6 @@ console.log({ affiliateId, abChoice, active })
         // Fetch the affiliate from the database
         const affiliate = await global.db.collection('affiliate').findOne({ _id: new ObjectId(affiliateId) });
         if (!affiliate) {
-            console.log('Affiliate not found')
             return res.status(404).json({ error: 'Affiliate not found' });
         }
 
@@ -188,14 +187,16 @@ console.log({ affiliateId, abChoice, active })
             active: active === 'true' || active === true
         };
 
+        const isAdmin = await checkIfAdmin(user)
         // Fetch the activated images for the A/B test
         const tests = await global.db.collection('abTests').aggregate([
             { $match: matchStage },
             { $lookup: { from: 'users', localField: 'userId', foreignField: '_id', as: 'user' } },
             { $unwind: '$user' },
-            { $match: { 'user.credits': { $gte: 0.3 } } },
+            { $match: isAdmin ? {} : { 'user.credits': { $gte: 0.3 } } },  // Check credits only for non-admin users
             { $sample: { size: 1 } },
         ]).toArray();
+
 
         if (tests.length === 0) {
             return res.status(404).json({ error: 'No active A/B Test found.' });
