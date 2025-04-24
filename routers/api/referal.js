@@ -45,10 +45,10 @@ const upload = multer({ storage, fileFilter, limits: { fileSize: 5*1024*1024 } }
 
 // GET referral info
 router.get('/info', async (req, res) => {
-  const popup = parseInt(req.query.popup, 10);
-  const doc = await POPUPS.findOne({ popup });
-  if (!doc) return res.status(404).json({ error: 'Not found' });
-  return res.json({ imageUrl: doc.imageUrl, targetUrl: doc.targetUrl });
+    const popupOrder = parseInt(req.query.popup, 10);
+    const doc = await POPUPS.findOne({ order: popupOrder });
+    if (!doc) return res.status(404).json({ error: 'Not found' });
+    return res.json({ imageUrl: doc.imageUrl, targetUrl: doc.targetUrl });
 });
 
 // GET register a view

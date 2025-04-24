@@ -24,7 +24,6 @@ block mainContent
                     th(style="width: 60px") 
                       i.bi.bi-arrows-move.me-1
                       | 表示順
-                    th ポップアップID
                     th 画像
                     th ターゲットURL
                     th 操作
@@ -34,9 +33,8 @@ block mainContent
                       td
                         span.handle(style="cursor:move;")
                           i.bi.bi-arrows-move.me-1
-                        input.form-control.form-control-sm.order-input(type="number" name="order[]" value=popup.order min="1" style="width: 60px; display: inline-block;")
+                        span.order-number #{popup.order}
                         input(type="hidden" name="popup[]" value=popup.popup)
-                      td #{popup.popup}
                       td
                         if popup.imageUrl
                           img(src=popup.imageUrl alt="画像" width="60" class="rounded shadow-sm")
@@ -78,6 +76,10 @@ block mainContent
               i.bi.bi-check-lg.me-1
               | 保存
 
+  //- Ensure jQuery UI is loaded for sortable
+  //- script(src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js")
+  //- link(rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css")
+
   script.
     $(function() {
       // Enable drag-and-drop sorting
@@ -85,9 +87,9 @@ block mainContent
         handle: '.handle',
         axis: 'y',
         update: function(event, ui) {
-          // Update order input values after sorting
+          // Update order numbers after sorting
           $('#popupTableBody tr').each(function(index) {
-            $(this).find('.order-input').val(index + 1);
+            $(this).find('.order-number').text(index + 1);
           });
         }
       });
@@ -173,11 +175,14 @@ block mainContent
       // Save order
       $('#orderForm').on('submit', function(e) {
         e.preventDefault();
-        // Ensure order inputs reflect the current order
+        // Build popup[] and order[] arrays based on current row order
+        var popupArr = [];
+        var orderArr = [];
         $('#popupTableBody tr').each(function(index) {
-          $(this).find('.order-input').val(index + 1);
+          popupArr.push($(this).data('popup'));
+          orderArr.push(index + 1);
         });
-        $.post('/api/referal/order', $(this).serialize())
+        $.post('/api/referal/order', { popup: popupArr, order: orderArr })
           .done(function() {
             Swal.fire('順序を保存しました', '', 'success').then(() => location.reload());
           })
