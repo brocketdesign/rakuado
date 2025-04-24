@@ -44,8 +44,8 @@ const upload = multer({ storage, fileFilter, limits: { fileSize: 5*1024*1024 } }
 
 // GET referral info
 router.get('/info', async (req, res) => {
-  const popup = parseInt(req.query.popup, 10);
-  const doc = await POPUPS.findOne({ popup });
+  const order = parseInt(req.query.popup, 10);
+  const doc = await POPUPS.findOne({ order });
   if (!doc) return res.status(404).json({ error: 'Not found' });
   // Add refery array to response for per-domain stats
   return res.json({ imageUrl: doc.imageUrl, targetUrl: doc.targetUrl, refery: doc.refery || [] });
@@ -53,25 +53,25 @@ router.get('/info', async (req, res) => {
 
 // GET register a view (increment counter, track per domain)
 router.get('/register-view', async (req, res) => {
-    const popup = parseInt(req.query.popup, 10);
+    const order = parseInt(req.query.popup, 10);
     const domain = req.query.domain || 'unknown';
 
     // Always increment global views
     await POPUPS.updateOne(
-        { popup },
+        { order },
         { $inc: { views: 1 } }
     );
 
     // Always increment views for this domain in refery array
     const result = await POPUPS.updateOne(
-        { popup, "refery.domain": domain },
+        { order, "refery.domain": domain },
         { $inc: { "refery.$.view": 1 } }
     );
 
     // If domain not present, add it with view:1, click:0
     if (result.matchedCount === 0) {
         await POPUPS.updateOne(
-            { popup },
+            { order },
             { $push: { refery: { domain, view: 1, click: 0 } } }
         );
     }
@@ -81,25 +81,25 @@ router.get('/register-view', async (req, res) => {
 
 // GET register a click (increment counter, track per domain)
 router.get('/register-click', async (req, res) => {
-    const popup = parseInt(req.query.popup, 10);
+    const order = parseInt(req.query.popup, 10);
     const domain = req.query.domain || 'unknown';
 
     // Always increment global clicks
     await POPUPS.updateOne(
-        { popup },
+        { order },
         { $inc: { clicks: 1 } }
     );
 
     // Always increment clicks for this domain in refery array
     const result = await POPUPS.updateOne(
-        { popup, "refery.domain": domain },
+        { order, "refery.domain": domain },
         { $inc: { "refery.$.click": 1 } }
     );
 
     // If domain not present, add it with view:0, click:1
     if (result.matchedCount === 0) {
         await POPUPS.updateOne(
-            { popup },
+            { order },
             { $push: { refery: { domain, view: 0, click: 1 } } }
         );
     }
@@ -134,13 +134,13 @@ router.post('/order', async (req, res) => {
 
 // POST save (create up to 2, or update existing), now with file upload
 router.post('/save', upload.single('image'), async (req, res) => {
-  const pNum = parseInt(req.body.popup, 10);
+  const order = parseInt(req.body.popup, 10);
   let { targetUrl } = req.body;
   let imageUrl = req.body.imageUrl; // fallback if no file
   if (req.file) {
     imageUrl = await handleFileUpload(req.file, global.db);
   }
-  if (isNaN(pNum)) {
+  if (isNaN(order)) {
     // create
     const count = await POPUPS.countDocuments({});
     if (count >= 2) return res.status(400).json({ error: 'Max popups reached' });
@@ -156,7 +156,7 @@ router.post('/save', upload.single('image'), async (req, res) => {
   } else {
     // update
     await POPUPS.updateOne(
-      { popup: pNum },
+      { order },
       { $set: { imageUrl, targetUrl } }
     );
   }
@@ -165,8 +165,8 @@ router.post('/save', upload.single('image'), async (req, res) => {
 
 // DELETE popup
 router.delete('/:popup', async (req, res) => {
-  const popup = parseInt(req.params.popup, 10);
-  const result = await POPUPS.deleteOne({ popup });
+  const order = parseInt(req.params.popup, 10);
+  const result = await POPUPS.deleteOne({ order });
   if (result.deletedCount === 0) {
     return res.status(404).json({ error: 'Not found' });
   }
