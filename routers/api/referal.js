@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const db = global.db;
 const POPUPS = db.collection('referalPopups');
-const EVENTS = db.collection('referalEvents');
 const multer = require('multer');
 const aws = require('aws-sdk');
 const path = require('path');
@@ -45,23 +44,32 @@ const upload = multer({ storage, fileFilter, limits: { fileSize: 5*1024*1024 } }
 
 // GET referral info
 router.get('/info', async (req, res) => {
-    const popupOrder = parseInt(req.query.popup, 10);
-    const doc = await POPUPS.findOne({ order: popupOrder });
-    if (!doc) return res.status(404).json({ error: 'Not found' });
-    return res.json({ imageUrl: doc.imageUrl, targetUrl: doc.targetUrl });
+  const popup = parseInt(req.query.popup, 10);
+  const userId = req.user._id;
+  const doc = await POPUPS.findOne({ popup, userId });
+  if (!doc) return res.status(404).json({ error: 'Not found' });
+  return res.json({ imageUrl: doc.imageUrl, targetUrl: doc.targetUrl });
 });
 
-// GET register a view
+// GET register a view (increment counter)
 router.get('/register-view', async (req, res) => {
   const popup = parseInt(req.query.popup, 10);
-  await EVENTS.insertOne({ popup, type: 'view', ts: new Date() });
+  const userId = req.user._id;
+  await POPUPS.updateOne(
+    { popup, userId },
+    { $inc: { views: 1 } }
+  );
   return res.sendStatus(200);
 });
 
-// GET register a click
+// GET register a click (increment counter)
 router.get('/register-click', async (req, res) => {
   const popup = parseInt(req.query.popup, 10);
-  await EVENTS.insertOne({ popup, type: 'click', ts: new Date() });
+  const userId = req.user._id;
+  await POPUPS.updateOne(
+    { popup, userId },
+    { $inc: { clicks: 1 } }
+  );
   return res.sendStatus(200);
 });
 
@@ -93,7 +101,6 @@ router.post('/order', async (req, res) => {
 
 // POST save (create up to 2, or update existing), now with file upload
 router.post('/save', upload.single('image'), async (req, res) => {
-  // ...existing code up to parsing...
   const pNum = parseInt(req.body.popup, 10);
   let { targetUrl } = req.body;
   let imageUrl = req.body.imageUrl; // fallback if no file
@@ -106,10 +113,21 @@ router.post('/save', upload.single('image'), async (req, res) => {
     const count = await POPUPS.countDocuments({ userId });
     if (count >= 2) return res.status(400).json({ error: 'Max popups reached' });
     const next = count + 1;
-    await POPUPS.insertOne({ popup: next, imageUrl, targetUrl, order: next, userId });
+    await POPUPS.insertOne({
+      popup: next,
+      imageUrl,
+      targetUrl,
+      order: next,
+      userId,
+      views: 0,
+      clicks: 0
+    });
   } else {
     // update
-    await POPUPS.updateOne({ popup: pNum, userId }, { $set: { imageUrl, targetUrl } });
+    await POPUPS.updateOne(
+      { popup: pNum, userId },
+      { $set: { imageUrl, targetUrl } }
+    );
   }
   return res.json({ imageUrl });
 });

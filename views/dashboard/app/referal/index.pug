@@ -26,6 +26,8 @@ block mainContent
                       | 表示順
                     th 画像
                     th ターゲットURL
+                    th 表示数
+                    th クリック数
                     th 操作
                 tbody#popupTableBody
                   each popup, idx in popups
@@ -44,6 +46,8 @@ block mainContent
                         a(href=popup.targetUrl target="_blank" class="text-decoration-none")
                           i.bi.bi-link-45deg.me-1
                           | #{popup.targetUrl}
+                      td #{popup.views || 0}
+                      td #{popup.clicks || 0}
                       td
                         button.btn.btn-outline-primary.btn-sm.me-1.btn-edit(type="button" data-popup=popup.popup title="編集")
                           i.bi.bi-pencil-square
