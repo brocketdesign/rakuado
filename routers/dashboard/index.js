@@ -149,13 +149,12 @@ router.get('/app/autoblog/blog-info/:blogId?', async (req, res) => {
 });
 
 router.get('/app/referal', ensureAuthenticated, ensureMembership, async (req, res) => {
-  const userId = req.user._id;
-  // Fetch popups for this user (now includes views/clicks fields)
-  const popups = await POPUPS.find({ userId }).sort({ order: 1 }).toArray();
+  // Fetch all popups (no userId filter)
+  const popups = await POPUPS.find({}).sort({ order: 1 }).toArray();
 
   const q = parseInt(req.query.popup, 10);
   const popupData = !isNaN(q)
-    ? await POPUPS.findOne({ popup: q, userId })
+    ? await POPUPS.findOne({ popup: q })
     : { popup: '', imageUrl: '', targetUrl: '' };
   res.render('dashboard/app/referal/index', { user: req.user, popups, popupData });
 });

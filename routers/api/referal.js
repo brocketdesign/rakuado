@@ -45,8 +45,7 @@ const upload = multer({ storage, fileFilter, limits: { fileSize: 5*1024*1024 } }
 // GET referral info
 router.get('/info', async (req, res) => {
   const popup = parseInt(req.query.popup, 10);
-  const userId = req.user._id;
-  const doc = await POPUPS.findOne({ popup, userId });
+  const doc = await POPUPS.findOne({ popup });
   if (!doc) return res.status(404).json({ error: 'Not found' });
   return res.json({ imageUrl: doc.imageUrl, targetUrl: doc.targetUrl });
 });
@@ -54,9 +53,8 @@ router.get('/info', async (req, res) => {
 // GET register a view (increment counter)
 router.get('/register-view', async (req, res) => {
   const popup = parseInt(req.query.popup, 10);
-  const userId = req.user._id;
   await POPUPS.updateOne(
-    { popup, userId },
+    { popup },
     { $inc: { views: 1 } }
   );
   return res.sendStatus(200);
@@ -65,9 +63,8 @@ router.get('/register-view', async (req, res) => {
 // GET register a click (increment counter)
 router.get('/register-click', async (req, res) => {
   const popup = parseInt(req.query.popup, 10);
-  const userId = req.user._id;
   await POPUPS.updateOne(
-    { popup, userId },
+    { popup },
     { $inc: { clicks: 1 } }
   );
   return res.sendStatus(200);
@@ -75,7 +72,6 @@ router.get('/register-click', async (req, res) => {
 
 // POST update popup order
 router.post('/order', async (req, res) => {
-  const userId = req.user._id;
   let orders = req.body.order || [];
   let popups = req.body.popup || [];
 
@@ -83,15 +79,15 @@ router.post('/order', async (req, res) => {
   if (!Array.isArray(orders)) orders = [orders];
   if (!Array.isArray(popups)) popups = [popups];
 
-  // Update each popup's order for this user
+  // Update each popup's order
   for (let i = 0; i < popups.length; i++) {
     const p = parseInt(popups[i], 10);
     const o = parseInt(orders[i], 10);
-    await POPUPS.updateOne({ popup: p, userId }, { $set: { order: o } });
+    await POPUPS.updateOne({ popup: p }, { $set: { order: o } });
   }
 
-  // Re-normalize: fetch all popups for this user, sort by 'order', and reassign order fields
-  const userPopups = await POPUPS.find({ userId }).sort({ order: 1 }).toArray();
+  // Re-normalize: fetch all popups, sort by 'order', and reassign order fields
+  const userPopups = await POPUPS.find({}).sort({ order: 1 }).toArray();
   for (let i = 0; i < userPopups.length; i++) {
     await POPUPS.updateOne({ _id: userPopups[i]._id }, { $set: { order: i + 1 } });
   }
@@ -107,10 +103,9 @@ router.post('/save', upload.single('image'), async (req, res) => {
   if (req.file) {
     imageUrl = await handleFileUpload(req.file, global.db);
   }
-  const userId = req.user._id;
   if (isNaN(pNum)) {
     // create
-    const count = await POPUPS.countDocuments({ userId });
+    const count = await POPUPS.countDocuments({});
     if (count >= 2) return res.status(400).json({ error: 'Max popups reached' });
     const next = count + 1;
     await POPUPS.insertOne({
@@ -118,14 +113,13 @@ router.post('/save', upload.single('image'), async (req, res) => {
       imageUrl,
       targetUrl,
       order: next,
-      userId,
       views: 0,
       clicks: 0
     });
   } else {
     // update
     await POPUPS.updateOne(
-      { popup: pNum, userId },
+      { popup: pNum },
       { $set: { imageUrl, targetUrl } }
     );
   }
@@ -135,8 +129,7 @@ router.post('/save', upload.single('image'), async (req, res) => {
 // DELETE popup
 router.delete('/:popup', async (req, res) => {
   const popup = parseInt(req.params.popup, 10);
-  const userId = req.user._id;
-  const result = await POPUPS.deleteOne({ popup, userId });
+  const result = await POPUPS.deleteOne({ popup });
   if (result.deletedCount === 0) {
     return res.status(404).json({ error: 'Not found' });
   }
