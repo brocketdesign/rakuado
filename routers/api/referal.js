@@ -100,6 +100,17 @@ router.post('/save', upload.single('image'), async (req, res) => {
   return res.json({ imageUrl });
 });
 
+// DELETE popup
+router.delete('/:popup', async (req, res) => {
+  const popup = parseInt(req.params.popup, 10);
+  const userId = req.user._id;
+  const result = await POPUPS.deleteOne({ popup, userId });
+  if (result.deletedCount === 0) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  return res.sendStatus(200);
+});
+
 // GET API metadata
 router.get('/about', (req, res) => {
   res.json({ app: 'referal', version: '1.0.0', description: 'Referral popups API' });

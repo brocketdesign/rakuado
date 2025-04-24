@@ -13,11 +13,11 @@ block mainContent
             span
               i.bi.bi-list-ol.me-2
               | ポップアップ順序管理
-            a.btn.btn-primary.btn-sm(href="/dashboard/app/referal")
+            button.btn.btn-primary.btn-sm#btnNewPopup(type="button")
               i.bi.bi-plus-circle.me-1
               | 新規作成
           .card-body
-            form(action="/api/referal/order" method="post")
+            form#orderForm
               table.table.table-hover.align-middle
                 thead
                   tr
@@ -28,7 +28,7 @@ block mainContent
                     th 操作
                 tbody
                   each popup in popups
-                    tr
+                    tr(data-popup=popup.popup)
                       td
                         input.form-control.form-control-sm(type="number" name="order[]" value=popup.order min="1" max="2" style="width: 70px; display: inline-block;")
                         input(type="hidden" name="popup[]" value=popup.popup)
@@ -43,39 +43,127 @@ block mainContent
                           i.bi.bi-link-45deg.me-1
                           | #{popup.targetUrl}
                       td
-                        a.btn.btn-outline-primary.btn-sm(
-                          href=`/dashboard/app/referal?popup=${popup.popup}`
-                          title="編集"
-                        )
+                        button.btn.btn-outline-primary.btn-sm.me-1.btn-edit(type="button" data-popup=popup.popup title="編集")
                           i.bi.bi-pencil-square
+                        button.btn.btn-outline-danger.btn-sm.btn-delete(type="button" data-popup=popup.popup title="削除")
+                          i.bi.bi-trash
               .mt-3.text-end
                 button.btn.btn-success(type="submit")
                   i.bi.bi-save.me-1
                   | 順序を保存
 
-    .row
-      .col-12
-        .card.shadow-sm
-          .card-header.bg-dark.text-white
-            i.bi.bi-pencil-square.me-2
-            | ポップアップ追加・編集
-          .card-body
-            form(action="/api/referal/save" method="post" enctype="multipart/form-data")
-              input(type="hidden" name="popup" value=popupData.popup)
-              if popupData.imageUrl
-                .mb-2
-                  img(src=popupData.imageUrl alt="現在の画像" width="100" class="rounded shadow-sm")
-              .mb-3
-                label.form-label(for="image") 画像アップロード
-                input.form-control(type="file" name="image" id="image" accept="image/*")
-                input(type="hidden" name="imageUrl" value=popupData.imageUrl)
-              .mb-3
-                label.form-label(for="targetUrl") ターゲットURL
-                input.form-control(type="text" name="targetUrl" id="targetUrl" value=popupData.targetUrl)
-              button.btn.btn-primary(type="submit")
-                i.bi.bi-check-lg.me-1
-                | 保存
+  //- Modal for Add/Edit Popup
+  .modal.fade#popupModal(tabindex="-1" aria-labelledby="popupModalLabel" aria-hidden="true")
+    .modal-dialog
+      .modal-content
+        .modal-header
+          h5.modal-title#popupModalLabel ポップアップ追加・編集
+          button.btn-close(type="button" data-bs-dismiss="modal" aria-label="Close")
+        .modal-body
+          form#popupForm(enctype="multipart/form-data")
+            input(type="hidden" name="popup" id="popupId")
+            .mb-3
+              label.form-label(for="image") 画像アップロード
+              input.form-control(type="file" name="image" id="image" accept="image/*")
+              input(type="hidden" name="imageUrl" id="imageUrl")
+              .mt-2#currentImage
+            .mb-3
+              label.form-label(for="targetUrl") ターゲットURL
+              input.form-control(type="text" name="targetUrl" id="targetUrl")
+            button.btn.btn-primary(type="submit")
+              i.bi.bi-check-lg.me-1
+              | 保存
 
-  //- Bootstrap Icons CDN (if not already included in base)
-  block append scripts
-    script(src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.js")
+block append scripts
+  script.
+    $(function() {
+      // Open modal for new popup
+      $('#btnNewPopup').on('click', function() {
+        $('#popupModalLabel').text('ポップアップ追加');
+        $('#popupForm')[0].reset();
+        $('#popupId').val('');
+        $('#imageUrl').val('');
+        $('#currentImage').html('');
+        $('#popupModal').modal('show');
+      });
+
+      // Edit popup
+      $('.btn-edit').on('click', function() {
+        const popup = $(this).data('popup');
+        $.get('/api/referal/info', { popup }, function(data) {
+          $('#popupModalLabel').text('ポップアップ編集');
+          $('#popupId').val(popup);
+          $('#targetUrl').val(data.targetUrl || '');
+          $('#imageUrl').val(data.imageUrl || '');
+          if (data.imageUrl) {
+            $('#currentImage').html('<img src="'+data.imageUrl+'" alt="現在の画像" width="100" class="rounded shadow-sm"/>');
+          } else {
+            $('#currentImage').html('');
+          }
+          $('#image').val('');
+          $('#popupModal').modal('show');
+        }).fail(function() {
+          Swal.fire('エラー', '情報の取得に失敗しました', 'error');
+        });
+      });
+
+      // Delete popup
+      $('.btn-delete').on('click', function() {
+        const popup = $(this).data('popup');
+        Swal.fire({
+          title: '削除しますか？',
+          text: 'このポップアップを削除します。よろしいですか？',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'はい、削除',
+          cancelButtonText: 'キャンセル'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            $.ajax({
+              url: '/api/referal/' + popup,
+              type: 'DELETE',
+              success: function() {
+                Swal.fire('削除しました', '', 'success').then(() => location.reload());
+              },
+              error: function() {
+                Swal.fire('エラー', '削除に失敗しました', 'error');
+              }
+            });
+          }
+        });
+      });
+
+      // Save popup (add/edit)
+      $('#popupForm').on('submit', function(e) {
+        e.preventDefault();
+        var formData = new FormData(this);
+        $.ajax({
+          url: '/api/referal/save',
+          type: 'POST',
+          data: formData,
+          processData: false,
+          contentType: false,
+          success: function() {
+            $('#popupModal').modal('hide');
+            Swal.fire('保存しました', '', 'success').then(() => location.reload());
+          },
+          error: function(xhr) {
+            let msg = '保存に失敗しました';
+            if (xhr.responseJSON && xhr.responseJSON.error) msg = xhr.responseJSON.error;
+            Swal.fire('エラー', msg, 'error');
+          }
+        });
+      });
+
+      // Save order
+      $('#orderForm').on('submit', function(e) {
+        e.preventDefault();
+        $.post('/api/referal/order', $(this).serialize())
+          .done(function() {
+            Swal.fire('順序を保存しました', '', 'success').then(() => location.reload());
+          })
+          .fail(function() {
+            Swal.fire('エラー', '順序の保存に失敗しました', 'error');
+          });
+      });
+    });
