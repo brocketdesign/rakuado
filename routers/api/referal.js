@@ -67,13 +67,27 @@ router.get('/register-click', async (req, res) => {
 
 // POST update popup order
 router.post('/order', async (req, res) => {
-  const orders = req.body.order || [];
-  const popups = req.body.popup || [];
+  const userId = req.user._id;
+  let orders = req.body.order || [];
+  let popups = req.body.popup || [];
+
+  // Ensure arrays
+  if (!Array.isArray(orders)) orders = [orders];
+  if (!Array.isArray(popups)) popups = [popups];
+
+  // Update each popup's order for this user
   for (let i = 0; i < popups.length; i++) {
     const p = parseInt(popups[i], 10);
     const o = parseInt(orders[i], 10);
-    await POPUPS.updateOne({ popup: p }, { $set: { order: o } });
+    await POPUPS.updateOne({ popup: p, userId }, { $set: { order: o } });
   }
+
+  // Re-normalize: fetch all popups for this user, sort by 'order', and reassign order fields
+  const userPopups = await POPUPS.find({ userId }).sort({ order: 1 }).toArray();
+  for (let i = 0; i < userPopups.length; i++) {
+    await POPUPS.updateOne({ _id: userPopups[i]._id }, { $set: { order: i + 1 } });
+  }
+
   return res.sendStatus(200);
 });
 

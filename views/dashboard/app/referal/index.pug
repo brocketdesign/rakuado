@@ -21,16 +21,20 @@ block mainContent
               table.table.table-hover.align-middle
                 thead
                   tr
-                    th(style="width: 80px") 順序
-                    th Popup #
+                    th(style="width: 60px") 
+                      i.bi.bi-arrows-move.me-1
+                      | 表示順
+                    th ポップアップID
                     th 画像
                     th ターゲットURL
                     th 操作
-                tbody
-                  each popup in popups
+                tbody#popupTableBody
+                  each popup, idx in popups
                     tr(data-popup=popup.popup)
                       td
-                        input.form-control.form-control-sm(type="number" name="order[]" value=popup.order min="1" max="2" style="width: 70px; display: inline-block;")
+                        span.handle(style="cursor:move;")
+                          i.bi.bi-arrows-move.me-1
+                        input.form-control.form-control-sm.order-input(type="number" name="order[]" value=popup.order min="1" style="width: 60px; display: inline-block;")
                         input(type="hidden" name="popup[]" value=popup.popup)
                       td #{popup.popup}
                       td
@@ -76,6 +80,18 @@ block mainContent
 
   script.
     $(function() {
+      // Enable drag-and-drop sorting
+      $('#popupTableBody').sortable({
+        handle: '.handle',
+        axis: 'y',
+        update: function(event, ui) {
+          // Update order input values after sorting
+          $('#popupTableBody tr').each(function(index) {
+            $(this).find('.order-input').val(index + 1);
+          });
+        }
+      });
+
       // Open modal for new popup
       $('#btnNewPopup').on('click', function() {
         $('#popupModalLabel').text('ポップアップ追加');
@@ -157,6 +173,10 @@ block mainContent
       // Save order
       $('#orderForm').on('submit', function(e) {
         e.preventDefault();
+        // Ensure order inputs reflect the current order
+        $('#popupTableBody tr').each(function(index) {
+          $(this).find('.order-input').val(index + 1);
+        });
         $.post('/api/referal/order', $(this).serialize())
           .done(function() {
             Swal.fire('順序を保存しました', '', 'success').then(() => location.reload());
@@ -166,3 +186,4 @@ block mainContent
           });
       });
     });
+    // jQuery UI sortable required
