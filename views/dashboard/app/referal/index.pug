@@ -48,11 +48,19 @@ block mainContent
                           | #{popup.targetUrl}
                       td #{popup.views || 0}
                       td #{popup.clicks || 0}
-                      td
+                      td.d-flex.align-items-center
+                        button.btn.btn-outline-secondary.btn-sm.me-1.btn-toggle-domain(type="button" data-popup=popup.popup title="ドメイン別統計を表示")
+                          i.bi.bi-chevron-down
                         button.btn.btn-outline-primary.btn-sm.me-1.btn-edit(type="button" data-popup=popup.popup title="編集")
                           i.bi.bi-pencil-square
                         button.btn.btn-outline-danger.btn-sm.btn-delete(type="button" data-popup=popup.popup title="削除")
                           i.bi.bi-trash
+                    //- Accordion row (hidden by default)
+                    tr.domain-stats-row(style="display:none;" data-popup=popup.popup)
+                      td(colspan="6")
+                        .domain-stats-content.text-center.py-3
+                          .spinner-border.text-secondary(role="status")
+                            span.visually-hidden 読み込み中...
               .mt-3.text-end
                 button.btn.btn-success(type="submit")
                   i.bi.bi-save.me-1
@@ -193,6 +201,41 @@ block mainContent
           .fail(function() {
             Swal.fire('エラー', '順序の保存に失敗しました', 'error');
           });
+      });
+
+      // Accordion toggle for domain stats
+      $('#popupTableBody').on('click', '.btn-toggle-domain', function() {
+        var $btn = $(this);
+        var popup = $btn.data('popup');
+        var $row = $btn.closest('tr');
+        var $accordion = $row.next('.domain-stats-row');
+        if ($accordion.is(':visible')) {
+          $accordion.hide();
+          $btn.find('i').removeClass('bi-chevron-up').addClass('bi-chevron-down');
+          return;
+        }
+        // Hide any other open accordions
+        $('.domain-stats-row').hide();
+        $('.btn-toggle-domain i').removeClass('bi-chevron-up').addClass('bi-chevron-down');
+        $accordion.show();
+        $btn.find('i').removeClass('bi-chevron-down').addClass('bi-chevron-up');
+        // If not loaded yet, fetch domain stats
+        var $content = $accordion.find('.domain-stats-content');
+        $content.html('<div class="spinner-border text-secondary" role="status"><span class="visually-hidden">読み込み中...</span></div>');
+        $.get('/api/referal/info', { popup }, function(data) {
+          if (!data.refery || !data.refery.length) {
+            $content.html('<div class="text-muted">ドメイン別の統計データはありません。</div>');
+            return;
+          }
+          var html = '<table class="table table-sm table-bordered mb-0"><thead><tr><th>ドメイン</th><th>表示数</th><th>クリック数</th></tr></thead><tbody>';
+          data.refery.forEach(function(r) {
+            html += '<tr><td>' + $('<div>').text(r.domain).html() + '</td><td>' + (r.view || 0) + '</td><td>' + (r.click || 0) + '</td></tr>';
+          });
+          html += '</tbody></table>';
+          $content.html(html);
+        }).fail(function() {
+          $content.html('<div class="text-danger">統計データの取得に失敗しました。</div>');
+        });
       });
     });
     // jQuery UI sortable required

@@ -47,27 +47,64 @@ router.get('/info', async (req, res) => {
   const popup = parseInt(req.query.popup, 10);
   const doc = await POPUPS.findOne({ popup });
   if (!doc) return res.status(404).json({ error: 'Not found' });
-  return res.json({ imageUrl: doc.imageUrl, targetUrl: doc.targetUrl });
+  // Add refery array to response for per-domain stats
+  return res.json({ imageUrl: doc.imageUrl, targetUrl: doc.targetUrl, refery: doc.refery || [] });
 });
 
-// GET register a view (increment counter)
+// GET register a view (increment counter, track per domain)
 router.get('/register-view', async (req, res) => {
-  const popup = parseInt(req.query.popup, 10);
-  await POPUPS.updateOne(
-    { popup },
-    { $inc: { views: 1 } }
-  );
-  return res.sendStatus(200);
+    const popup = parseInt(req.query.popup, 10);
+    const domain = req.query.domain || 'unknown';
+
+    // Always increment global views
+    await POPUPS.updateOne(
+        { popup },
+        { $inc: { views: 1 } }
+    );
+
+    // Always increment views for this domain in refery array
+    const result = await POPUPS.updateOne(
+        { popup, "refery.domain": domain },
+        { $inc: { "refery.$.view": 1 } }
+    );
+
+    // If domain not present, add it with view:1, click:0
+    if (result.matchedCount === 0) {
+        await POPUPS.updateOne(
+            { popup },
+            { $push: { refery: { domain, view: 1, click: 0 } } }
+        );
+    }
+
+    return res.sendStatus(200);
 });
 
-// GET register a click (increment counter)
+// GET register a click (increment counter, track per domain)
 router.get('/register-click', async (req, res) => {
-  const popup = parseInt(req.query.popup, 10);
-  await POPUPS.updateOne(
-    { popup },
-    { $inc: { clicks: 1 } }
-  );
-  return res.sendStatus(200);
+    const popup = parseInt(req.query.popup, 10);
+    const domain = req.query.domain || 'unknown';
+
+    // Always increment global clicks
+    await POPUPS.updateOne(
+        { popup },
+        { $inc: { clicks: 1 } }
+    );
+
+    // Always increment clicks for this domain in refery array
+    const result = await POPUPS.updateOne(
+        { popup, "refery.domain": domain },
+        { $inc: { "refery.$.click": 1 } }
+    );
+
+    // If domain not present, add it with view:0, click:1
+    if (result.matchedCount === 0) {
+        await POPUPS.updateOne(
+            { popup },
+            { $push: { refery: { domain, view: 0, click: 1 } } }
+        );
+    }
+
+    return res.sendStatus(200);
 });
 
 // POST update popup order
