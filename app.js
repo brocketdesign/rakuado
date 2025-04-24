@@ -88,7 +88,8 @@ function startServer() {
       const autoblog = require('./routers/api/autoblog');
       const affiliate = require('./routers/api/affiliate');
       const abtest = require('./routers/api/abtest');
-      
+      const referalRouter = require('./routers/api/referal');
+
       app.use('/', index); 
       app.use('/user', user); 
       app.use('/auth', auth); 
@@ -98,7 +99,7 @@ function startServer() {
       app.use('/api/autoblog', autoblog);
       app.use('/api/affiliate', affiliate);
       app.use('/api/abtest', abtest);
-
+      app.use('/api/referal', referalRouter);
 
 
       server.listen(port, () => 

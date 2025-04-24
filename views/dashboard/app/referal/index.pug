@@ -1,0 +1,40 @@
+doctype html
+html
+  head
+    title Referral Popups Management
+  body
+    h1 Manage Referral Popups
+
+    form(action="/api/referal/order" method="post")
+      table
+        thead
+          tr
+            th Order
+            th Popup #
+            th Image URL
+            th Target URL
+        tbody
+          each popup in popups
+            tr
+              td
+                input(type="number" name="order[]" value=popup.order min="1" max="2")
+                input(type="hidden" name="popup[]" value=popup.popup)
+              td #{popup.popup}
+              td #{popup.imageUrl}
+              td #{popup.targetUrl}
+              td
+                a.btn.btn-sm.btn-outline-primary(
+                  href=`/dashboard/app/referal?popup=${popup.popup}`
+                ) Edit
+      button(type="submit") Save Order
+
+    h2 Add / Edit Popup
+    form(action="/api/referal/save" method="post")
+      input(type="hidden" name="popup" value=popupData.popup)
+      label(for="imageUrl") Image URL:
+      input(type="text" name="imageUrl" id="imageUrl" value=popupData.imageUrl)
+      br
+      label(for="targetUrl") Target URL:
+      input(type="text" name="targetUrl" id="targetUrl" value=popupData.targetUrl)
+      br
+      button(type="submit") Save

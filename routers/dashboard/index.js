@@ -10,6 +10,7 @@ const {sendEmail} = require('../../services/email')
 const path = require('path');
 const { ObjectId } = require('mongodb');
 const axios = require('axios');
+const POPUPS = global.db.collection('referalPopups');
 
 // Route for handling '/dashboard/'
 router.get('/', ensureAuthenticated, ensureMembership, async (req, res) => {
@@ -145,6 +146,15 @@ router.get('/app/autoblog/blog-info/:blogId?', async (req, res) => {
     console.log(error);
     res.status(500).send('Internal server error');
   }
+});
+
+router.get('/app/referal', ensureAuthenticated, ensureMembership, async (req, res) => {
+  const popups = await POPUPS.find().sort({ order: 1 }).toArray();
+  const q = parseInt(req.query.popup, 10);
+  const popupData = !isNaN(q)
+    ? await POPUPS.findOne({ popup: q })
+    : { popup: '', imageUrl: '', targetUrl: '' };
+  res.render('dashboard/app/referal/index', { user: req.user, popups, popupData });
 });
 
 module.exports = router;
