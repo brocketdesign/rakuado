@@ -18,53 +18,48 @@ block mainContent
               | 新規作成
           .card-body
             form#orderForm
-              table.table.table-hover.align-middle
-                thead
-                  tr
-                    th(style="width: 60px") 
-                      i.bi.bi-arrows-move.me-1
-                      | 表示順
-                    th 画像
-                    th ターゲットURL
-                    th 表示数
-                    th クリック数
-                    th 操作
-                tbody#popupTableBody
-                  each popup, idx in popups
-                    tr(data-popup=popup.popup)
-                      td
-                        span.handle(style="cursor:move;")
-                          i.bi.bi-arrows-move.me-1
-                        span.order-number #{popup.order}
-                        input(type="hidden" name="popup[]" value=popup.popup)
-                      td
-                        if popup.imageUrl
-                          img(src=popup.imageUrl alt="画像" width="60" class="rounded shadow-sm")
-                        else
-                          span.text-muted 画像なし
-                      td
-                        a(href=popup.targetUrl target="_blank" class="text-decoration-none")
-                          i.bi.bi-link-45deg.me-1
-                          | #{popup.targetUrl}
-                      td #{popup.views || 0}
-                      td #{popup.clicks || 0}
-                      td.d-flex.align-items-center
-                        button.btn.btn-outline-secondary.btn-sm.me-1.btn-toggle-domain(type="button" data-popup=popup.popup title="ドメイン別統計を表示")
-                          i.bi.bi-chevron-down
-                        button.btn.btn-outline-primary.btn-sm.me-1.btn-edit(type="button" data-popup=popup.popup title="編集")
-                          i.bi.bi-pencil-square
-                        button.btn.btn-outline-danger.btn-sm.btn-delete(type="button" data-popup=popup.popup title="削除")
-                          i.bi.bi-trash
-                    //- Accordion row (hidden by default)
-                    tr.domain-stats-row(style="display:none;" data-popup=popup.popup)
-                      td(colspan="6")
-                        .domain-stats-content.text-center.py-3
-                          .spinner-border.text-secondary(role="status")
-                            span.visually-hidden 読み込み中...
-              .mt-3.text-end
-                button.btn.btn-success(type="submit")
-                  i.bi.bi-save.me-1
-                  | 順序を保存
+              .table-responsive
+                table.table.table-hover.align-middle
+                  thead
+                    tr
+                      th(style="width: 60px")
+                        i.bi.bi-arrows-move.me-1
+                        | 表示順
+                      th 画像
+                      th ターゲットURL
+                      th 表示数
+                      th クリック数
+                      th(style="width:120px" class="text-center") 操作
+                  tbody#popupTableBody
+                    each popup, idx in popups
+                      tr(data-popup=popup.popup)
+                        td
+                          span.handle(style="cursor:move;")
+                            i.bi.bi-arrows-move.me-1
+                          span.order-number #{popup.order}
+                          input(type="hidden" name="popup[]" value=popup.popup)
+                        td
+                          if popup.imageUrl
+                            img(src=popup.imageUrl alt="画像" width="60" class="rounded shadow-sm")
+                          else
+                            span.text-muted 画像なし
+                        td
+                          a(href=popup.targetUrl target="_blank" class="text-decoration-none")
+                            i.bi.bi-link-45deg.me-1
+                            | #{popup.targetUrl}
+                        td #{popup.views || 0}
+                        td #{popup.clicks || 0}
+                        td.d-flex.align-items-center
+                          button.btn.btn-outline-secondary.btn-sm.me-1.btn-toggle-domain(type="button" data-popup=popup.popup title="ドメイン別統計を表示")
+                            i.bi.bi-chevron-down
+                          button.btn.btn-outline-primary.btn-sm.me-1.btn-edit(type="button" data-popup=popup.popup title="編集")
+                            i.bi.bi-pencil-square
+                          button.btn.btn-outline-danger.btn-sm.btn-delete(type="button" data-popup=popup.popup title="削除")
+                            i.bi.bi-trash
+            .mt-3.text-end
+              button.btn.btn-success(type="submit")
+                i.bi.bi-save.me-1
+                | 順序を保存
 
   //- Modal for Add/Edit Popup
   .modal.fade#popupModal(tabindex="-1" aria-labelledby="popupModalLabel" aria-hidden="true")
@@ -88,7 +83,21 @@ block mainContent
               i.bi.bi-check-lg.me-1
               | 保存
 
-  //- Ensure jQuery UI is loaded for sortable
+  //- New Modal for Domain Stats
+  .modal.fade#domainStatsModal(tabindex="-1" aria-labelledby="domainStatsModalLabel" aria-hidden="true")
+    .modal-dialog.modal-lg
+      .modal-content
+        .modal-header
+          h5.modal-title#domainStatsModalLabel ドメイン別統計
+          button.btn-close(type="button" data-bs-dismiss="modal" aria-label="Close")
+        .modal-body
+          .text-center#domainStatsContent
+            .spinner-border.text-secondary(role="status")
+              span.visually-hidden 読み込み中...
+        .modal-footer
+          button.btn.btn-secondary(type="button" data-bs-dismiss="modal") 閉じる
+
+  // Ensure jQuery UI is loaded for sortable
   script(src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js")
   link(rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css")
 
@@ -203,38 +212,50 @@ block mainContent
           });
       });
 
-      // Accordion toggle for domain stats
-      $('#popupTableBody').on('click', '.btn-toggle-domain', function() {
-        var $btn = $(this);
-        var popup = $btn.data('popup');
-        var $row = $btn.closest('tr');
-        var $accordion = $row.next('.domain-stats-row');
-        if ($accordion.is(':visible')) {
-          $accordion.hide();
-          $btn.find('i').removeClass('bi-chevron-up').addClass('bi-chevron-down');
-          return;
-        }
-        // Hide any other open accordions
-        $('.domain-stats-row').hide();
-        $('.btn-toggle-domain i').removeClass('bi-chevron-up').addClass('bi-chevron-down');
-        $accordion.show();
-        $btn.find('i').removeClass('bi-chevron-down').addClass('bi-chevron-up');
-        // If not loaded yet, fetch domain stats
-        var $content = $accordion.find('.domain-stats-content');
-        $content.html('<div class="spinner-border text-secondary" role="status"><span class="visually-hidden">読み込み中...</span></div>');
+      // Remove old accordion binding
+      $('.btn-toggle-domain').off('click');
+
+      // New: open modal and fetch domain stats, then enable sortable columns
+      $('.btn-toggle-domain').on('click', function() {
+        var popup = $(this).data('popup');
+        $('#domainStatsModalLabel').text('ドメイン別統計 - ' + popup);
+        var $c = $('#domainStatsContent').html('<div class="spinner-border text-secondary" role="status"><span class="visually-hidden">読み込み中...</span></div>');
+        $('#domainStatsModal').modal('show');
         $.get('/api/referal/info', { popup }, function(data) {
           if (!data.refery || !data.refery.length) {
-            $content.html('<div class="text-muted">ドメイン別の統計データはありません。</div>');
+            $c.html('<div class="text-muted">統計データはありません。</div>');
             return;
           }
-          var html = '<table class="table table-sm table-bordered mb-0"><thead><tr><th>ドメイン</th><th>表示数</th><th>クリック数</th></tr></thead><tbody>';
-          data.refery.forEach(function(r) {
-            html += '<tr><td>' + $('<div>').text(r.domain).html() + '</td><td>' + (r.view || 0) + '</td><td>' + (r.click || 0) + '</td></tr>';
+          var tbl = '<table class="table table-sm table-striped" id="domainStatsTable">'
+                  + '<thead><tr>'
+                  + '<th class="sortable" data-key="domain">ドメイン</th>'
+                  + '<th class="sortable" data-key="view">表示数</th>'
+                  + '<th class="sortable" data-key="click">クリック数</th>'
+                  + '</tr></thead><tbody>';
+          data.refery.forEach(function(r){
+            tbl += '<tr><td>'+ $('<div>').text(r.domain).html() +'</td>'
+                 + '<td>'+(r.view||0)+'</td>'
+                 + '<td>'+(r.click||0)+'</td></tr>';
           });
-          html += '</tbody></table>';
-          $content.html(html);
-        }).fail(function() {
-          $content.html('<div class="text-danger">統計データの取得に失敗しました。</div>');
+          tbl += '</tbody></table>';
+          $c.html(tbl);
+
+          // enable sorting on modal table
+          $('#domainStatsTable th.sortable').on('click', function() {
+            var key = $(this).data('key');
+            var asc  = !$(this).hasClass('asc');
+            var rows = $('#domainStatsTable tbody tr').get();
+            rows.sort(function(a,b){
+              var va = $(a).find('td').eq( $('th.sortable').index(this) ).text();
+              var vb = $(b).find('td').eq( $('th.sortable').index(this) ).text();
+              return asc ? va - vb : vb - va;
+            }.bind(this));
+            $.each(rows, function(i,tr){ $('#domainStatsTable tbody').append(tr); });
+            $('#domainStatsTable th').removeClass('asc desc');
+            $(this).addClass(asc?'asc':'desc');
+          });
+        }).fail(function(){
+          $('#domainStatsContent').html('<div class="text-danger">統計データの取得に失敗しました。</div>');
         });
       });
     });
