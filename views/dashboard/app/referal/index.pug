@@ -70,7 +70,7 @@ block mainContent
               each popup, idx in popups
                 .card.mb-3
                   if popup.imageUrl
-                    img(src=popup.imageUrl alt="画像" class="card-img-top")
+                    img(src=popup.imageUrl alt="画像" class="card-img-top" style="object-fit: contain;")
                   else
                     .card-img-top.text-center.py-3.text-muted 画像なし
                   .card-body

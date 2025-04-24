@@ -327,5 +327,5 @@ input:checked + .slider:before {
     
   }
   .sortable{
-    cursor: move;
+    cursor: pointer;
   }
