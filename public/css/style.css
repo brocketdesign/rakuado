@@ -326,4 +326,6 @@ input:checked + .slider:before {
     }
     
   }
-  
+  .sortable{
+    cursor: move;
+  }

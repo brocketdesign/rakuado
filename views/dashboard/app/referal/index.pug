@@ -13,53 +13,81 @@ block mainContent
             span
               i.bi.bi-list-ol.me-2
               | ポップアップ順序管理
-            button.btn.btn-primary.btn-sm#btnNewPopup(type="button")
+            // hide on mobile
+            button#btnNewPopup.btn.btn-primary.btn-sm.d-none.d-md-inline-block(type="button")
               i.bi.bi-plus-circle.me-1
               | 新規作成
+
           .card-body
-            form#orderForm
-              .table-responsive
-                table.table.table-hover.align-middle
-                  thead
-                    tr
-                      th(style="width: 60px")
-                        i.bi.bi-arrows-move.me-1
-                        | 表示順
-                      th 画像
-                      th ターゲットURL
-                      th 表示数
-                      th クリック数
-                      th(style="width:120px" class="text-center") 操作
-                  tbody#popupTableBody
-                    each popup, idx in popups
-                      tr(data-popup=popup.popup)
-                        td
-                          span.handle(style="cursor:move;")
-                            i.bi.bi-arrows-move.me-1
-                          span.order-number #{popup.order}
-                          input(type="hidden" name="popup[]" value=popup.popup)
-                        td
-                          if popup.imageUrl
-                            img(src=popup.imageUrl alt="画像" width="60" class="rounded shadow-sm")
-                          else
-                            span.text-muted 画像なし
-                        td
-                          a(href=popup.targetUrl target="_blank" class="text-decoration-none")
-                            i.bi.bi-link-45deg.me-1
-                            | #{popup.targetUrl}
-                        td #{popup.views || 0}
-                        td #{popup.clicks || 0}
-                        td.d-flex.align-items-center
-                          button.btn.btn-outline-secondary.btn-sm.me-1.btn-toggle-domain(type="button" data-popup=popup.popup title="ドメイン別統計を表示")
-                            i.bi.bi-chevron-down
-                          button.btn.btn-outline-primary.btn-sm.me-1.btn-edit(type="button" data-popup=popup.popup title="編集")
-                            i.bi.bi-pencil-square
-                          button.btn.btn-outline-danger.btn-sm.btn-delete(type="button" data-popup=popup.popup title="削除")
-                            i.bi.bi-trash
-            .mt-3.text-end
-              button.btn.btn-success(type="submit")
-                i.bi.bi-save.me-1
-                | 順序を保存
+            // table & reorder: only on md+
+            .d-none.d-md-block
+              form#orderForm
+                .table-responsive
+                  table.table.table-hover.align-middle
+                    thead
+                      tr
+                        th(style="width: 60px")
+                          i.bi.bi-arrows-move.me-1
+                          | 表示順
+                        th 画像
+                        th ターゲットURL
+                        th 表示数
+                        th クリック数
+                        th(style="width:120px" class="text-center") 操作
+                    tbody#popupTableBody
+                      each popup, idx in popups
+                        tr(data-popup=popup.popup)
+                          td
+                            span.handle(style="cursor:move;")
+                              i.bi.bi-arrows-move.me-1
+                            span.order-number #{popup.order}
+                            input(type="hidden" name="popup[]" value=popup.popup)
+                          td
+                            if popup.imageUrl
+                              img(src=popup.imageUrl alt="画像" width="60" class="rounded shadow-sm")
+                            else
+                              span.text-muted 画像なし
+                          td
+                            a(href=popup.targetUrl target="_blank" class="text-decoration-none")
+                              i.bi.bi-link-45deg.me-1
+                              | #{popup.targetUrl}
+                          td #{popup.views || 0}
+                          td #{popup.clicks || 0}
+                          td.align-items-center
+                            button.btn.btn-outline-secondary.btn-sm.me-1.btn-toggle-domain(type="button" data-popup=popup.popup title="ドメイン別統計を表示")
+                              i.bi.bi-chevron-down
+                            button.btn.btn-outline-primary.btn-sm.me-1.btn-edit(type="button" data-popup=popup.popup title="編集")
+                              i.bi.bi-pencil-square
+                            button.btn.btn-outline-danger.btn-sm.btn-delete(type="button" data-popup=popup.popup title="削除")
+                              i.bi.bi-trash
+                .mt-3.text-end
+                  button.btn.btn-success(type="submit")
+                    i.bi.bi-save.me-1
+                    | 順序を保存
+
+            // cards: only on sm
+            .d-block.d-md-none
+              each popup, idx in popups
+                .card.mb-3
+                  if popup.imageUrl
+                    img(src=popup.imageUrl alt="画像" class="card-img-top")
+                  else
+                    .card-img-top.text-center.py-3.text-muted 画像なし
+                  .card-body
+                    p.mb-1
+                      strong URL:
+                      a.text-decoration-none.ms-1(href=popup.targetUrl target="_blank") #{popup.targetUrl}
+                    p.mb-1
+                      | 表示数: #{popup.views || 0}
+                      br
+                      | クリック数: #{popup.clicks || 0}
+                    .btn-group.mt-2
+                      button.btn.btn-outline-secondary.btn-sm.btn-toggle-domain(type="button" data-popup=popup.popup title="ドメイン別統計")
+                        i.bi.bi-chevron-down
+                      button.btn.btn-outline-primary.btn-sm.btn-edit(type="button" data-popup=popup.popup title="編集")
+                        i.bi.bi-pencil-square
+                      button.btn.btn-outline-danger.btn-sm.btn-delete(type="button" data-popup=popup.popup title="削除")
+                        i.bi.bi-trash
 
   //- Modal for Add/Edit Popup
   .modal.fade#popupModal(tabindex="-1" aria-labelledby="popupModalLabel" aria-hidden="true")
@@ -100,7 +128,8 @@ block mainContent
   // Ensure jQuery UI is loaded for sortable
   script(src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js")
   link(rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css")
-
+  // Add Bootstrap JS bundle so data-bs-dismiss on buttons actually works
+  script(src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js")
   script.
     $(function() {
       // Enable drag-and-drop sorting
