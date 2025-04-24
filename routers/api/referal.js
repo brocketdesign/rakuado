@@ -3,6 +3,45 @@ const router = express.Router();
 const db = global.db;
 const POPUPS = db.collection('referalPopups');
 const EVENTS = db.collection('referalEvents');
+const multer = require('multer');
+const aws = require('aws-sdk');
+const path = require('path');
+const mime = require('mime-types');
+const { createHash } = require('crypto');
+
+// AWS S3 Configuration
+const s3 = new aws.S3({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION
+});
+
+const uploadToS3 = async (buffer, hash, filename) => {
+  const contentType = mime.lookup(path.extname(filename)) || 'application/octet-stream';
+  const key = `${hash}_${filename}`;
+  await s3.upload({ Bucket: process.env.AWS_S3_BUCKET_NAME, Key: key, Body: buffer, ContentType: contentType }).promise();
+  return `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+};
+
+const handleFileUpload = async (file, db) => {
+  const buffer = file.buffer;
+  const hash = createHash('md5').update(buffer).digest('hex');
+  const awsimages = db.collection('awsimages');
+  const existing = await awsimages.findOne({ hash });
+  if (existing) return `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${existing.key}`;
+  const url = await uploadToS3(buffer, hash, file.originalname);
+  const key = url.split('/').pop();
+  await awsimages.insertOne({ key, hash });
+  return url;
+};
+
+// Multer setup
+const storage = multer.memoryStorage();
+const fileFilter = (req, f, cb) => {
+  const ok = /jpeg|jpg|png|gif/.test(f.mimetype) && /jpeg|jpg|png|gif/.test(path.extname(f.originalname).toLowerCase());
+  cb(ok ? null : new Error('Only images allowed'), ok);
+};
+const upload = multer({ storage, fileFilter, limits: { fileSize: 5*1024*1024 } });
 
 // GET referral info
 router.get('/info', async (req, res) => {
@@ -38,22 +77,27 @@ router.post('/order', async (req, res) => {
   return res.sendStatus(200);
 });
 
-// POST save (create up to 2, or update existing)
-router.post('/save', async (req, res) => {
+// POST save (create up to 2, or update existing), now with file upload
+router.post('/save', upload.single('image'), async (req, res) => {
+  // ...existing code up to parsing...
   const pNum = parseInt(req.body.popup, 10);
-  const { imageUrl, targetUrl } = req.body;
+  let { targetUrl } = req.body;
+  let imageUrl = req.body.imageUrl; // fallback if no file
+  if (req.file) {
+    imageUrl = await handleFileUpload(req.file, global.db);
+  }
+  const userId = req.user._id;
   if (isNaN(pNum)) {
-    const count = await POPUPS.countDocuments();
+    // create
+    const count = await POPUPS.countDocuments({ userId });
     if (count >= 2) return res.status(400).json({ error: 'Max popups reached' });
     const next = count + 1;
-    await POPUPS.insertOne({ popup: next, imageUrl, targetUrl, order: next });
+    await POPUPS.insertOne({ popup: next, imageUrl, targetUrl, order: next, userId });
   } else {
-    await POPUPS.updateOne(
-      { popup: pNum },
-      { $set: { imageUrl, targetUrl } }
-    );
+    // update
+    await POPUPS.updateOne({ popup: pNum, userId }, { $set: { imageUrl, targetUrl } });
   }
-  return res.redirect('/dashboard/app/referal');
+  return res.json({ imageUrl });
 });
 
 // GET API metadata
