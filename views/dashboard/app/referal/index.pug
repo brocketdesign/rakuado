@@ -64,6 +64,9 @@ block mainContent
                   button.btn.btn-success(type="submit")
                     i.bi.bi-save.me-1
                     | 順序を保存
+                  button.btn.btn-warning.ms-2#btnReset(type="button")
+                    i.bi.bi-arrow-counterclockwise.me-1
+                    | リセット
 
             // cards: only on sm
             .d-block.d-md-none
@@ -285,6 +288,28 @@ block mainContent
           });
         }).fail(function(){
           $('#domainStatsContent').html('<div class="text-danger">統計データの取得に失敗しました。</div>');
+        });
+      });
+
+      // Reset button handler
+      $('#btnReset').on('click', function() {
+        Swal.fire({
+          title: 'リセットしますか？',
+          text: '全ての表示数・クリック数・ドメイン統計をリセットします。よろしいですか？',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'はい、リセット',
+          cancelButtonText: 'キャンセル'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            $.post('/api/referal/reset')
+              .done(function() {
+                Swal.fire('リセットしました', '', 'success').then(() => location.reload());
+              })
+              .fail(function() {
+                Swal.fire('エラー', 'リセットに失敗しました', 'error');
+              });
+          }
         });
       });
     });

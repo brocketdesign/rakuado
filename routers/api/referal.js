@@ -42,6 +42,35 @@ const fileFilter = (req, f, cb) => {
 };
 const upload = multer({ storage, fileFilter, limits: { fileSize: 5*1024*1024 } });
 
+// Helper to get current timestamp
+const now = () => Date.now();
+
+// Helper to filter refery array to last 24 hours
+const filterRecentRefery = (refery) => {
+  const cutoff = now() - 24 * 60 * 60 * 1000;
+  return (refery || []).filter(r => r.timestamp && r.timestamp >= cutoff);
+};
+
+// Function to reset view and click data for all popups
+async function resetViewClickData() {
+  await POPUPS.updateMany(
+    {},
+    {
+      $set: {
+        views: 0,
+        clicks: 0,
+        refery: []
+      }
+    }
+  );
+}
+
+// POST endpoint to reset all view/click data
+router.post('/reset', async (req, res) => {
+  await resetViewClickData();
+  return res.sendStatus(200);
+});
+
 // GET referral info
 router.get('/info', async (req, res) => {
   const order = parseInt(req.query.popup, 10);
@@ -51,7 +80,7 @@ router.get('/info', async (req, res) => {
   return res.json({ imageUrl: doc.imageUrl, targetUrl: doc.targetUrl, refery: doc.refery || [] });
 });
 
-// GET register a view (increment counter, track per domain)
+// GET register a view (increment counter, track per domain, keep only 24h data)
 router.get('/register-view', async (req, res) => {
     const order = parseInt(req.query.popup, 10);
     const domain = req.query.domain || 'unknown';
@@ -62,24 +91,29 @@ router.get('/register-view', async (req, res) => {
         { $inc: { views: 1 } }
     );
 
-    // Always increment views for this domain in refery array
-    const result = await POPUPS.updateOne(
-        { order, "refery.domain": domain },
-        { $inc: { "refery.$.view": 1 } }
-    );
-
-    // If domain not present, add it with view:1, click:0
-    if (result.matchedCount === 0) {
-        await POPUPS.updateOne(
-            { order },
-            { $push: { refery: { domain, view: 1, click: 0 } } }
-        );
+    // Prune refery to last 24h and update/add this domain
+    const popup = await POPUPS.findOne({ order });
+    let refery = filterRecentRefery(popup.refery);
+    let found = false;
+    refery = refery.map(r => {
+      if (r.domain === domain) {
+        found = true;
+        return { ...r, view: (r.view || 0) + 1, timestamp: now() };
+      }
+      return r;
+    });
+    if (!found) {
+      refery.push({ domain, view: 1, click: 0, timestamp: now() });
     }
+    await POPUPS.updateOne(
+      { order },
+      { $set: { refery } }
+    );
 
     return res.sendStatus(200);
 });
 
-// GET register a click (increment counter, track per domain)
+// GET register a click (increment counter, track per domain, keep only 24h data)
 router.get('/register-click', async (req, res) => {
     const order = parseInt(req.query.popup, 10);
     const domain = req.query.domain || 'unknown';
@@ -90,19 +124,24 @@ router.get('/register-click', async (req, res) => {
         { $inc: { clicks: 1 } }
     );
 
-    // Always increment clicks for this domain in refery array
-    const result = await POPUPS.updateOne(
-        { order, "refery.domain": domain },
-        { $inc: { "refery.$.click": 1 } }
-    );
-
-    // If domain not present, add it with view:0, click:1
-    if (result.matchedCount === 0) {
-        await POPUPS.updateOne(
-            { order },
-            { $push: { refery: { domain, view: 0, click: 1 } } }
-        );
+    // Prune refery to last 24h and update/add this domain
+    const popup = await POPUPS.findOne({ order });
+    let refery = filterRecentRefery(popup.refery);
+    let found = false;
+    refery = refery.map(r => {
+      if (r.domain === domain) {
+        found = true;
+        return { ...r, click: (r.click || 0) + 1, timestamp: now() };
+      }
+      return r;
+    });
+    if (!found) {
+      refery.push({ domain, view: 0, click: 1, timestamp: now() });
     }
+    await POPUPS.updateOne(
+      { order },
+      { $set: { refery } }
+    );
 
     return res.sendStatus(200);
 });
