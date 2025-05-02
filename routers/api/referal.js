@@ -73,8 +73,8 @@ router.post('/reset', async (req, res) => {
 
 // GET referral info
 router.get('/info', async (req, res) => {
-  const order = parseInt(req.query.popup, 10);
-  const doc = await POPUPS.findOne({ order });
+  const popup = parseInt(req.query.popup, 10);
+  const doc = await POPUPS.findOne({ popup });
   if (!doc) return res.status(404).json({ error: 'Not found' });
   // Add refery array to response for per-domain stats
   return res.json({ imageUrl: doc.imageUrl, targetUrl: doc.targetUrl, refery: doc.refery || [] });
