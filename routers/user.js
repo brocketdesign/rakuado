@@ -13,6 +13,11 @@ const { email, sendEmail } = require('../services/email')
 const { ObjectId } = require('mongodb');
 const { hostname } = require('os');
 
+// Add this helper at the top
+function isValidObjectId(id) {
+  return typeof id === 'string' && /^[a-fA-F0-9]{24}$/.test(id);
+}
+
 router.get('/setting', (req, res) => {
   console.log('User setting page requested');
   res.render('user/setting',{user:req.user}); // Render the login template
@@ -343,6 +348,7 @@ router.post('/reset', async (req, res) => {
 
 // Endpoint to get the current user's credits
 router.get('/credits', async (req, res) => {
+  if (!req.user || !req.user._id) return res.status(401).json({ error: 'Unauthorized' });
   try {
       const userId = req.user._id;
       const user = await global.db.collection('users').findOne({ _id: userId }, { projection: { credits: 1 } });
@@ -359,6 +365,7 @@ router.get('/credits', async (req, res) => {
 });
 // Endpoint to check if the current user is an administrator
 router.get('/is-admin', async (req, res) => {
+  if (!req.user || !req.user.email) return res.status(401).json({ error: 'Unauthorized' });
   try {
       const adminEmails = ["japanclassicstore@gmail.com"]; // List of administrator emails
       const userEmail = req.user.email;

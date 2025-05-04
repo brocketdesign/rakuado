@@ -52,6 +52,11 @@ const filterRecentRefery = (refery) => {
   return (refery || []).filter(r => r.timestamp && r.timestamp >= cutoff);
 };
 
+// Helper for ObjectId validation
+function isValidObjectId(id) {
+  return typeof id === 'string' && /^[a-fA-F0-9]{24}$/.test(id);
+}
+
 // Function to reset view and click data for all popups
 async function resetViewClickData() {
   await POPUPS.updateMany(
@@ -75,7 +80,7 @@ router.post('/reset', async (req, res) => {
 // GET referral info (by _id)
 router.get('/info', async (req, res) => {
   let id = req.query.popup;
-  if (!id) return res.status(400).json({ error: 'Missing popup id' });
+  if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
   try {
     const doc = await POPUPS.findOne({ _id: new ObjectId(id) });
     if (!doc) return res.status(404).json({ error: 'Not found' });
@@ -109,7 +114,7 @@ router.get('/enabled', async (req, res) => {
 router.get('/register-view', async (req, res) => {
   let id = req.query.popup;
   const domain = req.query.domain || 'unknown';
-  if (!id) return res.sendStatus(400);
+  if (!isValidObjectId(id)) return res.sendStatus(400);
   const popup = await POPUPS.findOne({ _id: new ObjectId(id) });
   if (!popup) return res.sendStatus(404);
   await POPUPS.updateOne({ _id: popup._id }, { $inc: { views: 1 } });
@@ -131,7 +136,7 @@ router.get('/register-view', async (req, res) => {
 router.get('/register-click', async (req, res) => {
   let id = req.query.popup;
   const domain = req.query.domain || 'unknown';
-  if (!id) return res.sendStatus(400);
+  if (!isValidObjectId(id)) return res.sendStatus(400);
   const popup = await POPUPS.findOne({ _id: new ObjectId(id) });
   if (!popup) return res.sendStatus(404);
   await POPUPS.updateOne({ _id: popup._id }, { $inc: { clicks: 1 } });
@@ -157,6 +162,7 @@ router.post('/order', async (req, res) => {
   if (!Array.isArray(popups)) popups = [popups];
   for (let i = 0; i < popups.length; i++) {
     const id = popups[i];
+    if (!isValidObjectId(id)) continue;
     const o = parseInt(orders[i], 10);
     await POPUPS.updateOne({ _id: new ObjectId(id) }, { $set: { order: o } });
   }
@@ -172,6 +178,7 @@ router.post('/order', async (req, res) => {
 router.post('/save', upload.single('image'), async (req, res) => {
   let { popup, targetUrl, enabled } = req.body;
   let imageUrl = req.body.imageUrl;
+  if (popup && !isValidObjectId(popup)) return res.status(400).json({ error: 'Invalid id' });
   if (req.file) imageUrl = await handleFileUpload(req.file, global.db);
   enabled = enabled === 'false' ? false : true;
   if (!popup) {
@@ -201,7 +208,7 @@ router.post('/save', upload.single('image'), async (req, res) => {
 // POST enable/disable popup
 router.post('/toggle', async (req, res) => {
   const { id, enabled } = req.body;
-  if (!id) return res.status(400).json({ error: 'Missing id' });
+  if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
   await POPUPS.updateOne({ _id: new ObjectId(id) }, { $set: { enabled: enabled === 'true' } });
   return res.sendStatus(200);
 });
@@ -209,6 +216,7 @@ router.post('/toggle', async (req, res) => {
 // DELETE popup (by _id)
 router.delete('/:popup', async (req, res) => {
   const id = req.params.popup;
+  if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
   const result = await POPUPS.deleteOne({ _id: new ObjectId(id) });
   if (result.deletedCount === 0) {
     return res.status(404).json({ error: 'Not found' });
