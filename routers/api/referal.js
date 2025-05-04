@@ -7,6 +7,7 @@ const aws = require('aws-sdk');
 const path = require('path');
 const mime = require('mime-types');
 const { createHash } = require('crypto');
+const { ObjectId } = require('mongodb');
 
 // AWS S3 Configuration
 const s3 = new aws.S3({
@@ -64,150 +65,158 @@ async function resetViewClickData() {
     }
   );
 }
-
+  
 // POST endpoint to reset all view/click data
 router.post('/reset', async (req, res) => {
   await resetViewClickData();
   return res.sendStatus(200);
 });
 
-// GET referral info
+// GET referral info (by _id)
 router.get('/info', async (req, res) => {
-  const popup = parseInt(req.query.popup, 10);
-  const doc = await POPUPS.findOne({ popup });
-  if (!doc) return res.status(404).json({ error: 'Not found' });
-  // Add refery array to response for per-domain stats
-  return res.json({ imageUrl: doc.imageUrl, targetUrl: doc.targetUrl, refery: doc.refery || [] });
+  let id = req.query.popup;
+  if (!id) return res.status(400).json({ error: 'Missing popup id' });
+  try {
+    const doc = await POPUPS.findOne({ _id: new ObjectId(id) });
+    if (!doc) return res.status(404).json({ error: 'Not found' });
+    return res.json({
+      _id: doc._id,
+      imageUrl: doc.imageUrl,
+      targetUrl: doc.targetUrl,
+      refery: doc.refery || [],
+      enabled: doc.enabled !== false,
+      order: doc.order,
+      views: doc.views || 0,
+      clicks: doc.clicks || 0
+    });
+  } catch (e) {
+    return res.status(400).json({ error: 'Invalid id' });
+  }
 });
 
-// GET register a view (increment counter, track per domain, keep only 24h data)
+// GET all enabled popups (for frontend)
+router.get('/enabled', async (req, res) => {
+  const popups = await POPUPS.find({ enabled: { $ne: false } }).sort({ order: 1 }).toArray();
+  res.json(popups.map(p => ({
+    _id: p._id,
+    imageUrl: p.imageUrl,
+    targetUrl: p.targetUrl,
+    order: p.order
+  })));
+});
+
+// GET register a view (by _id)
 router.get('/register-view', async (req, res) => {
-    const order = parseInt(req.query.popup, 10);
-    const domain = req.query.domain || 'unknown';
-
-    // Always increment global views
-    await POPUPS.updateOne(
-        { order },
-        { $inc: { views: 1 } }
-    );
-
-    // Prune refery to last 24h and update/add this domain
-    const popup = await POPUPS.findOne({ order });
-    let refery = filterRecentRefery(popup.refery);
-    let found = false;
-    refery = refery.map(r => {
-      if (r.domain === domain) {
-        found = true;
-        return { ...r, view: (r.view || 0) + 1, timestamp: now() };
-      }
-      return r;
-    });
-    if (!found) {
-      refery.push({ domain, view: 1, click: 0, timestamp: now() });
+  let id = req.query.popup;
+  const domain = req.query.domain || 'unknown';
+  if (!id) return res.sendStatus(400);
+  const popup = await POPUPS.findOne({ _id: new ObjectId(id) });
+  if (!popup) return res.sendStatus(404);
+  await POPUPS.updateOne({ _id: popup._id }, { $inc: { views: 1 } });
+  let refery = filterRecentRefery(popup.refery);
+  let found = false;
+  refery = refery.map(r => {
+    if (r.domain === domain) {
+      found = true;
+      return { ...r, view: (r.view || 0) + 1, timestamp: now() };
     }
-    await POPUPS.updateOne(
-      { order },
-      { $set: { refery } }
-    );
-
-    return res.sendStatus(200);
+    return r;
+  });
+  if (!found) refery.push({ domain, view: 1, click: 0, timestamp: now() });
+  await POPUPS.updateOne({ _id: popup._id }, { $set: { refery } });
+  return res.sendStatus(200);
 });
 
-// GET register a click (increment counter, track per domain, keep only 24h data)
+// GET register a click (by _id)
 router.get('/register-click', async (req, res) => {
-    const order = parseInt(req.query.popup, 10);
-    const domain = req.query.domain || 'unknown';
-
-    // Always increment global clicks
-    await POPUPS.updateOne(
-        { order },
-        { $inc: { clicks: 1 } }
-    );
-
-    // Prune refery to last 24h and update/add this domain
-    const popup = await POPUPS.findOne({ order });
-    let refery = filterRecentRefery(popup.refery);
-    let found = false;
-    refery = refery.map(r => {
-      if (r.domain === domain) {
-        found = true;
-        return { ...r, click: (r.click || 0) + 1, timestamp: now() };
-      }
-      return r;
-    });
-    if (!found) {
-      refery.push({ domain, view: 0, click: 1, timestamp: now() });
+  let id = req.query.popup;
+  const domain = req.query.domain || 'unknown';
+  if (!id) return res.sendStatus(400);
+  const popup = await POPUPS.findOne({ _id: new ObjectId(id) });
+  if (!popup) return res.sendStatus(404);
+  await POPUPS.updateOne({ _id: popup._id }, { $inc: { clicks: 1 } });
+  let refery = filterRecentRefery(popup.refery);
+  let found = false;
+  refery = refery.map(r => {
+    if (r.domain === domain) {
+      found = true;
+      return { ...r, click: (r.click || 0) + 1, timestamp: now() };
     }
-    await POPUPS.updateOne(
-      { order },
-      { $set: { refery } }
-    );
-
-    return res.sendStatus(200);
+    return r;
+  });
+  if (!found) refery.push({ domain, view: 0, click: 1, timestamp: now() });
+  await POPUPS.updateOne({ _id: popup._id }, { $set: { refery } });
+  return res.sendStatus(200);
 });
 
-// POST update popup order
+// POST update popup order (by _id)
 router.post('/order', async (req, res) => {
   let orders = req.body.order || [];
   let popups = req.body.popup || [];
-
-  // Ensure arrays
   if (!Array.isArray(orders)) orders = [orders];
   if (!Array.isArray(popups)) popups = [popups];
-
-  // Update each popup's order
   for (let i = 0; i < popups.length; i++) {
-    const p = parseInt(popups[i], 10);
+    const id = popups[i];
     const o = parseInt(orders[i], 10);
-    await POPUPS.updateOne({ popup: p }, { $set: { order: o } });
+    await POPUPS.updateOne({ _id: new ObjectId(id) }, { $set: { order: o } });
   }
-
-  // Re-normalize: fetch all popups, sort by 'order', and reassign order fields
+  // Re-normalize
   const userPopups = await POPUPS.find({}).sort({ order: 1 }).toArray();
   for (let i = 0; i < userPopups.length; i++) {
     await POPUPS.updateOne({ _id: userPopups[i]._id }, { $set: { order: i + 1 } });
   }
-
   return res.sendStatus(200);
 });
 
-// POST save (create up to 2, or update existing), now with file upload
+// POST save (add or update by _id)
 router.post('/save', upload.single('image'), async (req, res) => {
-  const order = parseInt(req.body.popup, 10);
-  let { targetUrl } = req.body;
-  let imageUrl = req.body.imageUrl; // fallback if no file
-  if (req.file) {
-    imageUrl = await handleFileUpload(req.file, global.db);
-  }
-  if (isNaN(order)) {
+  let { popup, targetUrl, enabled } = req.body;
+  let imageUrl = req.body.imageUrl;
+  if (req.file) imageUrl = await handleFileUpload(req.file, global.db);
+  enabled = enabled === 'false' ? false : true;
+  if (!popup) {
     // create
     const count = await POPUPS.countDocuments({});
-    if (count >= 2) return res.status(400).json({ error: 'Max popups reached' });
-    const next = count + 1;
-    await POPUPS.insertOne({
-      popup: next,
+    const nextOrder = count + 1;
+    const result = await POPUPS.insertOne({
       imageUrl,
       targetUrl,
-      order: next,
+      order: nextOrder,
       views: 0,
-      clicks: 0
+      clicks: 0,
+      refery: [],
+      enabled
     });
+    return res.json({ imageUrl, _id: result.insertedId });
   } else {
     // update
     await POPUPS.updateOne(
-      { order },
-      { $set: { imageUrl, targetUrl } }
+      { _id: new ObjectId(popup) },
+      { $set: { imageUrl, targetUrl, enabled } }
     );
+    return res.json({ imageUrl });
   }
-  return res.json({ imageUrl });
 });
 
-// DELETE popup
+// POST enable/disable popup
+router.post('/toggle', async (req, res) => {
+  const { id, enabled } = req.body;
+  if (!id) return res.status(400).json({ error: 'Missing id' });
+  await POPUPS.updateOne({ _id: new ObjectId(id) }, { $set: { enabled: enabled === 'true' } });
+  return res.sendStatus(200);
+});
+
+// DELETE popup (by _id)
 router.delete('/:popup', async (req, res) => {
-  const order = parseInt(req.params.popup, 10);
-  const result = await POPUPS.deleteOne({ order });
+  const id = req.params.popup;
+  const result = await POPUPS.deleteOne({ _id: new ObjectId(id) });
   if (result.deletedCount === 0) {
     return res.status(404).json({ error: 'Not found' });
+  }
+  // Re-normalize order
+  const userPopups = await POPUPS.find({}).sort({ order: 1 }).toArray();
+  for (let i = 0; i < userPopups.length; i++) {
+    await POPUPS.updateOne({ _id: userPopups[i]._id }, { $set: { order: i + 1 } });
   }
   return res.sendStatus(200);
 });

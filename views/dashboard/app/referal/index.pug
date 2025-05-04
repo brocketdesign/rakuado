@@ -33,15 +33,16 @@ block mainContent
                         th ターゲットURL
                         th 表示数
                         th クリック数
+                        th 有効
                         th(style="width:120px" class="text-center") 操作
                     tbody#popupTableBody
                       each popup, idx in popups
-                        tr(data-popup=popup.popup)
+                        tr(data-popup=popup._id)
                           td
                             span.handle(style="cursor:move;")
                               i.bi.bi-arrows-move.me-1
                             span.order-number #{popup.order}
-                            input(type="hidden" name="popup[]" value=popup.popup)
+                            input(type="hidden" name="popup[]" value=popup._id)
                           td
                             if popup.imageUrl
                               img(src=popup.imageUrl alt="画像" width="60" class="rounded shadow-sm")
@@ -53,12 +54,14 @@ block mainContent
                               | #{popup.targetUrl}
                           td #{popup.views || 0}
                           td #{popup.clicks || 0}
+                          td.text-center
+                            input.form-check-input(type="checkbox" class="popup-enabled-toggle" data-popup=popup._id checked=popup.enabled)
                           td.align-items-center
-                            button.btn.btn-outline-secondary.btn-sm.me-1.btn-toggle-domain(type="button" data-popup=popup.popup title="ドメイン別統計を表示")
+                            button.btn.btn-outline-secondary.btn-sm.me-1.btn-toggle-domain(type="button" data-popup=popup._id title="ドメイン別統計を表示")
                               i.bi.bi-chevron-down
-                            button.btn.btn-outline-primary.btn-sm.me-1.btn-edit(type="button" data-popup=popup.popup title="編集")
+                            button.btn.btn-outline-primary.btn-sm.me-1.btn-edit(type="button" data-popup=popup._id title="編集")
                               i.bi.bi-pencil-square
-                            button.btn.btn-outline-danger.btn-sm.btn-delete(type="button" data-popup=popup.popup title="削除")
+                            button.btn.btn-outline-danger.btn-sm.btn-delete(type="button" data-popup=popup._id title="削除")
                               i.bi.bi-trash
                 .mt-3.text-end
                   button.btn.btn-success(type="submit")
@@ -85,11 +88,11 @@ block mainContent
                       br
                       | クリック数: #{popup.clicks || 0}
                     .btn-group.mt-2
-                      button.btn.btn-outline-secondary.btn-sm.btn-toggle-domain(type="button" data-popup=popup.popup title="ドメイン別統計")
+                      button.btn.btn-outline-secondary.btn-sm.btn-toggle-domain(type="button" data-popup=popup._id title="ドメイン別統計")
                         i.bi.bi-chevron-down
-                      button.btn.btn-outline-primary.btn-sm.btn-edit(type="button" data-popup=popup.popup title="編集")
+                      button.btn.btn-outline-primary.btn-sm.btn-edit(type="button" data-popup=popup._id title="編集")
                         i.bi.bi-pencil-square
-                      button.btn.btn-outline-danger.btn-sm.btn-delete(type="button" data-popup=popup.popup title="削除")
+                      button.btn.btn-outline-danger.btn-sm.btn-delete(type="button" data-popup=popup._id title="削除")
                         i.bi.bi-trash
 
   //- Modal for Add/Edit Popup
@@ -121,7 +124,7 @@ block mainContent
         .modal-header
           h5.modal-title#domainStatsModalLabel ドメイン別統計
           button.btn-close(type="button" data-bs-dismiss="modal" aria-label="Close")
-        .modal-body
+        .modal-body 
           .text-center#domainStatsContent
             .spinner-border.text-secondary(role="status")
               span.visually-hidden 読み込み中...
@@ -289,6 +292,16 @@ block mainContent
         }).fail(function(){
           $('#domainStatsContent').html('<div class="text-danger">統計データの取得に失敗しました。</div>');
         });
+      });
+
+      // Enable/disable toggle handler
+      $(document).on('change', '.popup-enabled-toggle', function() {
+        const id = $(this).data('popup');
+        const enabled = $(this).is(':checked');
+        $.post('/api/referal/toggle', { id, enabled })
+          .fail(function() {
+            Swal.fire('エラー', '有効/無効の切り替えに失敗しました', 'error');
+          });
       });
 
       // Reset button handler

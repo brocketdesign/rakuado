@@ -102,7 +102,7 @@ function startServer() {
       app.use('/api/referal', referalRouter);
 
 
-      server.listen(port, () => 
+      server.listen(port, '0.0.0.0', () => 
       console.log(`Express running → PORT http://${ip.address()}:${port}`));
 
     })
