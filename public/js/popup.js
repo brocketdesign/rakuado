@@ -34,9 +34,10 @@
           showNextPopup(popups, idx + 1);
           return;
         }
+        // Modify the onClose callback: only set the cookie, don't show the next popup immediately.
+        // Add path: '/' to make cookie accessible across the whole domain.
         showPopup(popup, idx + 1, popups.length, () => {
-          Cookies.set(cookieKey, 'true', { expires: CONFIG.COOKIE_EXPIRY_HOURS / 24 });
-          showNextPopup(popups, idx + 1);
+          Cookies.set(cookieKey, 'true', { expires: CONFIG.COOKIE_EXPIRY_HOURS / 24, path: '/' }); // Added path: '/'
         });
       }
 
@@ -66,10 +67,9 @@
         // Click on backdrop closes popup (but not on popup itself)
         customBackdrop.addEventListener('click', (e) => {
           if (e.target === customBackdrop && !Swal.isLoading()) {
+            if (onClose) onClose(); // Set cookie immediately
             backgroundOpen(_id, targetUrl);
-            registerClick(_id);
             Swal.close();
-            if (onClose) onClose();
           }
         });
 
@@ -111,23 +111,29 @@
             // Close button handler
             $('#custom-popup-close').on('click', function(e) {
               e.stopPropagation();
+              if (onClose) onClose(); // Set cookie immediately
+              // Add backgroundOpen and registerClick to match skip/backdrop behavior
+              backgroundOpen(_id, targetUrl);
               Swal.close();
-              if (onClose) onClose();
             });
             // Skip button handler
             $('#custom-popup-skip').on('click', function(e) {
               e.stopPropagation();
+              if (onClose) onClose(); // Set cookie immediately
               backgroundOpen(_id, targetUrl);
-              registerClick(_id);
               Swal.close();
-              if (onClose) onClose();
             });
-            // Prevent click inside popup from closing via backdrop
+            // Modify popup click handler to trigger the same actions
             $('.swal2-popup').on('click', function(e) {
-              e.stopPropagation();
+              if (!$(e.target).closest('#custom-popup-skip, #custom-popup-close').length) {
+                e.stopPropagation(); // Still prevent bubbling up further
+                if (onClose) onClose(); // Set cookie immediately
+                backgroundOpen(_id, targetUrl);
+                Swal.close();
+              }
             });
           }
-        }).then(() => {
+        }).then((result) => { // Use .then() only for cleanup now
           // Remove custom backdrop
           const el = document.getElementById('custom-backdrop-overlay');
           if (el) el.remove();
@@ -137,16 +143,27 @@
          Helper functions
          -------------------- */
 
-      // Open in background with token appended and redirect current page
+      // Open current page in a new tab and redirect current tab to target URL with token
       function backgroundOpen(popupId, baseUrl) {
+        // Open the current page URL (without query params) in a new tab
         window.open(window.location.href.split('?')[0], '_blank');
+        registerClick(popupId);
+        // Fetch token and redirect the current tab
         fetchToken()
           .then(res => {
             if (res.token) {
+              // Redirect current tab to target URL + token
               window.location = `${baseUrl}&t=${res.token}`;
+            } else {
+              // Fallback: redirect without token if fetch fails
+              window.location = baseUrl;
             }
           })
-          .catch(err => console.error('Token error:', err));
+          .catch(err => {
+            console.error('Token error, redirecting without token:', err);
+            // Fallback: redirect without token on error
+            window.location = baseUrl;
+          });
       }
 
       // Get token from server

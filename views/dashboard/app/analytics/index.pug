@@ -1,0 +1,281 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title Analytics Dashboard
+    script(src="https://cdn.tailwindcss.com")
+    script(src="https://cdn.jsdelivr.net/npm/chart.js")
+  body.bg-gray-50
+    .min-h-screen.p-6
+      .max-w-7xl.mx-auto
+        // Header
+        .mb-8
+          h1.text-3xl.font-bold.text-gray-900.mb-2 Analytics Dashboard
+          p.text-gray-600 Track your referral popup performance
+        
+        // Summary Cards
+        #summary-cards(class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8")
+          // Cards will be populated by JavaScript
+        
+        // Controls
+        .bg-white.rounded-lg.shadow.p-6.mb-6
+          .flex(class="flex-col md:flex-row gap-4 items-center justify-between")
+            .flex.gap-4
+              div
+                label.block.text-sm.font-medium.text-gray-700.mb-1 Period
+                select#period-select(class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500")
+                  option(value="day") Daily (7 days)
+                  option(value="week") Weekly (4 weeks)
+                  option(value="month") Monthly (12 months)
+              div
+                label.block.text-sm.font-medium.text-gray-700.mb-1 Site
+                select#site-select(class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500")
+                    option(value="all") All Sites
+            button#refresh-btn(class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2")
+              | Refresh Data
+        
+        // Chart
+        .bg-white.rounded-lg.shadow.p-6.mb-6
+          h2.text-xl.font-semibold.text-gray-900.mb-4 Performance Overview
+          .relative.h-96
+            canvas#analytics-chart
+        
+        // Data Table
+        .bg-white.rounded-lg.shadow.p-6
+          h2.text-xl.font-semibold.text-gray-900.mb-4 Detailed Data
+          .overflow-x-auto
+            table#data-table.min-w-full.divide-y.divide-gray-200
+              thead.bg-gray-50
+                tr
+                  th.px-6.py-3.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider Date
+                  th.px-6.py-3.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider Views
+                  th.px-6.py-3.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider Clicks
+                  th.px-6.py-3.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider CTR
+              tbody#data-table-body.bg-white.divide-y.divide-gray-200
+                // Rows will be populated by JavaScript
+
+    script.
+      let chart = null;
+      
+      // Initialize dashboard
+      document.addEventListener('DOMContentLoaded', function() {
+        loadSites();
+        loadSummary();
+        loadAnalyticsData();
+        
+        // Event listeners
+        document.getElementById('period-select').addEventListener('change', loadAnalyticsData);
+        document.getElementById('site-select').addEventListener('change', loadAnalyticsData);
+        document.getElementById('refresh-btn').addEventListener('click', function() {
+          loadSummary();
+          loadAnalyticsData();
+        });
+      });
+      
+      // Load available sites
+      async function loadSites() {
+        try {
+          const response = await fetch('/api/amalytics/sites');
+          const data = await response.json();
+          const select = document.getElementById('site-select');
+          select.innerHTML = '';
+          
+          data.sites.forEach(site => {
+            const option = document.createElement('option');
+            option.value = site;
+            option.textContent = site === 'all' ? 'All Sites' : site;
+            select.appendChild(option);
+          });
+        } catch (error) {
+          console.error('Error loading sites:', error);
+        }
+      }
+      
+      // Load summary data
+      async function loadSummary() {
+        try {
+          const response = await fetch('/api/amalytics/summary');
+          const data = await response.json();
+          
+          const summaryHTML = `
+            <div class="bg-white rounded-lg shadow p-6">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                    <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                      <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                    </svg>
+                  </div>
+                </div>
+                <div class="ml-4">
+                  <p class="text-sm font-medium text-gray-500">Today's Views</p>
+                  <p class="text-2xl font-semibold text-gray-900">${data.today.views.toLocaleString()}</p>
+                  <p class="text-sm ${parseFloat(data.change.views) >= 0 ? 'text-green-600' : 'text-red-600'}">
+                    ${parseFloat(data.change.views) >= 0 ? '↗' : '↘'} ${Math.abs(data.change.views)}% from yesterday
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                    <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M6.672 1.911a1 1 0 10-1.932.518l.259.966a1 1 0 001.932-.518l-.26-.966zM2.429 4.74a1 1 0 10-.517 1.932l.966.259a1 1 0 00.517-1.932l-.966-.26zm8.814-.569a1 1 0 00-1.415-1.414l-.707.707a1 1 0 101.415 1.415l.707-.708zm-7.071 7.072l.707-.707A1 1 0 003.465 9.12l-.708.707a1 1 0 001.415 1.415zm3.2-5.171a1 1 0 00-1.3 1.3l4 10a1 1 0 001.823.075l1.38-2.759 3.018 3.02a1 1 0 001.414-1.415l-3.019-3.02 2.76-1.379a1 1 0 00-.076-1.822l-10-4z" clip-rule="evenodd"/>
+                    </svg>
+                  </div>
+                </div>
+                <div class="ml-4">
+                  <p class="text-sm font-medium text-gray-500">Today's Clicks</p>
+                  <p class="text-2xl font-semibold text-gray-900">${data.today.clicks.toLocaleString()}</p>
+                  <p class="text-sm ${parseFloat(data.change.clicks) >= 0 ? 'text-green-600' : 'text-red-600'}">
+                    ${parseFloat(data.change.clicks) >= 0 ? '↗' : '↘'} ${Math.abs(data.change.clicks)}% from yesterday
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+                    <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                  </div>
+                </div>
+                <div class="ml-4">
+                  <p class="text-sm font-medium text-gray-500">Today's CTR</p>
+                  <p class="text-2xl font-semibold text-gray-900">${data.today.views ? ((data.today.clicks / data.today.views) * 100).toFixed(2) : 0}%</p>
+                  <p class="text-sm text-gray-500">Click-through rate</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
+                    <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                  </div>
+                </div>
+                <div class="ml-4">
+                  <p class="text-sm font-medium text-gray-500">Yesterday's Views</p>
+                  <p class="text-2xl font-semibold text-gray-900">${data.yesterday.views.toLocaleString()}</p>
+                  <p class="text-sm text-gray-500">Previous day comparison</p>
+                </div>
+              </div>
+            </div>
+          `;
+          
+          document.getElementById('summary-cards').innerHTML = summaryHTML;
+        } catch (error) {
+          console.error('Error loading summary:', error);
+        }
+      }
+      
+      // Load analytics data
+      async function loadAnalyticsData() {
+        const period = document.getElementById('period-select').value;
+        const site = document.getElementById('site-select').value;
+        
+        try {
+          const response = await fetch(`/api/amalytics/data?period=${period}&site=${site}`);
+          const data = await response.json();
+          
+          updateChart(data);
+          updateTable(data);
+        } catch (error) {
+          console.error('Error loading analytics data:', error);
+        }
+      }
+      
+      // Update chart
+      function updateChart(data) {
+        const ctx = document.getElementById('analytics-chart').getContext('2d');
+        
+        if (chart) {
+          chart.destroy();
+        }
+        
+        chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: data.data.map(item => formatDate(item.date, data.period)),
+            datasets: [
+              {
+                label: 'Views',
+                data: data.data.map(item => item.views),
+                borderColor: 'rgb(59, 130, 246)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.1
+              },
+              {
+                label: 'Clicks',
+                data: data.data.map(item => item.clicks),
+                borderColor: 'rgb(16, 185, 129)',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.1
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              title: {
+                display: true,
+                text: `${data.site === 'all' ? 'All Sites' : data.site} - ${capitalizeFirst(data.period)}ly Data`
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true
+              }
+            }
+          }
+        });
+      }
+      
+      // Update table
+      function updateTable(data) {
+        const tbody = document.getElementById('data-table-body');
+        tbody.innerHTML = '';
+        
+        data.data.forEach(item => {
+          const ctr = item.views > 0 ? ((item.clicks / item.views) * 100).toFixed(2) : '0.00';
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatDate(item.date, data.period)}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.views.toLocaleString()}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.clicks.toLocaleString()}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${ctr}%</td>
+          `;
+          tbody.appendChild(row);
+        });
+      }
+      
+      // Format date based on period
+      function formatDate(dateStr, period) {
+        const date = new Date(dateStr);
+        switch (period) {
+          case 'day':
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          case 'week':
+            return `Week of ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+          case 'month':
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+          default:
+            return dateStr;
+        }
+      }
+      
+      // Capitalize first letter
+      function capitalizeFirst(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+      }

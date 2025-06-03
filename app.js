@@ -12,6 +12,7 @@ const { StableDiffusionApi } = require("stable-diffusion-api");
 
 const { initializeCronJobs } = require('./modules/cronJobs-bot.js');
 const { initializeCronJobsForBlogs } = require('./modules/cronJobs-blog.js');
+const { initializeAnalyticsCronJobs } = require('./modules/cronjob-analytics.js');
 
 const passport = require("passport");
 const passportConfig = require('./middleware/passport')(passport);
@@ -34,6 +35,8 @@ function startServer() {
       global.db = db; // Save the db connection in a global variable
       initializeCronJobsForBlogs(db)
       initializeCronJobs(db)
+      initializeAnalyticsCronJobs(db)
+
       // Use the express-session middleware
       app.use(
         session({
@@ -78,28 +81,22 @@ function startServer() {
       app.set('view engine', 'pug');
       app.set('views', './views');
 
-      // Define your routers
-      const index = require('./routers/index');
-      const user = require('./routers/user');
-      const auth = require('./routers/auth');
-      const payment = require('./routers/payment');
-      const dashboard= require('./routers/dashboard/index');
-      const generator = require('./routers/api/generator');
-      const autoblog = require('./routers/api/autoblog');
-      const affiliate = require('./routers/api/affiliate');
-      const abtest = require('./routers/api/abtest');
-      const referalRouter = require('./routers/api/referal');
+      // Define and use routers concisely
+      const routers = [
+        ['/', './routers/index'],
+        ['/user', './routers/user'],
+        ['/auth', './routers/auth'],
+        ['/payment', './routers/payment'],
+        ['/dashboard', './routers/dashboard/index'],
+        ['/api/generator', './routers/api/generator'],
+        ['/api/autoblog', './routers/api/autoblog'],
+        ['/api/affiliate', './routers/api/affiliate'],
+        ['/api/abtest', './routers/api/abtest'],
+        ['/api/referal', './routers/api/referal'],
+        ['/api/amalytics', './routers/api/analytics'],
+      ];
 
-      app.use('/', index); 
-      app.use('/user', user); 
-      app.use('/auth', auth); 
-      app.use('/payment', payment);
-      app.use('/dashboard', dashboard);
-      app.use('/api/generator', generator);
-      app.use('/api/autoblog', autoblog);
-      app.use('/api/affiliate', affiliate);
-      app.use('/api/abtest', abtest);
-      app.use('/api/referal', referalRouter);
+      routers.forEach(([route, path]) => app.use(route, require(path)));
 
 
       server.listen(port, '0.0.0.0', () => 

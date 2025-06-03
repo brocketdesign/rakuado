@@ -6,7 +6,8 @@
   "scripts": {
     "test": "npm test",
     "dev": "nodemon app.js",
-    "start": "nodemon app.js"
+    "start": "nodemon app.js",
+    "init-analytics": "node scripts/init-analytics.js"
   },
   "repository": {
     "type": "git",
