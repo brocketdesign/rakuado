@@ -1,90 +1,329 @@
-doctype html
-html(lang="en")
-  head
-    meta(charset="UTF-8")
-    meta(name="viewport", content="width=device-width, initial-scale=1.0")
-    title Analytics Dashboard
-    script(src="https://cdn.tailwindcss.com")
+extends ../../base
+
+block mainContent
     script(src="https://cdn.jsdelivr.net/npm/chart.js")
-  body.bg-gray-50
-    .min-h-screen.p-6
-      .max-w-7xl.mx-auto
-        // Header
-        .mb-8
-          h1.text-3xl.font-bold.text-gray-900.mb-2 Analytics Dashboard
-          p.text-gray-600 Track your referral popup performance
-        
-        // Summary Cards
-        #summary-cards(class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8")
-          // Cards will be populated by JavaScript
-        
-        // Controls
-        .bg-white.rounded-lg.shadow.p-6.mb-6
-          .flex(class="flex-col md:flex-row gap-4 items-center justify-between")
-            .flex.gap-4
-              div
-                label.block.text-sm.font-medium.text-gray-700.mb-1 Period
-                select#period-select(class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500")
-                  option(value="day") Daily (7 days)
-                  option(value="week") Weekly (4 weeks)
-                  option(value="month") Monthly (12 months)
-              div
-                label.block.text-sm.font-medium.text-gray-700.mb-1 Site
-                select#site-select(class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500")
-                    option(value="all") All Sites
-            button#refresh-btn(class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2")
-              | Refresh Data
-        
-        // Chart
-        .bg-white.rounded-lg.shadow.p-6.mb-6
-          h2.text-xl.font-semibold.text-gray-900.mb-4 Performance Overview
-          .relative.h-96
-            canvas#analytics-chart
-        
-        // Data Table
-        .bg-white.rounded-lg.shadow.p-6
-          h2.text-xl.font-semibold.text-gray-900.mb-4 Detailed Data
-          .overflow-x-auto
-            table#data-table.min-w-full.divide-y.divide-gray-200
-              thead.bg-gray-50
-                tr
-                  th.px-6.py-3.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider Date
-                  th.px-6.py-3.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider Views
-                  th.px-6.py-3.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider Clicks
-                  th.px-6.py-3.text-left.text-xs.font-medium.text-gray-500.uppercase.tracking-wider CTR
-              tbody#data-table-body.bg-white.divide-y.divide-gray-200
-                // Rows will be populated by JavaScript
+    
+    // Hero Section
+    .hero-section.mb-5
+        .container
+            .row.align-items-center
+                .col-md-8
+                    h1.display-4.fw-bold.mb-3 
+                        i.fas.fa-chart-line.me-3
+                        span#hero-title Analytics Dashboard
+                    p.lead#hero-subtitle アナリティクスダッシュボード - サイト全体のリファラルポップアップのパフォーマンスを監視
+                .col-md-4.text-end
+                    .stats-card.bg-primary.text-white.p-4.rounded-3
+                        h3.mb-1#total-today-views 0
+                        small#total-today-label 今日の総ビュー数 / Today's Total Views
+    
+    // Period Controls Section
+    section.period-controls-section.mb-5
+        .container
+            .card.border-0.shadow-sm
+                .card-header.bg-white.border-0.pb-0
+                    h5.fw-bold.mb-0
+                        i.fas.fa-calendar-alt.me-2.text-primary
+                        | Period Selection / 期間選択
+                .card-body
+                    .row.align-items-center
+                        .col-auto
+                            .btn-group(role="group")
+                                button#current-period-btn.btn.btn-primary.period-btn.active
+                                    | Current Period / 現在の期間
+                                button#previous-period-btn.btn.btn-outline-primary.period-btn
+                                    | Previous Period / 前期間
+                        .col-auto
+                            span#period-info.text-muted.small
+    
+    // Summary Cards Section
+    section.summary-section.mb-5
+        .container
+            .row.g-4#summary-cards
+                // Cards will be populated by JavaScript
+    
+    // Tab Navigation Section
+    section.analytics-content.mb-5
+        .container
+            .card.border-0.shadow-sm
+                .card-header.bg-white.border-0
+                    .nav.nav-tabs.border-0
+                        button#simple-tab.nav-link.active.tab-button
+                            i.fas.fa-chart-simple.me-2
+                            | Simplified View / シンプル表示
+                        button#detailed-tab.nav-link.tab-button
+                            i.fas.fa-chart-line.me-2
+                            | Detailed View / 詳細表示
+                
+                .card-body.p-0
+                    // Simple View
+                    #simple-view.tab-content.active.p-4
+                        // Total Performance Section
+                        .mb-5
+                            h4.fw-bold.mb-3
+                                i.fas.fa-globe.me-2.text-success
+                                | Total Performance Overview / 全体パフォーマンス概要
+                            .card.bg-light.border-0
+                                .card-body
+                                    .chart-container(style="position: relative; height: 400px;")
+                                        canvas#total-chart
+                        
+                        // Sites Performance Section
+                        .mb-5
+                            h4.fw-bold.mb-3
+                                i.fas.fa-sitemap.me-2.text-info
+                                | Performance by Site / サイト別パフォーマンス
+                            #sites-section
+                                // Site charts will be populated by JavaScript
+                    
+                    // Detailed View
+                    #detailed-view.tab-content.p-4
+                        .mb-4
+                            h4.fw-bold.mb-3
+                                i.fas.fa-microscope.me-2.text-warning
+                                | Detailed Analytics / 詳細分析
+                            
+                            // Site Filter
+                            .row.mb-4
+                                .col-md-4
+                                    label.form-label.fw-medium Filter by Site / サイト別フィルター
+                                    select#site-select.form-select
+                                        option(value="all") All Sites / 全サイト
+                            
+                            // Detailed Chart
+                            .card.bg-light.border-0.mb-4
+                                .card-body
+                                    .chart-container(style="position: relative; height: 400px;")
+                                        canvas#detailed-chart
+                            
+                            // Data Table
+                            .card.border-0.shadow-sm
+                                .card-header.bg-white
+                                    h5.fw-bold.mb-0
+                                        i.fas.fa-table.me-2.text-secondary
+                                        | Daily Data Breakdown / 日別データ詳細
+                                .card-body.p-0
+                                    .table-responsive
+                                        table#data-table.table.table-hover.mb-0
+                                            thead.table-light
+                                                tr
+                                                    th.fw-bold Date / 日付
+                                                    th.fw-bold Views / ビュー数
+                                                    th.fw-bold Clicks / クリック数
+                                                    th.fw-bold CTR
+                                            tbody#data-table-body
+                                                // Rows will be populated by JavaScript
+
+    style.
+      .tab-content { display: none; }
+      .tab-content.active { display: block; }
+      .tab-button.active { 
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+        color: white !important; 
+        border-color: #667eea !important;
+      }
+      .period-btn.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        border-color: #667eea !important;
+      }
+      .analytics-content .nav-tabs {
+        border-bottom: 2px solid #e9ecef;
+      }
+      .analytics-content .nav-link {
+        border: none;
+        border-radius: 0;
+        padding: 1rem 1.5rem;
+        margin-bottom: -2px;
+        position: relative;
+        transition: all 0.3s ease;
+      }
+      .analytics-content .nav-link.active::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        border-radius: 2px 2px 0 0;
+      }
+      .site-chart-container {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border: 1px solid #e9ecef;
+        transition: all 0.3s ease;
+      }
+      .site-chart-container:hover {
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+      }
+      .site-title {
+        color: #2c3e50;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e9ecef;
+      }
+      .site-title a {
+        color: #667eea;
+        text-decoration: none;
+        transition: color 0.3s ease;
+      }
+      .site-title a:hover {
+        color: #764ba2;
+      }
+      .summary-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        border: 1px solid #e9ecef;
+        position: relative;
+        overflow: hidden;
+      }
+      .summary-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+      }
+      .summary-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+      }
+      .summary-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+      }
+      .summary-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+      }
+      .summary-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        font-weight: 500;
+      }
+      .change-indicator {
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+      .change-positive { color: #28a745; }
+      .change-negative { color: #dc3545; }
 
     script.
-      let chart = null;
+      let charts = {}; // Store multiple charts
+      let currentPeriod = 'current';
+      let availableSites = [];
       
       // Initialize dashboard
       document.addEventListener('DOMContentLoaded', function() {
         loadSites();
         loadSummary();
-        loadAnalyticsData();
+        loadData();
         
-        // Event listeners
-        document.getElementById('period-select').addEventListener('change', loadAnalyticsData);
-        document.getElementById('site-select').addEventListener('change', loadAnalyticsData);
-        document.getElementById('refresh-btn').addEventListener('click', function() {
-          loadSummary();
-          loadAnalyticsData();
+        // Period buttons
+        document.getElementById('current-period-btn').addEventListener('click', function() {
+          setActivePeriod('current');
         });
+        document.getElementById('previous-period-btn').addEventListener('click', function() {
+          setActivePeriod('previous');
+        });
+        
+        // Tab buttons
+        document.getElementById('simple-tab').addEventListener('click', function() {
+          setActiveTab('simple');
+        });
+        document.getElementById('detailed-tab').addEventListener('click', function() {
+          setActiveTab('detailed');
+        });
+        
+        // Site select for detailed view
+        document.getElementById('site-select').addEventListener('change', loadDetailedData);
       });
+      
+      // Set active period
+      function setActivePeriod(period) {
+        currentPeriod = period;
+        
+        // Update button styles
+        document.querySelectorAll('.period-btn').forEach(btn => {
+          btn.classList.remove('active');
+          btn.classList.remove('btn-primary');
+          btn.classList.add('btn-outline-primary');
+        });
+        
+        const activeBtn = period === 'current' ? 
+          document.getElementById('current-period-btn') : 
+          document.getElementById('previous-period-btn');
+        
+        activeBtn.classList.remove('btn-outline-primary');
+        activeBtn.classList.add('btn-primary', 'active');
+        
+        // Reload data
+        loadSummary();
+        loadData();
+        loadDetailedData();
+      }
+      
+      // Set active tab
+      function setActiveTab(tab) {
+        // Update tab buttons
+        document.querySelectorAll('.tab-button').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        
+        const activeBtn = tab === 'simple' ? 
+          document.getElementById('simple-tab') : 
+          document.getElementById('detailed-tab');
+        
+        activeBtn.classList.add('active');
+        
+        // Update content visibility
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.remove('active');
+        });
+        
+        const activeContent = tab === 'simple' ? 
+          document.getElementById('simple-view') : 
+          document.getElementById('detailed-view');
+        
+        activeContent.classList.add('active');
+        
+        // Load data if switching to detailed view
+        if (tab === 'detailed') {
+          loadDetailedData();
+        }
+      }
       
       // Load available sites
       async function loadSites() {
         try {
-          const response = await fetch('/api/amalytics/sites');
+          const response = await fetch('/api/analytics/sites');
           const data = await response.json();
+          availableSites = data.sites;
+          
           const select = document.getElementById('site-select');
           select.innerHTML = '';
           
           data.sites.forEach(site => {
             const option = document.createElement('option');
             option.value = site;
-            option.textContent = site === 'all' ? 'All Sites' : site;
+            option.textContent = site === 'all' ? 'All Sites / 全サイト' : site;
             select.appendChild(option);
           });
         } catch (error) {
@@ -95,79 +334,65 @@ html(lang="en")
       // Load summary data
       async function loadSummary() {
         try {
-          const response = await fetch('/api/amalytics/summary');
+          const response = await fetch(`/api/analytics/summary?period=${currentPeriod}`);
           const data = await response.json();
           
+          // Update hero stats card
+          document.getElementById('total-today-views').textContent = data.today.views.toLocaleString();
+          
+          // Update period info
+          const periodInfo = document.getElementById('period-info');
+          periodInfo.textContent = `期間: ${data.period.startDate} ~ ${data.period.endDate}`;
+          
           const summaryHTML = `
-            <div class="bg-white rounded-lg shadow p-6">
-              <div class="flex items-center">
-                <div class="flex-shrink-0">
-                  <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                    <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
-                      <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
-                    </svg>
-                  </div>
+            <div class="col-md-6 col-lg-3">
+              <div class="summary-card">
+                <div class="summary-icon bg-primary bg-opacity-10 text-primary">
+                  <i class="fas fa-eye"></i>
                 </div>
-                <div class="ml-4">
-                  <p class="text-sm font-medium text-gray-500">Today's Views</p>
-                  <p class="text-2xl font-semibold text-gray-900">${data.today.views.toLocaleString()}</p>
-                  <p class="text-sm ${parseFloat(data.change.views) >= 0 ? 'text-green-600' : 'text-red-600'}">
-                    ${parseFloat(data.change.views) >= 0 ? '↗' : '↘'} ${Math.abs(data.change.views)}% from yesterday
-                  </p>
+                <div class="summary-value">${data.period.views.toLocaleString()}</div>
+                <div class="summary-label">期間ビュー数 / Period Views</div>
+                <div class="change-indicator ${parseFloat(data.change.views) >= 0 ? 'change-positive' : 'change-negative'}">
+                  ${parseFloat(data.change.views) >= 0 ? '↗' : '↘'} ${Math.abs(data.change.views)}% from previous
                 </div>
               </div>
             </div>
             
-            <div class="bg-white rounded-lg shadow p-6">
-              <div class="flex items-center">
-                <div class="flex-shrink-0">
-                  <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                    <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M6.672 1.911a1 1 0 10-1.932.518l.259.966a1 1 0 001.932-.518l-.26-.966zM2.429 4.74a1 1 0 10-.517 1.932l.966.259a1 1 0 00.517-1.932l-.966-.26zm8.814-.569a1 1 0 00-1.415-1.414l-.707.707a1 1 0 101.415 1.415l.707-.708zm-7.071 7.072l.707-.707A1 1 0 003.465 9.12l-.708.707a1 1 0 001.415 1.415zm3.2-5.171a1 1 0 00-1.3 1.3l4 10a1 1 0 001.823.075l1.38-2.759 3.018 3.02a1 1 0 001.414-1.415l-3.019-3.02 2.76-1.379a1 1 0 00-.076-1.822l-10-4z" clip-rule="evenodd"/>
-                    </svg>
-                  </div>
+            <div class="col-md-6 col-lg-3">
+              <div class="summary-card">
+                <div class="summary-icon bg-success bg-opacity-10 text-success">
+                  <i class="fas fa-mouse-pointer"></i>
                 </div>
-                <div class="ml-4">
-                  <p class="text-sm font-medium text-gray-500">Today's Clicks</p>
-                  <p class="text-2xl font-semibold text-gray-900">${data.today.clicks.toLocaleString()}</p>
-                  <p class="text-sm ${parseFloat(data.change.clicks) >= 0 ? 'text-green-600' : 'text-red-600'}">
-                    ${parseFloat(data.change.clicks) >= 0 ? '↗' : '↘'} ${Math.abs(data.change.clicks)}% from yesterday
-                  </p>
+                <div class="summary-value">${data.period.clicks.toLocaleString()}</div>
+                <div class="summary-label">期間クリック数 / Period Clicks</div>
+                <div class="change-indicator ${parseFloat(data.change.clicks) >= 0 ? 'change-positive' : 'change-negative'}">
+                  ${parseFloat(data.change.clicks) >= 0 ? '↗' : '↘'} ${Math.abs(data.change.clicks)}% from previous
                 </div>
               </div>
             </div>
             
-            <div class="bg-white rounded-lg shadow p-6">
-              <div class="flex items-center">
-                <div class="flex-shrink-0">
-                  <div class="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                    <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                    </svg>
-                  </div>
+            <div class="col-md-6 col-lg-3">
+              <div class="summary-card">
+                <div class="summary-icon bg-warning bg-opacity-10 text-warning">
+                  <i class="fas fa-percentage"></i>
                 </div>
-                <div class="ml-4">
-                  <p class="text-sm font-medium text-gray-500">Today's CTR</p>
-                  <p class="text-2xl font-semibold text-gray-900">${data.today.views ? ((data.today.clicks / data.today.views) * 100).toFixed(2) : 0}%</p>
-                  <p class="text-sm text-gray-500">Click-through rate</p>
+                <div class="summary-value">${data.period.ctr}%</div>
+                <div class="summary-label">クリック率 / Click-through Rate</div>
+                <div class="change-indicator ${parseFloat(data.change.ctr) >= 0 ? 'change-positive' : 'change-negative'}">
+                  ${parseFloat(data.change.ctr) >= 0 ? '↗' : '↘'} ${Math.abs(data.change.ctr)}% from previous
                 </div>
               </div>
             </div>
             
-            <div class="bg-white rounded-lg shadow p-6">
-              <div class="flex items-center">
-                <div class="flex-shrink-0">
-                  <div class="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                    <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                  </div>
+            <div class="col-md-6 col-lg-3">
+              <div class="summary-card">
+                <div class="summary-icon bg-info bg-opacity-10 text-info">
+                  <i class="fas fa-calendar-day"></i>
                 </div>
-                <div class="ml-4">
-                  <p class="text-sm font-medium text-gray-500">Yesterday's Views</p>
-                  <p class="text-2xl font-semibold text-gray-900">${data.yesterday.views.toLocaleString()}</p>
-                  <p class="text-sm text-gray-500">Previous day comparison</p>
+                <div class="summary-value">${data.today.views.toLocaleString()}</div>
+                <div class="summary-label">今日のビュー数 / Today's Views</div>
+                <div class="change-indicator ${parseFloat(data.change.views) >= 0 ? 'change-positive' : 'change-negative'}">
+                  vs yesterday
                 </div>
               </div>
             </div>
@@ -179,48 +404,99 @@ html(lang="en")
         }
       }
       
-      // Load analytics data
-      async function loadAnalyticsData() {
-        const period = document.getElementById('period-select').value;
-        const site = document.getElementById('site-select').value;
-        
+      // Load simplified view data
+      async function loadData() {
         try {
-          const response = await fetch(`/api/amalytics/data?period=${period}&site=${site}`);
-          const data = await response.json();
+          // Load total performance
+          const totalResponse = await fetch(`/api/analytics/data?period=${currentPeriod}&site=all`);
+          const totalData = await totalResponse.json();
+          updateTotalChart(totalData);
           
-          updateChart(data);
-          updateTable(data);
+          // Load site-specific charts
+          loadSiteCharts();
         } catch (error) {
-          console.error('Error loading analytics data:', error);
+          console.error('Error loading data:', error);
         }
       }
       
-      // Update chart
-      function updateChart(data) {
-        const ctx = document.getElementById('analytics-chart').getContext('2d');
+      // Load site-specific charts
+      async function loadSiteCharts() {
+        const sitesSection = document.getElementById('sites-section');
+        sitesSection.innerHTML = '';
         
-        if (chart) {
-          chart.destroy();
+        for (const site of availableSites) {
+          if (site === 'all') continue;
+          
+          try {
+            const response = await fetch(`/api/analytics/data?period=${currentPeriod}&site=${site}`);
+            const siteData = await response.json();
+            
+            const siteDiv = document.createElement('div');
+            siteDiv.className = 'site-chart-container mb-4';
+            siteDiv.innerHTML = `
+              <h5 class="site-title">
+                <a href="https://${site}" target="_blank">${site}</a>
+              </h5>
+              <div class="chart-container" style="position: relative; height: 300px;">
+                <canvas id="site-chart-${site.replace(/\./g, '-')}"></canvas>
+              </div>
+            `;
+            sitesSection.appendChild(siteDiv);
+            
+            updateSiteChart(site, siteData);
+          } catch (error) {
+            console.error(`Error loading data for ${site}:`, error);
+          }
+        }
+      }
+      
+      // Load detailed view data
+      async function loadDetailedData() {
+        const site = document.getElementById('site-select').value;
+        
+        try {
+          const response = await fetch(`/api/analytics/data?period=${currentPeriod}&site=${site}`);
+          const data = await response.json();
+          
+          updateDetailedChart(data);
+          updateTable(data);
+        } catch (error) {
+          console.error('Error loading detailed data:', error);
+        }
+      }
+      
+      // Update total chart
+      function updateTotalChart(data) {
+        const ctx = document.getElementById('total-chart').getContext('2d');
+        
+        if (charts['total']) {
+          charts['total'].destroy();
         }
         
-        chart = new Chart(ctx, {
+        charts['total'] = new Chart(ctx, {
           type: 'line',
           data: {
-            labels: data.data.map(item => formatDate(item.date, data.period)),
+            labels: data.data.map(item => formatDate(item.date)),
             datasets: [
               {
                 label: 'Views',
                 data: data.data.map(item => item.views),
                 borderColor: 'rgb(59, 130, 246)',
                 backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                tension: 0.1
+                tension: 0.1,
+                fill: true,
+                pointRadius: 2,
+                pointHoverRadius: 4
               },
               {
                 label: 'Clicks',
                 data: data.data.map(item => item.clicks),
                 borderColor: 'rgb(16, 185, 129)',
                 backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                tension: 0.1
+                tension: 0.1,
+                fill: true,
+                pointRadius: 2,
+                pointHoverRadius: 4
               }
             ]
           },
@@ -230,13 +506,156 @@ html(lang="en")
             plugins: {
               title: {
                 display: true,
-                text: `${data.site === 'all' ? 'All Sites' : data.site} - ${capitalizeFirst(data.period)}ly Data`
+                text: `All Sites - ${currentPeriod === 'current' ? 'Current' : 'Previous'} Period (${data.data.length} days)`
+              },
+              legend: {
+                position: 'top'
               }
             },
             scales: {
+              x: {
+                display: true,
+                ticks: {
+                  maxTicksLimit: 15,
+                  maxRotation: 45
+                }
+              },
               y: {
                 beginAtZero: true
               }
+            },
+            interaction: {
+              intersect: false,
+              mode: 'index'
+            }
+          }
+        });
+      }
+      
+      // Update site chart
+      function updateSiteChart(site, data) {
+        const chartId = `site-chart-${site.replace(/\./g, '-')}`;
+        const ctx = document.getElementById(chartId).getContext('2d');
+        
+        if (charts[site]) {
+          charts[site].destroy();
+        }
+        
+        charts[site] = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: data.data.map(item => formatDate(item.date)),
+            datasets: [
+              {
+                label: 'Views',
+                data: data.data.map(item => item.views),
+                borderColor: 'rgb(59, 130, 246)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.1,
+                pointRadius: 1,
+                pointHoverRadius: 3
+              },
+              {
+                label: 'Clicks',
+                data: data.data.map(item => item.clicks),
+                borderColor: 'rgb(16, 185, 129)',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.1,
+                pointRadius: 1,
+                pointHoverRadius: 3
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'top'
+              },
+              title: {
+                display: true,
+                text: `${currentPeriod === 'current' ? 'Current' : 'Previous'} Period (${data.data.length} days)`
+              }
+            },
+            scales: {
+              x: {
+                display: true,
+                ticks: {
+                  maxTicksLimit: 10,
+                  maxRotation: 45
+                }
+              },
+              y: {
+                beginAtZero: true
+              }
+            },
+            interaction: {
+              intersect: false,
+              mode: 'index'
+            }
+          }
+        });
+      }
+      
+      // Update detailed chart
+      function updateDetailedChart(data) {
+        const ctx = document.getElementById('detailed-chart').getContext('2d');
+        
+        if (charts['detailed']) {
+          charts['detailed'].destroy();
+        }
+        
+        charts['detailed'] = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: data.data.map(item => formatDate(item.date)),
+            datasets: [
+              {
+                label: 'Views',
+                data: data.data.map(item => item.views),
+                borderColor: 'rgb(59, 130, 246)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.1,
+                fill: true
+              },
+              {
+                label: 'Clicks',
+                data: data.data.map(item => item.clicks),
+                borderColor: 'rgb(16, 185, 129)',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.1,
+                fill: true
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              title: {
+                display: true,
+                text: `${data.site === 'all' ? 'All Sites' : data.site} - ${currentPeriod === 'current' ? 'Current' : 'Previous'} Period (${data.data.length} days)`
+              },
+              legend: {
+                position: 'top'
+              }
+            },
+            scales: {
+              x: {
+                display: true,
+                ticks: {
+                  maxTicksLimit: 15,
+                  maxRotation: 45
+                }
+              },
+              y: {
+                beginAtZero: true
+              }
+            },
+            interaction: {
+              intersect: false,
+              mode: 'index'
             }
           }
         });
@@ -251,31 +670,28 @@ html(lang="en")
           const ctr = item.views > 0 ? ((item.clicks / item.views) * 100).toFixed(2) : '0.00';
           const row = document.createElement('tr');
           row.innerHTML = `
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatDate(item.date, data.period)}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.views.toLocaleString()}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.clicks.toLocaleString()}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${ctr}%</td>
+            <td class="py-3 px-4 text-sm">${formatDateLong(item.date)}</td>
+            <td class="py-3 px-4 text-sm">${item.views.toLocaleString()}</td>
+            <td class="py-3 px-4 text-sm">${item.clicks.toLocaleString()}</td>
+            <td class="py-3 px-4 text-sm">${ctr}%</td>
           `;
           tbody.appendChild(row);
         });
       }
       
-      // Format date based on period
-      function formatDate(dateStr, period) {
+      // Format date for chart labels
+      function formatDate(dateStr) {
         const date = new Date(dateStr);
-        switch (period) {
-          case 'day':
-            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          case 'week':
-            return `Week of ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
-          case 'month':
-            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-          default:
-            return dateStr;
-        }
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       }
       
-      // Capitalize first letter
-      function capitalizeFirst(str) {
-        return str.charAt(0).toUpperCase() + str.slice(1);
+      // Format date for table display
+      function formatDateLong(dateStr) {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { 
+          weekday: 'short',
+          month: 'short', 
+          day: 'numeric',
+          year: 'numeric'
+        });
       }

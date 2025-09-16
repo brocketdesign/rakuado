@@ -52,6 +52,44 @@ const filterRecentRefery = (refery) => {
   return (refery || []).filter(r => r.timestamp && r.timestamp >= cutoff);
 };
 
+// Helper to store daily analytics data immediately
+const storeDailyAnalytics = async (domain, popupId, viewIncrement = 0, clickIncrement = 0) => {
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  
+  const ANALYTICS_DAILY = global.db.collection('analyticsDaily');
+  
+  // Get existing daily record or create new one
+  let dailyRecord = await ANALYTICS_DAILY.findOne({ date: todayStr });
+  
+  if (!dailyRecord) {
+    dailyRecord = {
+      date: todayStr,
+      timestamp: today.getTime(),
+      total: { views: 0, clicks: 0 },
+      sites: {}
+    };
+  }
+  
+  // Update totals
+  dailyRecord.total.views += viewIncrement;
+  dailyRecord.total.clicks += clickIncrement;
+  
+  // Update site-specific data
+  if (!dailyRecord.sites[domain]) {
+    dailyRecord.sites[domain] = { views: 0, clicks: 0 };
+  }
+  dailyRecord.sites[domain].views += viewIncrement;
+  dailyRecord.sites[domain].clicks += clickIncrement;
+  
+  // Store the updated record
+  await ANALYTICS_DAILY.replaceOne(
+    { date: todayStr },
+    dailyRecord,
+    { upsert: true }
+  );
+};
+
 // Helper for ObjectId validation
 function isValidObjectId(id) {
   return typeof id === 'string' && /^[a-fA-F0-9]{24}$/.test(id);
@@ -117,7 +155,14 @@ router.get('/register-view', async (req, res) => {
   if (!isValidObjectId(id)) return res.sendStatus(400);
   const popup = await POPUPS.findOne({ _id: new ObjectId(id) });
   if (!popup) return res.sendStatus(404);
+  
+  // Update popup stats
   await POPUPS.updateOne({ _id: popup._id }, { $inc: { views: 1 } });
+  
+  // Store analytics data immediately
+  await storeDailyAnalytics(domain, id, 1, 0);
+  
+  // Update refery data (keep for backward compatibility)
   let refery = filterRecentRefery(popup.refery);
   let found = false;
   refery = refery.map(r => {
@@ -129,6 +174,7 @@ router.get('/register-view', async (req, res) => {
   });
   if (!found) refery.push({ domain, view: 1, click: 0, timestamp: now() });
   await POPUPS.updateOne({ _id: popup._id }, { $set: { refery } });
+  
   return res.sendStatus(200);
 });
 
@@ -139,7 +185,14 @@ router.get('/register-click', async (req, res) => {
   if (!isValidObjectId(id)) return res.sendStatus(400);
   const popup = await POPUPS.findOne({ _id: new ObjectId(id) });
   if (!popup) return res.sendStatus(404);
+  
+  // Update popup stats
   await POPUPS.updateOne({ _id: popup._id }, { $inc: { clicks: 1 } });
+  
+  // Store analytics data immediately
+  await storeDailyAnalytics(domain, id, 0, 1);
+  
+  // Update refery data (keep for backward compatibility)
   let refery = filterRecentRefery(popup.refery);
   let found = false;
   refery = refery.map(r => {
@@ -151,6 +204,7 @@ router.get('/register-click', async (req, res) => {
   });
   if (!found) refery.push({ domain, view: 0, click: 1, timestamp: now() });
   await POPUPS.updateOne({ _id: popup._id }, { $set: { refery } });
+  
   return res.sendStatus(200);
 });
 

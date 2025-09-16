@@ -162,33 +162,12 @@ router.get('/app/referal', ensureAuthenticated, ensureMembership, async (req, re
 // Analytics route
 router.get('/app/analytics', ensureAuthenticated, ensureMembership, async (req, res) => {
   try {
-    const dailyData = await global.db.collection('analyticsDaily')
-      .find({})
-      .sort({ date: -1 })
-      .limit(30)
-      .toArray();
-
-    const weeklyData = await global.db.collection('analyticsWeekly')
-      .find({})
-      .sort({ weekStart: -1 })
-      .limit(12)
-      .toArray();
-
-    const monthlyData = await global.db.collection('analyticsMonthly')
-      .find({})
-      .sort({ monthStart: -1 })
-      .limit(12)
-      .toArray();
-
     res.render('dashboard/app/analytics/index', {
       user: req.user,
-      dailyData,
-      weeklyData,
-      monthlyData,
-      title: "RAKUBUN - Dashboard"
+      title: "RAKUBUN - Analytics Dashboard"
     });
   } catch (error) {
-    console.error('Error fetching analytics data:', error);
+    console.error('Error rendering analytics dashboard:', error);
     res.status(500).send('Internal server error');
   }
 });

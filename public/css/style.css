@@ -329,3 +329,169 @@ input:checked + .slider:before {
   .sortable{
     cursor: pointer;
   }
+
+/* Modern Dashboard Styles */
+.hero-section {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  margin: -1.5rem -15px 2rem -15px;
+  padding: 3rem 0;
+  border-radius: 0 0 20px 20px;
+}
+
+.hero-section h1 {
+  color: white;
+}
+
+.hero-section .lead {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.stats-card {
+  background: rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stats-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 1.5rem;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 50px;
+  height: 3px;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  border-radius: 2px;
+}
+
+.tool-card {
+  transition: all 0.3s ease;
+  border-radius: 15px !important;
+  overflow: hidden;
+  position: relative;
+}
+
+.tool-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.tool-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+.tool-card:hover::before {
+  opacity: 1;
+}
+
+.icon-wrapper {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.tool-card:hover .icon-wrapper {
+  transform: scale(1.1);
+}
+
+.quick-actions-section .card,
+.admin-tools-section .card {
+  border-radius: 15px !important;
+  transition: all 0.3s ease;
+}
+
+.quick-actions-section .btn {
+  border-radius: 10px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.quick-actions-section .btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.quick-actions-section .btn:hover::before {
+  left: 100%;
+}
+
+.quick-actions-section .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.news-item {
+  padding: 1rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 10px;
+  border-left: 4px solid #667eea;
+  transition: all 0.3s ease;
+}
+
+.news-item:hover {
+  transform: translateX(5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.admin-tools-section {
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  padding: 2rem 0;
+  margin: 0 -15px;
+  border-radius: 20px;
+}
+
+@media (max-width: 768px) {
+  .hero-section {
+    margin: -1rem -15px 1rem -15px;
+    padding: 2rem 0;
+  }
+  
+  .tool-card .row .col-2 {
+    flex: 0 0 auto;
+    width: 20%;
+  }
+  
+  .tool-card .row .col-10 {
+    flex: 0 0 auto;
+    width: 80%;
+  }
+  
+  .section-title {
+    font-size: 1.3rem;
+  }
+}

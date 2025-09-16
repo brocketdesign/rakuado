@@ -27,9 +27,24 @@ const url = process.env.MONGODB_URL; // Use MONGODB_URL from .env file
 const dbName = process.env.MONGODB_DATABASE; // Use MONGODB_DATABASE from .env file
 
 function startServer() {
-  MongoClient.connect(url, { useUnifiedTopology: true })
+  console.log('Attempting to connect to MongoDB...');
+  console.log('MongoDB URL:', url ? url.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') : 'NOT SET');
+  console.log('Database Name:', dbName || 'NOT SET');
+  
+  if (!url || !dbName) {
+    console.error('MongoDB connection string or database name not found in environment variables');
+    process.exit(1);
+  }
+
+  MongoClient.connect(url, { 
+    useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 10000, // 10 seconds timeout
+    connectTimeoutMS: 10000,
+    socketTimeoutMS: 0,
+    maxPoolSize: 10
+  })
     .then(client => {
-      console.log('Connected to MongoDB...');
+      console.log('✅ Successfully connected to MongoDB');
 
       const db = client.db(dbName); // Use the database name from .env file
       global.db = db; // Save the db connection in a global variable
@@ -93,7 +108,7 @@ function startServer() {
         ['/api/affiliate', './routers/api/affiliate'],
         ['/api/abtest', './routers/api/abtest'],
         ['/api/referal', './routers/api/referal'],
-        ['/api/amalytics', './routers/api/analytics'],
+        ['/api/analytics', './routers/api/analytics'],
       ];
 
       routers.forEach(([route, path]) => app.use(route, require(path)));
@@ -104,7 +119,27 @@ function startServer() {
 
     })
     .catch(err => {
-      console.log('Error occurred while connecting to MongoDB...\n', err);
+      console.error('❌ MongoDB connection failed:');
+      console.error('Error details:', err.message);
+      console.error('Error code:', err.code);
+      
+      if (err.code === 'ESERVFAIL' || err.code === 'ENOTFOUND') {
+        console.error('');
+        console.error('🔧 DNS/Network issue detected. Possible solutions:');
+        console.error('1. Check your internet connection');
+        console.error('2. Verify the MongoDB URL in your .env file');
+        console.error('3. Ensure the MongoDB cluster is running and accessible');
+        console.error('4. Check if you need to whitelist your IP address in MongoDB Atlas');
+        console.error('');
+        console.error('Current MongoDB URL (sanitized):', url ? url.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') : 'NOT SET');
+      }
+      
+      console.error('');
+      console.error('⏳ Retrying connection in 5 seconds...');
+      setTimeout(() => {
+        console.log('🔄 Retrying MongoDB connection...');
+        startServer();
+      }, 5000);
     });
 }
 

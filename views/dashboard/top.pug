@@ -1,74 +1,120 @@
 extends base
 
 block mainContent
-    .text-center
-        i.fa.fa-home.display-6
-    hr.my-4
+    // Hero Section
+    .hero-section.mb-5
+        .container
+            .row.align-items-center
+                .col-md-8
+                    h1.display-4.fw-bold.mb-3 ダッシュボード
+                    p.lead.text-white データとツールを一箇所で管理
+    // Main Tools Section
+    section.tools-section.mb-5
+        .container
+            h2.section-title.mb-4
+                i.fas.fa-tools.me-2
+                | メインツール
+            .row.g-4
+                // Testing & Analytics Tools
+                .col-lg-6.col-md-12.mb-3
+                    .card.tool-card.h-100.border-0.shadow-sm
+                        .card-body
+                            .row.align-items-center
+                                .col-2
+                                    .icon-wrapper.bg-primary.bg-opacity-10.rounded-circle.p-3.text-center
+                                        i.fas.fa-flask.text-primary.fs-4
+                                .col-10
+                                    h5.card-title.fw-bold.mb-2 A/B Test
+                                    p.card-text.text-muted.mb-0 Create and manage A/B tests
+                                    a.stretched-link(href="/dashboard/app/ab-test-results")
+                
+                .col-lg-6.col-md-12.mb-3
+                    .card.tool-card.h-100.border-0.shadow-sm
+                        .card-body
+                            .row.align-items-center
+                                .col-2
+                                    .icon-wrapper.bg-success.bg-opacity-10.rounded-circle.p-3.text-center
+                                        i.fas.fa-chart-line.text-success.fs-4
+                                .col-10
+                                    h5.card-title.fw-bold.mb-2 Analytics
+                                    p.card-text.text-muted.mb-0 View your site analytics and insights
+                                    a.stretched-link(href="/dashboard/app/analytics")
     
-    section.my-5
-        .row.row-cols-1.row-cols-md-3.my-5
-            .col.mb-3.isAdmin
-                a.card.btn.bg-white.px-2(href=`/dashboard/app/affiliate/`)
-                    .card-body.row.justify-start.items-start.px-2
-                        div.col-2.d-flex.align-items-center
-                            i.fab.fa-wordpress.mr-3.display-6
-                        div.col-10
-                            h5.card-title.fw-bold.text-start
-                                | Affiliate
-                            p.card-text.text-start.text-muted
-                                | List of partner
-            .col.mb-3
-                a.card.btn.bg-white.px-2(href=`/dashboard/app/ab-test-results`)
-                    .card-body.row.justify-start.items-start.px-2
-                        div.col-2.d-flex.align-items-center
-                            i.fab.fa-wordpress.mr-3.display-6
-                        div.col-10
-                            h5.card-title.fw-bold.text-start
-                                | A/B Test
-                            p.card-text.text-start.text-muted
-                                | Create A/B test
-            .col.mb-3.isAdmin
-                a.card.btn.bg-white.px-2(href=`/dashboard/app/referal`)
-                    .card-body.row.justify-start.items-start.px-2
-                        div.col-2.d-flex.align-items-center
-                            i.fas.fa-bullhorn.mr-3.display-6
-                        div.col-10
-                            h5.card-title.fw-bold.text-start
-                                | Referral
-                            p.card-text.text-start.text-muted
-                                | Manage referral popups
-            // Analytics
-            .col.mb-3
-                a.card.btn.bg-white.px-2(href=`/dashboard/app/analytics`)
-                    .card-body.row.justify-start.items-start.px-2
-                        div.col-2.d-flex.align-items-center
-                            i.fas.fa-chart-line.mr-3.display-6
-                        div.col-10
-                            h5.card-title.fw-bold.text-start
-                                | Analytics
-                            p.card-text.text-start.text-muted
-                                | View your site analytics
-        .row.row-cols-1.row-cols-md-2.my-5
-            .col.d-none
-                h5.fw-bold
-                    i.fas.fa-bell.me-2
-                if latestNews
-                    .news-item.mt-3
-                        .news-date.text-muted
-                            | #{latestNews.date}
-                        .news-content
-                            | #{latestNews.content}
-                else
-                    p.text-muted.mt-3.px-3 今は何もありません。
-            .col 
-                h5.fw-bold
-                    i.fas.fa-cogs.me-2
-                .row.row-cols-1.row-cols-md-2.my-3
-                    .col.my-1
-                        a.btn.btn-primary.w-100(href="/user/setting") アカウント設定
-                    .col.my-1
-                        a.btn.btn-primary.w-100(target="_blank" href="https://hatoltd.com/sell-or-advertise/") 会社概要
-                    .col.my-1.d-none
-                        a.btn.btn-outline-primary.w-100(href="#") 使い方ガイド
-                    .col.my-1
-                        a.btn.btn-outline-primary.w-100(target="_blank" href="https://hatoltd.com/contact/") お問い合わせ
+    // Admin Tools Section
+    section.admin-tools-section.mb-5.isAdmin
+        .container
+            h2.section-title.mb-4
+                i.fas.fa-shield-alt.me-2
+                | 管理者ツール
+            .row.g-4
+                .col-lg-6.col-md-12.mb-3
+                    .card.tool-card.h-100.border-0.shadow-sm
+                        .card-body
+                            .row.align-items-center
+                                .col-2
+                                    .icon-wrapper.bg-warning.bg-opacity-10.rounded-circle.p-3.text-center
+                                        i.fab.fa-wordpress.text-warning.fs-4
+                                .col-10
+                                    h5.card-title.fw-bold.mb-2 Affiliate
+                                    p.card-text.text-muted.mb-0 Manage partner affiliates
+                                    a.stretched-link(href="/dashboard/app/affiliate/")
+                
+                .col-lg-6.col-md-12.mb-3
+                    .card.tool-card.h-100.border-0.shadow-sm
+                        .card-body
+                            .row.align-items-center
+                                .col-2
+                                    .icon-wrapper.bg-info.bg-opacity-10.rounded-circle.p-3.text-center
+                                        i.fas.fa-bullhorn.text-info.fs-4
+                                .col-10
+                                    h5.card-title.fw-bold.mb-2 Referral
+                                    p.card-text.text-muted.mb-0 Manage referral popups and campaigns
+                                    a.stretched-link(href="/dashboard/app/referal")
+    
+    // Quick Actions & Settings Section
+    section.quick-actions-section.mb-5
+        .container
+            .row
+                .col-lg-8.mb-4
+                    .card.border-0.shadow-sm.h-100
+                        .card-header.bg-white.border-0.pb-0
+                            h5.fw-bold.mb-0
+                                i.fas.fa-rocket.me-2.text-primary
+                                | クイックアクション
+                        .card-body
+                            .row.g-3
+                                .col-sm-6
+                                    a.btn.btn-primary.w-100.py-3(href="/user/setting")
+                                        i.fas.fa-user-cog.me-2
+                                        | アカウント設定
+                                .col-sm-6
+                                    a.btn.btn-outline-primary.w-100.py-3(target="_blank" href="https://hatoltd.com/sell-or-advertise/")
+                                        i.fas.fa-building.me-2
+                                        | 会社概要
+                                .col-sm-6
+                                    a.btn.btn-outline-secondary.w-100.py-3(target="_blank" href="https://hatoltd.com/contact/")
+                                        i.fas.fa-envelope.me-2
+                                        | お問い合わせ
+                                .col-sm-6
+                                    a.btn.btn-outline-secondary.w-100.py-3(href="#")
+                                        i.fas.fa-question-circle.me-2
+                                        | ヘルプ
+                
+                .col-lg-4.mb-4
+                    .card.border-0.shadow-sm.h-100
+                        .card-header.bg-white.border-0.pb-0
+                            h5.fw-bold.mb-0
+                                i.fas.fa-bell.me-2.text-warning
+                                | お知らせ
+                        .card-body
+                            if latestNews
+                                .news-item
+                                    .news-date.text-muted.small.mb-2
+                                        i.fas.fa-calendar-alt.me-1
+                                        | #{latestNews.date}
+                                    .news-content
+                                        | #{latestNews.content}
+                            else
+                                .text-center.py-4
+                                    i.fas.fa-inbox.text-muted.display-6.mb-3
+                                    p.text-muted.mb-0 現在お知らせはありません

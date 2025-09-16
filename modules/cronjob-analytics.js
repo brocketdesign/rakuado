@@ -12,7 +12,82 @@ function initializeAnalyticsCronJobs(db) {
     await aggregateDailyAnalytics(POPUPS, ANALYTICS_DAILY, ANALYTICS_WEEKLY, ANALYTICS_MONTHLY);
   });
 
+  // Run hourly backup to ensure data preservation
+  cron.schedule('0 * * * *', async () => {
+    console.log('Running hourly analytics backup...');
+    await backupCurrentAnalytics(POPUPS, ANALYTICS_DAILY);
+  });
+
   console.log('Analytics cron jobs initialized');
+}
+
+// Backup current analytics data every hour to prevent data loss
+async function backupCurrentAnalytics(POPUPS, ANALYTICS_DAILY) {
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  
+  try {
+    // Get current daily record
+    let dailyRecord = await ANALYTICS_DAILY.findOne({ date: todayStr });
+    
+    if (!dailyRecord) {
+      // Initialize today's record if it doesn't exist
+      dailyRecord = {
+        date: todayStr,
+        timestamp: today.getTime(),
+        total: { views: 0, clicks: 0 },
+        sites: {}
+      };
+    }
+
+    // Get all popups and their current refery data
+    const popups = await POPUPS.find({}).toArray();
+    const currentSiteData = {};
+
+    for (const popup of popups) {
+      const refery = popup.refery || [];
+      for (const ref of refery) {
+        const domain = ref.domain || 'unknown';
+        if (!currentSiteData[domain]) {
+          currentSiteData[domain] = { views: 0, clicks: 0 };
+        }
+        currentSiteData[domain].views += ref.view || 0;
+        currentSiteData[domain].clicks += ref.click || 0;
+      }
+    }
+
+    // Merge with existing data (to preserve historical data within the day)
+    for (const [domain, data] of Object.entries(currentSiteData)) {
+      if (!dailyRecord.sites[domain]) {
+        dailyRecord.sites[domain] = { views: 0, clicks: 0 };
+      }
+      // Only update if current data is higher (prevents going backwards)
+      if (data.views > dailyRecord.sites[domain].views) {
+        dailyRecord.sites[domain].views = data.views;
+      }
+      if (data.clicks > dailyRecord.sites[domain].clicks) {
+        dailyRecord.sites[domain].clicks = data.clicks;
+      }
+    }
+
+    // Recalculate totals
+    let totalViews = 0, totalClicks = 0;
+    for (const data of Object.values(dailyRecord.sites)) {
+      totalViews += data.views;
+      totalClicks += data.clicks;
+    }
+    dailyRecord.total = { views: totalViews, clicks: totalClicks };
+
+    // Store the updated record
+    await ANALYTICS_DAILY.replaceOne(
+      { date: todayStr },
+      dailyRecord,
+      { upsert: true }
+    );
+
+  } catch (error) {
+    console.error('Error in hourly analytics backup:', error);
+  }
 }
 
 async function aggregateDailyAnalytics(POPUPS, ANALYTICS_DAILY, ANALYTICS_WEEKLY, ANALYTICS_MONTHLY) {
@@ -148,13 +223,16 @@ async function aggregateMonthlyData(ANALYTICS_DAILY, monthStart) {
 }
 
 async function cleanupOldData(ANALYTICS_DAILY, ANALYTICS_WEEKLY, ANALYTICS_MONTHLY) {
-  const sevenDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-  const oneMonthAgo = new Date(Date.now() - 32 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-  const oneYearAgo = new Date(Date.now() - 366 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  // Keep 3 months of daily data (for 2 complete periods)
+  const threeMonthsAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  // Keep 1 year of weekly data
+  const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  // Keep 3 years of monthly data
+  const threeYearsAgo = new Date(Date.now() - 3 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-  await ANALYTICS_DAILY.deleteMany({ date: { $lt: sevenDaysAgo } });
-  await ANALYTICS_WEEKLY.deleteMany({ weekStart: { $lt: oneMonthAgo } });
-  await ANALYTICS_MONTHLY.deleteMany({ monthStart: { $lt: oneYearAgo } });
+  await ANALYTICS_DAILY.deleteMany({ date: { $lt: threeMonthsAgo } });
+  await ANALYTICS_WEEKLY.deleteMany({ weekStart: { $lt: oneYearAgo } });
+  await ANALYTICS_MONTHLY.deleteMany({ monthStart: { $lt: threeYearsAgo } });
 }
 
 function getWeekStart(date) {
