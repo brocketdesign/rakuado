@@ -288,4 +288,112 @@ router.get('/about', (req, res) => {
   res.json({ app: 'referal', version: '1.0.0', description: 'Referral popups API' });
 });
 
+// GET next popup in alternating rotation - updated for cross-domain tracking
+router.get('/next-popup', async (req, res) => {
+  try {
+    // Get all enabled popups sorted by order
+    const enabledPopups = await POPUPS.find({ enabled: { $ne: false } }).sort({ order: 1 }).toArray();
+    
+    if (enabledPopups.length === 0) {
+      return res.json({ popup: null });
+    }
+
+    // Get or create user session ID from query params or generate new one
+    let sessionId = req.query.sessionId;
+    if (!sessionId) {
+      sessionId = require('crypto').randomBytes(16).toString('hex');
+    }
+
+    const domain = req.query.domain || 'unknown';
+    
+    // Check server-side session storage for viewed popups
+    const SESSIONS = global.db.collection('userSessions');
+    const cutoffTime = Date.now() - (1 * 60 * 60 * 1000); // 1 hour expiry
+    
+    let session = await SESSIONS.findOne({ 
+      sessionId, 
+      lastActivity: { $gte: cutoffTime } 
+    });
+    
+    if (!session) {
+      // Create new session
+      session = {
+        sessionId,
+        viewedPopups: [],
+        lastActivity: Date.now(),
+        domains: [domain]
+      };
+      await SESSIONS.insertOne(session);
+    } else {
+      // Update session activity and add domain if not present
+      const updateData = { lastActivity: Date.now() };
+      if (!session.domains.includes(domain)) {
+        updateData.domains = [...session.domains, domain];
+      }
+      await SESSIONS.updateOne({ sessionId }, { $set: updateData });
+    }
+
+    // Find popups that haven't been shown in this session
+    const viewedPopupIds = session.viewedPopups.map(id => id.toString());
+    const unshownPopups = enabledPopups.filter(popup => {
+      return !viewedPopupIds.includes(popup._id.toString());
+    });
+
+    let selectedPopup;
+    
+    if (unshownPopups.length > 0) {
+      // Show the first unshown popup
+      selectedPopup = unshownPopups[0];
+    } else {
+      // All popups have been shown, reset session and start over
+      await SESSIONS.updateOne(
+        { sessionId },
+        { $set: { viewedPopups: [], lastActivity: Date.now() } }
+      );
+      selectedPopup = enabledPopups[0];
+    }
+
+    // Return the selected popup with session ID
+    res.json({
+      popup: {
+        _id: selectedPopup._id,
+        imageUrl: selectedPopup.imageUrl,
+        targetUrl: selectedPopup.targetUrl,
+        order: selectedPopup.order
+      },
+      sessionId: sessionId
+    });
+  } catch (error) {
+    console.error('Error getting next popup:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST mark popup as viewed in session
+router.post('/mark-viewed', async (req, res) => {
+  try {
+    const { sessionId, popupId } = req.body;
+    
+    if (!sessionId || !isValidObjectId(popupId)) {
+      return res.status(400).json({ error: 'Invalid sessionId or popupId' });
+    }
+
+    const SESSIONS = global.db.collection('userSessions');
+    
+    // Add popup to viewed list
+    await SESSIONS.updateOne(
+      { sessionId },
+      { 
+        $addToSet: { viewedPopups: new ObjectId(popupId) },
+        $set: { lastActivity: Date.now() }
+      }
+    );
+    
+    res.sendStatus(200);
+  } catch (error) {
+    console.error('Error marking popup as viewed:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
