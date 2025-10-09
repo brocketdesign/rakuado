@@ -7,7 +7,7 @@
  */
 (function() {
   // Always update the file version when editing
-  console.log('Referral popup widget version: v1.1.0');
+  console.log('Referral popup widget version: v1.0.9');
 
   const DEBUG_PREFIX = '[ReferalPopup]';
 
@@ -87,7 +87,9 @@
         REFERAL_API_URL: 'https://rakuado-43706e27163e.herokuapp.com/api/referal',
         COOKIE_EXPIRY_HOURS: 1,
         COOKIE_PREFIX: 'referal-opened-',
-        RENDER_DELAY_MS: 5000
+        SCROLL_THRESHOLD_MIN: 20,
+        SCROLL_THRESHOLD_MAX: 50,
+        RENDER_DELAY_MS: 400
       };
 
       const BUTTON_PRESETS = {
@@ -96,14 +98,14 @@
           extraDays: 3,
           headline: 'Yahoo!ショッピングで50%オフクーポンをゲット！',
           accentHex: '#ef4444',
-          logoUrl: 'https://hatoltd.com/affiliate-partner/yahoo-logo.svg'
+          logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/b/b5/Yahoo_Japan_Logo.svg'
         },
         rakuten: {
           siteName: '楽天市場',
           extraDays: 5,
           headline: '楽天市場で50%オフクーポンをゲット！',
           accentHex: '#d43c33',
-          logoUrl: 'https://hatoltd.com/affiliate-partner/rakuten-logo.jpg'
+          logoUrl: 'https://i1.wp.com/rakuten.today/wp-content/uploads/2018/06/one_logo.jpg?fit=2000%2C1350&ssl=1'
         }
       };
 
@@ -112,6 +114,9 @@
         shadow: null,
         wrapper: null,
         renderedSlugs: new Set(),
+        pendingPopups: [],
+        scrollGateAttached: false,
+        scrollGateSatisfied: false,
         renderTimeoutId: null
       };
 
@@ -189,21 +194,11 @@
               return;
             }
 
-              if (state.renderTimeoutId) {
-                window.clearTimeout(state.renderTimeoutId);
-                state.renderTimeoutId = null;
-              }
-
-              log('Scheduling CTA render with fixed delay', {
-                delay: CONFIG.RENDER_DELAY_MS,
+              state.pendingPopups = filtered;
+              log('Deferred rendering until scroll gate met', {
                 count: filtered.length
               });
-
-              state.renderTimeoutId = window.setTimeout(() => {
-                log('Rendering CTA buttons after delay', filtered.map(p => ({ popupId: p._id, slug: p.slug })));
-                renderButtons(filtered);
-                state.renderTimeoutId = null;
-              }, CONFIG.RENDER_DELAY_MS);
+              armScrollGate();
           })
           .catch(err => error('Failed to fetch enabled popups', err));
       }
@@ -416,7 +411,78 @@
         }
       }
 
-      // Scroll gate logic removed (mobile compatibility)
+      function renderPendingPopups() {
+        if (!state.pendingPopups.length) {
+          log('renderPendingPopups called with no pending items');
+          return;
+        }
+        log('Rendering CTA buttons', state.pendingPopups.map(p => ({ popupId: p._id, slug: p.slug })));
+        renderButtons(state.pendingPopups);
+        state.pendingPopups = [];
+        state.scrollGateSatisfied = true;
+        state.renderTimeoutId = null;
+        detachScrollGate();
+      }
+
+      function armScrollGate() {
+        if (state.scrollGateAttached || state.scrollGateSatisfied) {
+          log('Scroll gate already attached or satisfied', {
+            attached: state.scrollGateAttached,
+            satisfied: state.scrollGateSatisfied
+          });
+          evaluateScrollGate();
+          return;
+        }
+        log('Attaching scroll gate listener');
+        state.scrollGateAttached = true;
+        window.addEventListener('scroll', evaluateScrollGate, { passive: true });
+        evaluateScrollGate();
+      }
+
+      function detachScrollGate() {
+        if (!state.scrollGateAttached) return;
+        window.removeEventListener('scroll', evaluateScrollGate);
+        state.scrollGateAttached = false;
+        log('Scroll gate listener detached');
+      }
+
+      function evaluateScrollGate() {
+        if (state.scrollGateSatisfied) return;
+        if (!state.pendingPopups.length) return;
+        const doc = document.documentElement;
+        const scrollTop = window.pageYOffset || doc.scrollTop || document.body.scrollTop || 0;
+        const viewportHeight = window.innerHeight || doc.clientHeight || 0;
+        const scrollHeight = Math.max(doc.scrollHeight, document.body.scrollHeight);
+        const seen = scrollTop + viewportHeight;
+        const progress = scrollHeight <= 0
+          ? 100
+          : Math.min(100, Math.max(0, (seen / scrollHeight) * 100));
+        log('Scroll progress check', { scrollTop, viewportHeight, scrollHeight, seen, progress });
+
+        const withinRange = progress >= CONFIG.SCROLL_THRESHOLD_MIN && progress <= CONFIG.SCROLL_THRESHOLD_MAX;
+        const beyondRange = progress > CONFIG.SCROLL_THRESHOLD_MAX;
+
+        if (withinRange || beyondRange) {
+          triggerPendingRender(progress, withinRange ? 'within-range' : 'beyond-range');
+        }
+      }
+
+      function triggerPendingRender(progress, reason) {
+        if (state.renderTimeoutId) {
+          log('Render already scheduled, skipping trigger', { progress, reason });
+          return;
+        }
+        state.scrollGateSatisfied = true;
+        detachScrollGate();
+        log('Scheduling CTA render after delay', {
+          delay: CONFIG.RENDER_DELAY_MS,
+          progress,
+          reason
+        });
+        state.renderTimeoutId = window.setTimeout(() => {
+          renderPendingPopups();
+        }, CONFIG.RENDER_DELAY_MS);
+      }
 
       function createButtonElement(popup, index) {
         const slug = popup.slug || `slot-${index}`;

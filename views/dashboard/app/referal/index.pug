@@ -32,8 +32,8 @@ block mainContent
                         th 画像
                         th ターゲットURL
                         th スラッグ
-                        th 表示数
-                        th クリック数
+                        th 表示数(24h)
+                        th クリック数(24h)
                         th 有効
                         th(style="width:120px" class="text-center") 操作
                     tbody#popupTableBody
@@ -55,8 +55,8 @@ block mainContent
                               | #{popup.targetUrl}
                           td
                             code #{popup.slug || '-'}
-                          td #{popup.views || 0}
-                          td #{popup.clicks || 0}
+                          td #{popup.views24h || 0}
+                          td #{popup.clicks24h || 0}
                           td.text-center
                             input.form-check-input(type="checkbox" class="popup-enabled-toggle" data-popup=popup._id checked=popup.enabled)
                           td.align-items-center
@@ -90,9 +90,9 @@ block mainContent
                       strong スラッグ:
                       code.ms-1 #{popup.slug || '-'}
                     p.mb-1
-                      | 表示数: #{popup.views || 0}
+                      | 表示数(24h): #{popup.views24h || 0}
                       br
-                      | クリック数: #{popup.clicks || 0}
+                      | クリック数(24h): #{popup.clicks24h || 0}
                     .btn-group.mt-2
                       button.btn.btn-outline-secondary.btn-sm.btn-toggle-domain(type="button" data-popup=popup._id title="ドメイン別統計")
                         i.bi.bi-chevron-down

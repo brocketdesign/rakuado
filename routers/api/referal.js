@@ -133,6 +133,9 @@ router.get('/info', async (req, res) => {
   try {
     const doc = await POPUPS.findOne({ _id: new ObjectId(id) });
     if (!doc) return res.status(404).json({ error: 'Not found' });
+    const recentRefery = filterRecentRefery(doc.refery);
+    const views24h = recentRefery.reduce((sum, entry) => sum + (entry.view || 0), 0);
+    const clicks24h = recentRefery.reduce((sum, entry) => sum + (entry.click || 0), 0);
     return res.json({
       _id: doc._id,
       imageUrl: doc.imageUrl,
@@ -142,7 +145,9 @@ router.get('/info', async (req, res) => {
       enabled: doc.enabled !== false,
       order: doc.order,
       views: doc.views || 0,
-      clicks: doc.clicks || 0
+      clicks: doc.clicks || 0,
+      views24h,
+      clicks24h
     });
   } catch (e) {
     return res.status(400).json({ error: 'Invalid id' });

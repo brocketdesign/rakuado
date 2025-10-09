@@ -150,7 +150,19 @@ router.get('/app/autoblog/blog-info/:blogId?', async (req, res) => {
 
 router.get('/app/referal', ensureAuthenticated, ensureMembership, async (req, res) => {
   // Fetch all popups (no userId filter)
-  const popups = await POPUPS.find({}).sort({ order: 1 }).toArray();
+  const popupsRaw = await POPUPS.find({}).sort({ order: 1 }).toArray();
+
+  const popups = popupsRaw.map(p => {
+    const refery = (p.refery && Array.isArray(p.refery)) ? p.refery : [];
+    const recent = refery.filter(r => r && r.timestamp && r.timestamp >= Date.now() - 24 * 60 * 60 * 1000);
+    const views24h = recent.reduce((sum, r) => sum + (r.view || 0), 0);
+    const clicks24h = recent.reduce((sum, r) => sum + (r.click || 0), 0);
+    return {
+      ...p,
+      views24h,
+      clicks24h
+    };
+  });
 
   const q = parseInt(req.query.popup, 10);
   const popupData = !isNaN(q)
