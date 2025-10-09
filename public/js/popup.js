@@ -1,189 +1,546 @@
+/*
+ * Referral popup widget
+ * - Fetches enabled popups (with slug) from backend
+ * - Renders Yahoo & Rakuten CTA layout inspired by cta-test-1.html using scoped styles
+ * - Keeps analytics (view/click) reporting and backgroundOpen behaviour
+ * - Persists per-slug cookies so refreshed pages only show remaining CTAs
+ */
 (function() {
-  if (typeof jQuery === 'undefined') {
-    var script = document.createElement('script');
-    script.onload = init; // Call init after jQuery loads
-    script.src = 'https://code.jquery.com/jquery-3.6.0.min.js';
-    document.head.appendChild(script);
-  } else {
-    init();
+  // Always update the file version when editing
+  console.log('Referral popup widget version: v1.0.7');
+
+  const DEBUG_PREFIX = '[ReferalPopup]';
+
+  const log = (...args) => console.log(DEBUG_PREFIX, ...args);
+  const warn = (...args) => console.warn(DEBUG_PREFIX, ...args);
+  const error = (...args) => console.error(DEBUG_PREFIX, ...args);
+
+  let jQueryLoaded = typeof jQuery !== 'undefined';
+  let cookiesLoaded = typeof Cookies !== 'undefined';
+
+  log('Bootstrap starting', { jQueryLoaded, cookiesLoaded });
+
+  // Fallback cookie helpers (will delegate to js-cookie if available)
+  function getCookie(name) {
+    if (typeof Cookies !== 'undefined') {
+      return Cookies.get(name);
+    }
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return undefined;
   }
+
+  function setCookie(name, value, options = {}) {
+    if (typeof Cookies !== 'undefined') {
+      return Cookies.set(name, value, options);
+    }
+    let cookieString = `${name}=${value}`;
+    if (options.expires) {
+      const date = new Date();
+      date.setTime(date.getTime() + (options.expires * 24 * 60 * 60 * 1000));
+      cookieString += `; expires=${date.toUTCString()}`;
+    }
+    cookieString += `; path=${options.path || '/'}`;
+    document.cookie = cookieString;
+  }
+
+  function ensureScript(src, onLoaded) {
+    const tag = document.createElement('script');
+    tag.src = src;
+    tag.onload = onLoaded;
+    tag.onerror = () => warn('Failed loading external script', src);
+    document.head.appendChild(tag);
+  }
+
+  function checkAndInit() {
+    if (jQueryLoaded && cookiesLoaded) {
+      log('All dependencies ready, initializing');
+      init();
+    }
+  }
+
+  if (!jQueryLoaded) {
+    log('Loading jQuery on demand');
+    ensureScript('https://code.jquery.com/jquery-3.6.0.min.js', () => {
+      jQueryLoaded = true;
+      checkAndInit();
+    });
+  }
+
+  if (!cookiesLoaded) {
+    log('Loading js-cookie on demand');
+    ensureScript('https://cdnjs.cloudflare.com/ajax/libs/js-cookie/3.0.5/js.cookie.min.js', () => {
+      cookiesLoaded = true;
+      checkAndInit();
+    });
+  }
+
+  // If both libraries were already on page
+  checkAndInit();
 
   function init() {
     (function($) {
-      // CONFIG: referral API and cookie expiry
+      log('init() called');
+
       const CONFIG = {
         REFERAL_API_URL: 'https://rakuado-43706e27163e.herokuapp.com/api/referal',
         COOKIE_EXPIRY_HOURS: 1,
+        COOKIE_PREFIX: 'referal-opened-',
+      };
+
+      const BUTTON_PRESETS = {
+        yahoo: {
+          siteName: 'Yahoo!ショッピング',
+          extraDays: 3,
+          headline: 'Yahoo!ショッピングで50%オフクーポンをゲット！',
+          accentHex: '#ef4444',
+          logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/b/b5/Yahoo_Japan_Logo.svg'
+        },
+        rakuten: {
+          siteName: '楽天市場',
+          extraDays: 5,
+          headline: '楽天市場で50%オフクーポンをゲット！',
+          accentHex: '#d43c33',
+          logoUrl: 'https://i1.wp.com/rakuten.today/wp-content/uploads/2018/06/one_logo.jpg?fit=2000%2C1350&ssl=1'
+        }
+      };
+
+      const state = {
+        root: null,
+        shadow: null,
+        wrapper: null,
+        renderedSlugs: new Set()
       };
 
       $(document).ready(() => {
+        log('Document ready, fetching enabled popups');
+        fetchEnabledPopups();
+      });
+
+      const normalizeSlug = (slugRaw = '') => {
+        if (typeof slugRaw !== 'string') return '';
+        const sanitized = slugRaw
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9-]+/g, '-')
+          .replace(/-{2,}/g, '-')
+          .replace(/^-|-$/g, '');
+        return sanitized || slugRaw.trim();
+      };
+
+      const resolveSlug = (popup) => {
+        const direct = normalizeSlug(popup.slug);
+        if (direct) {
+          log('Resolved slug from popup.slug', { popupId: popup._id, raw: popup.slug, normalized: direct });
+          return direct;
+        }
+        const fallback = `popup-${popup._id}`;
+        log('Resolved slug via fallback', { popupId: popup._id, fallback });
+        return fallback;
+      };
+
+      const resolvePresetKey = (slug) => {
+        if (!slug) return null;
+        if (BUTTON_PRESETS[slug]) return slug;
+        const match = Object.keys(BUTTON_PRESETS).find(key => slug.startsWith(key));
+        return match || null;
+      };
+
+      function fetchEnabledPopups() {
         fetch(`${CONFIG.REFERAL_API_URL}/enabled`)
           .then(res => res.json())
           .then(popups => {
-            if (!Array.isArray(popups) || popups.length === 0) return;
-            showNextPopup(popups, 0);
-          });
-      });
+            log('Enabled popups payload', popups);
+            if (!Array.isArray(popups) || popups.length === 0) {
+              return;
+            }
+            const enriched = popups
+              .filter(Boolean)
+              .map(p => {
+                const slugSource = p.slug ? 'db' : 'fallback';
+                const resolvedSlug = resolveSlug(p);
+                const presetKey = resolvePresetKey(resolvedSlug);
+                const snapshot = { ...p, slug: resolvedSlug, presetKey, slugSource };
+                log('Enriched popup entry', snapshot);
+                if (!p.slug) {
+                  warn('Popup is missing slug in API payload', { popupId: p._id, slugSource });
+                }
+                return snapshot;
+              });
 
-      // Show popups in order, skipping those already visited
-      function showNextPopup(popups, idx) {
-        if (idx >= popups.length) return;
-        const popup = popups[idx];
-        const cookieKey = `visited-popup-${popup._id}`;
-        if (Cookies.get(cookieKey)) {
-          showNextPopup(popups, idx + 1);
-          return;
-        }
-        // Modify the onClose callback: only set the cookie, don't show the next popup immediately.
-        // Add path: '/' to make cookie accessible across the whole domain.
-        showPopup(popup, idx + 1, popups.length, () => {
-          Cookies.set(cookieKey, 'true', { expires: CONFIG.COOKIE_EXPIRY_HOURS / 24, path: '/' }); // Added path: '/'
-        });
+            const filtered = enriched.filter(p => {
+              const alreadyOpened = hasOpened(p.slug);
+              log('Filter check', { popupId: p._id, slug: p.slug, alreadyOpened });
+              return !alreadyOpened;
+            });
+
+            log('Filtered popups summary', {
+              total: enriched.length,
+              eligible: filtered.length,
+              filteredIds: filtered.map(p => p._id)
+            });
+
+            if (filtered.length === 0) {
+              log('All slugs already opened, nothing to render');
+              teardown();
+              return;
+            }
+
+            log('Rendering CTA buttons', filtered.map(p => ({ popupId: p._id, slug: p.slug })));
+            renderButtons(filtered);
+          })
+          .catch(err => error('Failed to fetch enabled popups', err));
       }
 
-      // Generic popup function
-      function showPopup(popup, popupIndex, totalPopups, onClose) {
-        const { imageUrl, targetUrl, _id } = popup;
-        // Create a custom backdrop overlay (less transparent, blurred)
-        const customBackdrop = document.createElement('div');
-        customBackdrop.id = 'custom-backdrop-overlay';
-        Object.assign(customBackdrop.style, {
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          background: 'rgba(0, 0, 0, 0.35)',
-          zIndex: 999,
-          cursor: 'pointer',
-          backdropFilter: 'blur(6px)',
-          WebkitBackdropFilter: 'blur(6px)'
-        });
-        document.body.appendChild(customBackdrop);
+      function hasOpened(slug) {
+        const cookieKey = CONFIG.COOKIE_PREFIX + slug;
+        const rawValue = getCookie(cookieKey);
+        const opened = Boolean(rawValue);
+        log('Checking cookie status', { slug, cookieKey, rawValue, opened });
+        return opened;
+      }
 
-        // Register view for this popup
-        registerView(_id);
+      function markOpened(slug) {
+        const cookieKey = CONFIG.COOKIE_PREFIX + slug;
+        log('Persisting opened slug', { slug, cookieKey });
+        setCookie(cookieKey, 'true', { expires: CONFIG.COOKIE_EXPIRY_HOURS / 24, path: '/' });
+      }
 
-        // Click on backdrop closes popup (but not on popup itself)
-        customBackdrop.addEventListener('click', (e) => {
-          if (e.target === customBackdrop && !Swal.isLoading()) {
-            if (onClose) onClose(); // Set cookie immediately
-            backgroundOpen(_id, targetUrl);
-            Swal.close();
+      function ensureShadowRoot() {
+        if (state.wrapper) return state;
+
+        const host = document.createElement('div');
+        host.id = 'referal-popup-host';
+        host.style.position = 'fixed';
+        host.style.left = '20px';
+        host.style.bottom = '20px';
+        host.style.zIndex = '2147483647';
+        host.style.width = 'auto';
+        host.style.pointerEvents = 'none';
+        document.body.appendChild(host);
+
+        const shadow = host.attachShadow({ mode: 'open' });
+        const style = document.createElement('style');
+        style.textContent = `
+          :host {
+            all: initial;
+          }
+          *, *::before, *::after {
+            box-sizing: border-box;
+          }
+          .popup-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            pointer-events: auto;
+          }
+          .cta-button {
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border-radius: 9999px;
+            padding: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+          }
+          .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.35);
+          }
+          .cta-button .logo {
+            width: 36px;
+            height: 36px;
+            border-radius: 9999px;
+            object-fit: contain;
+            margin-right: 16px;
+            flex-shrink: 0;
+            background: #fff;
+          }
+          .cta-info {
+            display: flex;
+            flex-direction: column;
+            margin-right: 16px;
+            min-width: 0;
+          }
+          .cta-info h4 {
+            font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+            font-weight: 700;
+            font-size: 15px;
+            color: #1f2937;
+            margin: 0;
+            line-height: 1.3;
+          }
+          .cta-info span {
+            font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+            font-weight: 600;
+            font-size: 12px;
+            color: #ef4444;
+            margin-top: 4px;
+            white-space: nowrap;
+          }
+          .cta-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+          .cta-primary {
+            font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+            font-weight: 600;
+            font-size: 14px;
+            color: #ffffff;
+            padding: 10px 18px;
+            border-radius: 9999px;
+            cursor: pointer;
+            border: none;
+            transition: transform 0.15s ease, box-shadow 0.2s ease;
+          }
+          .cta-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.25);
+          }
+          .cta-close {
+            width: 28px;
+            height: 28px;
+            border-radius: 9999px;
+            border: 1px solid rgba(148, 163, 184, 0.4);
+            background: rgba(248, 250, 252, 0.95);
+            color: #475569;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s ease, color 0.2s ease;
+          }
+          .cta-close:hover {
+            background: rgba(226, 232, 240, 0.95);
+            color: #1f2937;
+          }
+          .bounce {
+            animation: bounce 1.5s infinite;
+          }
+          .pulse {
+            animation: pulse 2s infinite;
+          }
+          @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+          }
+          @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.08); opacity: 1; }
+          }
+          @media (max-width: 640px) {
+            :host {
+              left: 12px !important;
+              right: 12px !important;
+            }
+            .popup-wrapper {
+              width: calc(100vw - 24px);
+            }
+            .cta-button {
+              flex-direction: column;
+              align-items: flex-start;
+              border-radius: 24px;
+              padding: 16px;
+              gap: 12px;
+            }
+            .cta-info {
+              margin-right: 0;
+            }
+            .cta-actions {
+              width: 100%;
+              justify-content: space-between;
+            }
+          }
+        `;
+
+        shadow.appendChild(style);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'popup-wrapper';
+        shadow.appendChild(wrapper);
+
+        state.root = host;
+        state.shadow = shadow;
+        state.wrapper = wrapper;
+
+        return state;
+      }
+
+      function teardown() {
+        if (state.root && state.root.parentNode) {
+          log('Tearing down popup host');
+          state.root.parentNode.removeChild(state.root);
+        }
+        state.root = null;
+        state.shadow = null;
+        state.wrapper = null;
+        state.renderedSlugs.clear();
+      }
+
+      function renderButtons(popups) {
+        const { wrapper } = ensureShadowRoot();
+        wrapper.innerHTML = '';
+
+        popups.forEach((popup, index) => {
+          try {
+            const element = createButtonElement(popup, index);
+            if (element) {
+              wrapper.appendChild(element);
+              state.renderedSlugs.add(popup.slug);
+              registerView(popup._id);
+            }
+          } catch (err) {
+            error('Failed rendering popup', popup, err);
           }
         });
 
-        // Custom HTML for centered popup
-        const counter = `${popupIndex}/${totalPopups}`;
-        const message = '当ブログにアクセスするには広告をスキップしてください。<br>ご協力ありがとうございます。';
-        const html = `
-          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;box-sizing:border-box;padding:0;">
-            <img src="${imageUrl}" 
-              alt="ad" 
-              style="width:120px;height:120px;object-fit:cover;border-radius:14px;margin-bottom:18px;box-shadow:0 2px 12px rgba(0,0,0,0.12);">
-            <div style="font-size:12px;color:#222;line-height:1.4;word-break:break-word;text-align:center;margin-bottom:18px;opacity:0.85;">
-              ${message}
-            </div>
-            <div style="display:flex;align-items:center;justify-content:center;width:100%;">
-              <span style="background:#eee;color:#444;font-size:11px;padding:2px 7px;border-radius:10px;margin-right:10px;display:inline-block;">${counter}</span>
-              <button type="button" id="custom-popup-skip" style="background:#fff;border:1px solid #ccc;border-radius:8px;padding:7px 22px;font-size:14px;color:#444;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.07);transition:background 0.2s;">
-                スキップ
-              </button>
-              <button type="button" id="custom-popup-close" style="background:transparent;border:none;outline:none;cursor:pointer;padding:0 0 0 10px;margin:0;">
-                <svg width="20" height="20" viewBox="0 0 18 18"><line x1="4" y1="4" x2="14" y2="14" stroke="#888" stroke-width="2"/><line x1="14" y1="4" x2="4" y2="14" stroke="#888" stroke-width="2"/></svg>
-              </button>
-            </div>
+        if (!wrapper.children.length) {
+          teardown();
+        }
+      }
+
+      function createButtonElement(popup, index) {
+        const slug = popup.slug || `slot-${index}`;
+        const presetKey = resolvePresetKey(slug);
+        const preset = presetKey ? BUTTON_PRESETS[presetKey] : null;
+
+        const siteName = popup.siteName
+          || (preset ? preset.siteName : null)
+          || slug;
+        const extraDays = typeof popup.extraDays === 'number' ? popup.extraDays : (preset ? preset.extraDays : 3);
+        const accentHex = popup.accentHex || (preset ? preset.accentHex : '#2563eb');
+        const logoUrl = popup.logoUrl || (preset ? preset.logoUrl : popup.imageUrl || '');
+        const headline = popup.headline
+          || (preset ? preset.headline : `${siteName}で限定オファーをチェック！`);
+
+        log('Creating CTA element', {
+          popupId: popup._id,
+          slug,
+          presetKey,
+          siteName,
+          headline,
+          logoUrl,
+          extraDays,
+          accentHex
+        });
+
+        const container = document.createElement('div');
+        container.className = 'cta-button bounce';
+        container.dataset.slug = slug;
+
+        const expirationDate = buildExpirationDate(extraDays);
+        const accent = accentHex;
+
+        container.innerHTML = `
+          <img class="logo" src="${logoUrl}" alt="${siteName} logo" />
+          <div class="cta-info">
+            <h4>${headline}</h4>
+            <span>有効期限: ${expirationDate}（限定オファー）</span>
+          </div>
+          <div class="cta-actions">
+            <button class="cta-primary pulse" type="button" style="background: linear-gradient(90deg, ${accent}, ${shadeColor(accent, -10)});">
+              今すぐチェック
+            </button>
+            <button class="cta-close" type="button" aria-label="閉じる">×</button>
           </div>
         `;
 
-        Swal.fire({
-          toast: false,
-          position: 'center',
-          html,
-          showConfirmButton: false,
-          showCancelButton: false,
-          showCloseButton: false,
-          customClass: {
-            popup: 'swal2-no-padding swal2-no-overflow',
-          },
-          backdrop: false, // Disable SweetAlert2's own backdrop
-          didOpen: () => {
-            // Close button handler
-            $('#custom-popup-close').on('click', function(e) {
-              e.stopPropagation();
-              if (onClose) onClose(); // Set cookie immediately
-              // Add backgroundOpen and registerClick to match skip/backdrop behavior
-              backgroundOpen(_id, targetUrl);
-              Swal.close();
-            });
-            // Skip button handler
-            $('#custom-popup-skip').on('click', function(e) {
-              e.stopPropagation();
-              if (onClose) onClose(); // Set cookie immediately
-              backgroundOpen(_id, targetUrl);
-              Swal.close();
-            });
-            // Modify popup click handler to trigger the same actions
-            $('.swal2-popup').on('click', function(e) {
-              if (!$(e.target).closest('#custom-popup-skip, #custom-popup-close').length) {
-                e.stopPropagation(); // Still prevent bubbling up further
-                if (onClose) onClose(); // Set cookie immediately
-                backgroundOpen(_id, targetUrl);
-                Swal.close();
-              }
-            });
+        const primaryBtn = container.querySelector('.cta-primary');
+        const closeBtn = container.querySelector('.cta-close');
+
+        const handleAction = (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          log('CTA interaction (click/close)', { slug, popupId: popup._id, targetUrl: popup.targetUrl });
+          markOpened(slug);
+          backgroundOpen(popup._id, popup.targetUrl, slug);
+          container.remove();
+          if (!state.wrapper.querySelector('.cta-button')) {
+            teardown();
           }
-        }).then((result) => { // Use .then() only for cleanup now
-          // Remove custom backdrop
-          const el = document.getElementById('custom-backdrop-overlay');
-          if (el) el.remove();
-        });
+        };
+
+        primaryBtn.addEventListener('click', handleAction);
+        closeBtn.addEventListener('click', handleAction);
+
+        return container;
       }
+
+      function buildExpirationDate(extraDays) {
+        const baseDate = new Date();
+        const days = Number(extraDays) || 0;
+        const expiration = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000);
+        return expiration.toISOString().slice(0, 10);
+      }
+
+      function shadeColor(color, percent) {
+        // Simple hex shade helper for CTA gradient
+        const num = parseInt(color.replace('#', ''), 16);
+        const amt = Math.round(2.55 * percent);
+        const r = (num >> 16) + amt;
+        const g = ((num >> 8) & 0x00FF) + amt;
+        const b = (num & 0x0000FF) + amt;
+        return `#${(
+          0x1000000 +
+          (r < 255 ? (r < 0 ? 0 : r) : 255) * 0x10000 +
+          (g < 255 ? (g < 0 ? 0 : g) : 255) * 0x100 +
+          (b < 255 ? (b < 0 ? 0 : b) : 255)
+        ).toString(16).slice(1)}`;
+      }
+
       /* --------------------
-         Helper functions
+         Analytics helpers
          -------------------- */
 
-      // Open current page in a new tab and redirect current tab to target URL with token
-      function backgroundOpen(popupId, baseUrl) {
-        // Open the current page URL (without query params) in a new tab
-        window.open(window.location.href.split('?')[0], '_blank');
+      function backgroundOpen(popupId, baseUrl, slug) {
+        if (!baseUrl) {
+          warn('Missing targetUrl for popup', { popupId, slug });
+          return;
+        }
+
+        try {
+          log('backgroundOpen triggered', { popupId, slug, baseUrl });
+          window.open(window.location.href.split('?')[0], '_blank');
+        } catch (err) {
+          warn('Unable to open background tab', err);
+        }
+
         registerClick(popupId);
-        // Fetch token and redirect the current tab
+
         fetchToken()
           .then(res => {
-            if (res.token) {
-              // Redirect current tab to target URL + token
-              window.location = `${baseUrl}&t=${res.token}`;
+            log('Token response', res);
+            if (res && res.token) {
+              window.location = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}t=${res.token}`;
             } else {
-              // Fallback: redirect without token if fetch fails
               window.location = baseUrl;
             }
           })
           .catch(err => {
-            console.error('Token error, redirecting without token:', err);
-            // Fallback: redirect without token on error
+            warn('Token fetch failed, redirecting without token', err);
             window.location = baseUrl;
           });
       }
 
-      // Get token from server
       function fetchToken() {
         return $.post('https://yuuyasumi.com/wp-json/myapi/v1/get-token',
           { secret: 'KnixnLd3' }, 'json');
       }
 
-      // Log a view event
       function registerView(popupId) {
         const domain = window.location.hostname;
+        log('Registering view', { popupId, domain });
         fetch(`${CONFIG.REFERAL_API_URL}/register-view?popup=${popupId}&domain=${encodeURIComponent(domain)}`)
-          .catch(console.error);
+          .catch(err => warn('Failed to register view', err));
       }
 
-      // Log a click event
       function registerClick(popupId) {
         const domain = window.location.hostname;
+        log('Registering click', { popupId, domain });
         fetch(`${CONFIG.REFERAL_API_URL}/register-click?popup=${popupId}&domain=${encodeURIComponent(domain)}`)
-          .catch(console.error);
+          .catch(err => warn('Failed to register click', err));
       }
     })(jQuery);
   }

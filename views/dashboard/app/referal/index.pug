@@ -31,6 +31,7 @@ block mainContent
                           | 表示順
                         th 画像
                         th ターゲットURL
+                        th スラッグ
                         th 表示数
                         th クリック数
                         th 有効
@@ -52,6 +53,8 @@ block mainContent
                             a(href=popup.targetUrl target="_blank" class="text-decoration-none")
                               i.bi.bi-link-45deg.me-1
                               | #{popup.targetUrl}
+                          td
+                            code #{popup.slug || '-'}
                           td #{popup.views || 0}
                           td #{popup.clicks || 0}
                           td.text-center
@@ -84,6 +87,9 @@ block mainContent
                       strong URL:
                       a.text-decoration-none.ms-1(href=popup.targetUrl target="_blank") #{popup.targetUrl}
                     p.mb-1
+                      strong スラッグ:
+                      code.ms-1 #{popup.slug || '-'}
+                    p.mb-1
                       | 表示数: #{popup.views || 0}
                       br
                       | クリック数: #{popup.clicks || 0}
@@ -113,6 +119,9 @@ block mainContent
             .mb-3
               label.form-label(for="targetUrl") ターゲットURL
               input.form-control(type="text" name="targetUrl" id="targetUrl")
+            .mb-3
+              label.form-label(for="slug") スラッグ
+              input.form-control(type="text" name="slug" id="slug" placeholder="例: yahoo")
             button.btn.btn-primary(type="submit")
               i.bi.bi-check-lg.me-1
               | 保存
@@ -156,6 +165,7 @@ block mainContent
         $('#popupForm')[0].reset();
         $('#popupId').val('');
         $('#imageUrl').val('');
+        $('#slug').val('');
         $('#currentImage').html('');
         $('#popupModal').modal('show');
       });
@@ -168,6 +178,7 @@ block mainContent
           $('#popupId').val(popup);
           $('#targetUrl').val(data.targetUrl || '');
           $('#imageUrl').val(data.imageUrl || '');
+          $('#slug').val(data.slug || '');
           if (data.imageUrl) {
             $('#currentImage').html('<img src="'+data.imageUrl+'" alt="現在の画像" width="100" class="rounded shadow-sm"/>');
           } else {

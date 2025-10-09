@@ -95,6 +95,17 @@ function isValidObjectId(id) {
   return typeof id === 'string' && /^[a-fA-F0-9]{24}$/.test(id);
 }
 
+// Helper to normalize slugs consistently across create/update flows
+const normalizeSlug = (slugRaw = '') => {
+  if (typeof slugRaw !== 'string') return '';
+  return slugRaw
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-|-$/g, '');
+};
+
 // Function to reset view and click data for all popups
 async function resetViewClickData() {
   await POPUPS.updateMany(
@@ -126,6 +137,7 @@ router.get('/info', async (req, res) => {
       _id: doc._id,
       imageUrl: doc.imageUrl,
       targetUrl: doc.targetUrl,
+      slug: doc.slug || '',
       refery: doc.refery || [],
       enabled: doc.enabled !== false,
       order: doc.order,
@@ -144,7 +156,8 @@ router.get('/enabled', async (req, res) => {
     _id: p._id,
     imageUrl: p.imageUrl,
     targetUrl: p.targetUrl,
-    order: p.order
+    order: p.order,
+    slug: p.slug || ''
   })));
 });
 
@@ -230,11 +243,29 @@ router.post('/order', async (req, res) => {
 
 // POST save (add or update by _id)
 router.post('/save', upload.single('image'), async (req, res) => {
-  let { popup, targetUrl, enabled } = req.body;
+  let { popup, targetUrl, enabled, slug } = req.body;
   let imageUrl = req.body.imageUrl;
+  const normalizedSlug = normalizeSlug(slug);
+  console.log('[referal::save] Incoming save request', { popup, targetUrl, slug: normalizedSlug });
+
   if (popup && !isValidObjectId(popup)) return res.status(400).json({ error: 'Invalid id' });
   if (req.file) imageUrl = await handleFileUpload(req.file, global.db);
   enabled = enabled === 'false' ? false : true;
+
+  if (!normalizedSlug) {
+    return res.status(400).json({ error: 'Slug is required' });
+  }
+
+  const slugQuery = { slug: normalizedSlug };
+  if (popup) {
+    slugQuery._id = { $ne: new ObjectId(popup) };
+  }
+  const existingSlugOwner = await POPUPS.findOne(slugQuery);
+  if (existingSlugOwner) {
+    console.warn('[referal::save] Duplicate slug detected', normalizedSlug);
+    return res.status(409).json({ error: 'Slug already exists. Please choose a different value.' });
+  }
+
   if (!popup) {
     // create
     const count = await POPUPS.countDocuments({});
@@ -242,20 +273,23 @@ router.post('/save', upload.single('image'), async (req, res) => {
     const result = await POPUPS.insertOne({
       imageUrl,
       targetUrl,
+      slug: normalizedSlug,
       order: nextOrder,
       views: 0,
       clicks: 0,
       refery: [],
       enabled
     });
-    return res.json({ imageUrl, _id: result.insertedId });
+    console.log('[referal::save] Created popup', { id: result.insertedId, slug: normalizedSlug });
+    return res.json({ imageUrl, _id: result.insertedId, slug: normalizedSlug });
   } else {
     // update
     await POPUPS.updateOne(
       { _id: new ObjectId(popup) },
-      { $set: { imageUrl, targetUrl, enabled } }
+      { $set: { imageUrl, targetUrl, enabled, slug: normalizedSlug } }
     );
-    return res.json({ imageUrl });
+    console.log('[referal::save] Updated popup', { id: popup, slug: normalizedSlug });
+    return res.json({ imageUrl, slug: normalizedSlug });
   }
 });
 
