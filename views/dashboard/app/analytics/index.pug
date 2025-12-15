@@ -391,8 +391,8 @@ block mainContent
                 </div>
                 <div class="summary-value">${data.today.views.toLocaleString()}</div>
                 <div class="summary-label">今日のビュー数 / Today's Views</div>
-                <div class="change-indicator ${parseFloat(data.change.views) >= 0 ? 'change-positive' : 'change-negative'}">
-                  vs yesterday
+                <div class="change-indicator ${parseFloat(data.dailyChange.views) >= 0 ? 'change-positive' : 'change-negative'}">
+                  ${parseFloat(data.dailyChange.views) !== 0 ? (parseFloat(data.dailyChange.views) >= 0 ? '↗' : '↘') + ' ' + Math.abs(data.dailyChange.views) + '%' : ''} vs yesterday
                 </div>
               </div>
             </div>

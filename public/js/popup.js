@@ -1,13 +1,13 @@
 /*
- * Referral popup widget
- * - Fetches enabled popups (with slug) from backend
- * - Renders Yahoo & Rakuten CTA layout inspired by cta-test-1.html using scoped styles
- * - Keeps analytics (view/click) reporting and backgroundOpen behaviour
- * - Persists per-slug cookies so refreshed pages only show remaining CTAs
+ * Referral popup widget v1.2.0
+ * - Fetches enabled Yahoo popups from backend
+ * - Stage 1: Non-intrusive bottom popup (3s delay, 20s display time) - SEO friendly
+ * - Stage 2: Full-screen overlay (5s skip timer) if Stage 1 not clicked - Intrusive fallback
+ * - Persists per-slug cookies so refreshed pages skip shown popups
+ * - Triggers backgroundOpen on user click/interaction
  */
 (function() {
-  // Always update the file version when editing
-  console.log('Referral popup widget version: v1.1.0');
+  console.log('Referral popup widget version: v1.2.0');
 
   const DEBUG_PREFIX = '[ReferalPopup]';
 
@@ -85,34 +85,34 @@
 
       const CONFIG = {
         REFERAL_API_URL: 'https://rakuado-43706e27163e.herokuapp.com/api/referal',
-        COOKIE_EXPIRY_HOURS: 1,
+        COOKIE_EXPIRY_HOURS: 24,
         COOKIE_PREFIX: 'referal-opened-',
-        RENDER_DELAY_MS: 5000
+        STAGE1_DELAY_MS: 3000,      // Stage 1 appears after 3s page load
+        STAGE1_DISPLAY_MS: 20000,   // Stage 1 visible for 20s
+        STAGE2_SKIP_MS: 5000        // Stage 2 skip button becomes clickable after 5s
       };
 
-      const BUTTON_PRESETS = {
-        yahoo: {
-          siteName: 'Yahoo!ショッピング',
-          extraDays: 3,
-          headline: 'Yahoo!ショッピングで50%オフクーポンをゲット！',
-          accentHex: '#ef4444',
-          logoUrl: 'https://hatoltd.com/affiliate-partner/yahoo-logo.svg'
-        },
-        rakuten: {
-          siteName: '楽天市場',
-          extraDays: 5,
-          headline: '楽天市場で50%オフクーポンをゲット！',
-          accentHex: '#d43c33',
-          logoUrl: 'https://hatoltd.com/affiliate-partner/rakuten-logo.jpg'
-        }
+      const YAHOO_PRESET = {
+        siteName: 'Yahoo!ショッピング',
+        extraDays: 3,
+        headline: 'Yahoo!ショッピングで50%オフクーポンをゲット！',
+        accentHex: '#ef4444',
+        logoUrl: 'https://hatoltd.com/affiliate-partner/yahoo-logo.svg'
       };
 
       const state = {
-        root: null,
-        shadow: null,
-        wrapper: null,
-        renderedSlugs: new Set(),
-        renderTimeoutId: null
+        currentPopup: null,
+        stage1Root: null,
+        stage1Shadow: null,
+        stage1TimeoutId: null,
+        stage1DismissTimeoutId: null,
+        stage1CountdownInterval: null,
+        stage2Root: null,
+        stage2Shadow: null,
+        stage2SkipTimeoutId: null,
+        stage2SkipCounter: null,
+        interacted: false,
+        processingInteraction: false  // Lock to prevent concurrent interactions
       };
 
       $(document).ready(() => {
@@ -142,32 +142,33 @@
         return fallback;
       };
 
-      const resolvePresetKey = (slug) => {
-        if (!slug) return null;
-        if (BUTTON_PRESETS[slug]) return slug;
-        const match = Object.keys(BUTTON_PRESETS).find(key => slug.startsWith(key));
-        return match || null;
-      };
-
       function fetchEnabledPopups() {
         fetch(`${CONFIG.REFERAL_API_URL}/enabled`)
           .then(res => res.json())
           .then(popups => {
             log('Enabled popups payload', popups);
             if (!Array.isArray(popups) || popups.length === 0) {
+              log('No enabled popups available');
               return;
             }
-            const enriched = popups
+
+            // Only use Yahoo popups
+            const yahooPopups = popups.filter(p => {
+              const slug = normalizeSlug(p.slug);
+              return slug && slug.includes('yahoo');
+            });
+
+            if (yahooPopups.length === 0) {
+              log('No Yahoo popups available');
+              return;
+            }
+
+            const enriched = yahooPopups
               .filter(Boolean)
               .map(p => {
-                const slugSource = p.slug ? 'db' : 'fallback';
                 const resolvedSlug = resolveSlug(p);
-                const presetKey = resolvePresetKey(resolvedSlug);
-                const snapshot = { ...p, slug: resolvedSlug, presetKey, slugSource };
+                const snapshot = { ...p, slug: resolvedSlug };
                 log('Enriched popup entry', snapshot);
-                if (!p.slug) {
-                  warn('Popup is missing slug in API payload', { popupId: p._id, slugSource });
-                }
                 return snapshot;
               });
 
@@ -184,26 +185,16 @@
             });
 
             if (filtered.length === 0) {
-              log('All slugs already opened, nothing to render');
-              teardown();
+              log('All Yahoo popups already opened');
               return;
             }
 
-              if (state.renderTimeoutId) {
-                window.clearTimeout(state.renderTimeoutId);
-                state.renderTimeoutId = null;
-              }
+            // Use first eligible popup
+            const popup = filtered[0];
+            log('Selected popup for display', { popupId: popup._id, slug: popup.slug });
 
-              log('Scheduling CTA render with fixed delay', {
-                delay: CONFIG.RENDER_DELAY_MS,
-                count: filtered.length
-              });
-
-              state.renderTimeoutId = window.setTimeout(() => {
-                log('Rendering CTA buttons after delay', filtered.map(p => ({ popupId: p._id, slug: p.slug })));
-                renderButtons(filtered);
-                state.renderTimeoutId = null;
-              }, CONFIG.RENDER_DELAY_MS);
+            // Schedule Stage 1 display
+            scheduleStage1(popup);
           })
           .catch(err => error('Failed to fetch enabled popups', err));
       }
@@ -222,11 +213,31 @@
         setCookie(cookieKey, 'true', { expires: CONFIG.COOKIE_EXPIRY_HOURS / 24, path: '/' });
       }
 
-      function ensureShadowRoot() {
-        if (state.wrapper) return state;
+      function scheduleStage1(popup) {
+        state.currentPopup = popup;
+        registerView(popup._id);
 
+        log('Scheduling Stage 1 display', {
+          delay: CONFIG.STAGE1_DELAY_MS,
+          popupId: popup._id
+        });
+
+        state.stage1TimeoutId = window.setTimeout(() => {
+          log('Displaying Stage 1 popup', { popupId: popup._id });
+          renderStage1(popup);
+
+          // Schedule Stage 1 auto-dismiss
+          state.stage1DismissTimeoutId = window.setTimeout(() => {
+            log('Stage 1 timeout - dismissing and showing Stage 2', { popupId: popup._id });
+            dismissStage1();
+            scheduleStage2(popup);
+          }, CONFIG.STAGE1_DISPLAY_MS);
+        }, CONFIG.STAGE1_DELAY_MS);
+      }
+
+      function renderStage1(popup) {
         const host = document.createElement('div');
-        host.id = 'referal-popup-host';
+        host.id = 'referal-popup-stage1-host';
         host.style.position = 'fixed';
         host.style.left = '20px';
         host.style.bottom = '20px';
@@ -247,18 +258,36 @@
           .popup-wrapper {
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 0;
             pointer-events: auto;
+          }
+          .progress-bar {
+            width: 100%;
+            height: 3px;
+            background: #e5e7eb;
+            border-radius: 9999px 9999px 0 0;
+            overflow: hidden;
+          }
+          .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+            width: 100%;
+            animation: depleteBar 20s linear forwards;
+          }
+          @keyframes depleteBar {
+            from { width: 100%; }
+            to { width: 0%; }
           }
           .cta-button {
             display: flex;
             align-items: center;
             background: #ffffff;
-            border-radius: 9999px;
+            border-radius: 0 0 9999px 9999px;
             padding: 16px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
             position: relative;
+            cursor: pointer;
           }
           .cta-button:hover {
             transform: translateY(-2px);
@@ -278,6 +307,7 @@
             flex-direction: column;
             margin-right: 16px;
             min-width: 0;
+            flex: 1;
           }
           .cta-info h4 {
             font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
@@ -287,7 +317,7 @@
             margin: 0;
             line-height: 1.3;
           }
-          .cta-info span {
+          .cta-info .countdown {
             font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
             font-weight: 600;
             font-size: 12px;
@@ -299,6 +329,8 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            margin-left: auto;
+            flex-shrink: 0;
           }
           .cta-primary {
             font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
@@ -335,16 +367,9 @@
           .bounce {
             animation: bounce 1.5s infinite;
           }
-          .pulse {
-            animation: pulse 2s infinite;
-          }
           @keyframes bounce {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-6px); }
-          }
-          @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 0.9; }
-            50% { transform: scale(1.08); opacity: 1; }
           }
           @media (max-width: 640px) {
             :host {
@@ -357,16 +382,17 @@
             .cta-button {
               flex-direction: column;
               align-items: flex-start;
-              border-radius: 24px;
+              border-radius: 0 0 24px 24px;
               padding: 16px;
-              gap: 12px;
             }
             .cta-info {
               margin-right: 0;
+              margin-bottom: 12px;
             }
             .cta-actions {
               width: 100%;
               justify-content: space-between;
+              margin-left: 0;
             }
           }
         `;
@@ -376,88 +402,29 @@
         wrapper.className = 'popup-wrapper';
         shadow.appendChild(wrapper);
 
-        state.root = host;
-        state.shadow = shadow;
-        state.wrapper = wrapper;
+        // Progress bar
+        const progressContainer = document.createElement('div');
+        progressContainer.className = 'progress-bar';
+        const progressFill = document.createElement('div');
+        progressFill.className = 'progress-fill';
+        progressContainer.appendChild(progressFill);
+        wrapper.appendChild(progressContainer);
 
-        return state;
-      }
-
-      function teardown() {
-        if (state.root && state.root.parentNode) {
-          log('Tearing down popup host');
-          state.root.parentNode.removeChild(state.root);
-        }
-        state.root = null;
-        state.shadow = null;
-        state.wrapper = null;
-        state.renderedSlugs.clear();
-      }
-
-      function renderButtons(popups) {
-        const { wrapper } = ensureShadowRoot();
-        wrapper.innerHTML = '';
-
-        popups.forEach((popup, index) => {
-          try {
-            const element = createButtonElement(popup, index);
-            if (element) {
-              wrapper.appendChild(element);
-              state.renderedSlugs.add(popup.slug);
-              registerView(popup._id);
-            }
-          } catch (err) {
-            error('Failed rendering popup', popup, err);
-          }
-        });
-
-        if (!wrapper.children.length) {
-          teardown();
-        }
-      }
-
-      // Scroll gate logic removed (mobile compatibility)
-
-      function createButtonElement(popup, index) {
-        const slug = popup.slug || `slot-${index}`;
-        const presetKey = resolvePresetKey(slug);
-        const preset = presetKey ? BUTTON_PRESETS[presetKey] : null;
-
-        const siteName = popup.siteName
-          || (preset ? preset.siteName : null)
-          || slug;
-        const extraDays = typeof popup.extraDays === 'number' ? popup.extraDays : (preset ? preset.extraDays : 3);
-        const accentHex = popup.accentHex || (preset ? preset.accentHex : '#2563eb');
-        const logoUrl = popup.logoUrl || (preset ? preset.logoUrl : popup.imageUrl || '');
-        const headline = popup.headline
-          || (preset ? preset.headline : `${siteName}で限定オファーをチェック！`);
-
-        log('Creating CTA element', {
-          popupId: popup._id,
-          slug,
-          presetKey,
-          siteName,
-          headline,
-          logoUrl,
-          extraDays,
-          accentHex
-        });
+        const expirationDate = buildExpirationDate(YAHOO_PRESET.extraDays);
+        const accent = YAHOO_PRESET.accentHex;
 
         const container = document.createElement('div');
         container.className = 'cta-button bounce';
-        container.dataset.slug = slug;
-
-        const expirationDate = buildExpirationDate(extraDays);
-        const accent = accentHex;
+        container.dataset.slug = popup.slug;
 
         container.innerHTML = `
-          <img class="logo" src="${logoUrl}" alt="${siteName} logo" />
+          <img class="logo" src="${YAHOO_PRESET.logoUrl}" alt="Yahoo!ショッピング logo" />
           <div class="cta-info">
-            <h4>${headline}</h4>
-            <span>有効期限: ${expirationDate}（限定オファー）</span>
+            <h4>${YAHOO_PRESET.headline}</h4>
+            <div class="countdown">有効期限: ${expirationDate}（残り <span id="timer">20</span>秒）</div>
           </div>
           <div class="cta-actions">
-            <button class="cta-primary pulse" type="button" style="background: linear-gradient(90deg, ${accent}, ${shadeColor(accent, -10)});">
+            <button class="cta-primary" type="button" style="background: linear-gradient(90deg, ${accent}, ${shadeColor(accent, -10)});">
               今すぐチェック
             </button>
             <button class="cta-close" type="button" aria-label="閉じる">×</button>
@@ -466,23 +433,311 @@
 
         const primaryBtn = container.querySelector('.cta-primary');
         const closeBtn = container.querySelector('.cta-close');
+        const timerDisplay = container.querySelector('#timer');
+
+        // Countdown timer
+        let remainingTime = 20;
+        state.stage1CountdownInterval = window.setInterval(() => {
+          remainingTime--;
+          if (timerDisplay) {
+            timerDisplay.textContent = remainingTime;
+          }
+          if (remainingTime <= 0) {
+            if (state.stage1CountdownInterval) {
+              window.clearInterval(state.stage1CountdownInterval);
+            }
+          }
+        }, 1000);
 
         const handleAction = (event) => {
+          // Prevent concurrent interactions
+          if (state.processingInteraction) {
+            log('Interaction already in progress, ignoring duplicate');
+            return;
+          }
+          state.processingInteraction = true;
+
           event.preventDefault();
           event.stopPropagation();
-          log('CTA interaction (click/close)', { slug, popupId: popup._id, targetUrl: popup.targetUrl });
-          markOpened(slug);
-          backgroundOpen(popup._id, popup.targetUrl, slug);
-          container.remove();
-          if (!state.wrapper.querySelector('.cta-button')) {
-            teardown();
-          }
+          log('Stage 1: User interaction', { popupId: popup._id });
+          state.interacted = true;
+          markOpened(popup.slug);
+          dismissStage1();
+          dismissStage2();
+          backgroundOpen(popup._id, popup.targetUrl, popup.slug);
         };
 
         primaryBtn.addEventListener('click', handleAction);
         closeBtn.addEventListener('click', handleAction);
+        container.addEventListener('click', handleAction);
 
-        return container;
+        wrapper.appendChild(container);
+        state.stage1Root = host;
+        state.stage1Shadow = shadow;
+      }
+
+      function dismissStage1() {
+        if (state.stage1CountdownInterval) {
+          window.clearInterval(state.stage1CountdownInterval);
+          state.stage1CountdownInterval = null;
+        }
+        if (state.stage1DismissTimeoutId) {
+          window.clearTimeout(state.stage1DismissTimeoutId);
+          state.stage1DismissTimeoutId = null;
+        }
+        if (state.stage1Root && state.stage1Root.parentNode) {
+          log('Dismissing Stage 1 popup');
+          state.stage1Root.parentNode.removeChild(state.stage1Root);
+        }
+        state.stage1Root = null;
+        state.stage1Shadow = null;
+      }
+
+      function scheduleStage2(popup) {
+        if (state.interacted) {
+          log('User already interacted, skipping Stage 2');
+          return;
+        }
+
+        log('Scheduling Stage 2 display', { popupId: popup._id });
+        renderStage2(popup);
+      }
+
+      function renderStage2(popup) {
+        // Create overlay container
+        const overlay = document.createElement('div');
+        overlay.id = 'referal-popup-stage2-overlay';
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        overlay.style.zIndex = '2147483646';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.pointerEvents = 'auto';
+
+        document.body.appendChild(overlay);
+
+        const host = document.createElement('div');
+        host.id = 'referal-popup-stage2-host';
+        host.style.position = 'relative';
+        host.style.zIndex = '2147483647';
+        host.style.width = 'auto';
+        host.style.maxWidth = '90vw';
+        host.style.pointerEvents = 'auto';
+        overlay.appendChild(host);
+
+        const shadow = host.attachShadow({ mode: 'open' });
+        const style = document.createElement('style');
+        style.textContent = `
+          :host {
+            all: initial;
+          }
+          *, *::before, *::after {
+            box-sizing: border-box;
+          }
+          .modal-container {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            position: relative;
+          }
+          .modal-container .logo {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 20px;
+            object-fit: contain;
+          }
+          .modal-container h2 {
+            font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+            font-weight: 700;
+            font-size: 24px;
+            color: #1f2937;
+            margin: 0 0 10px 0;
+            line-height: 1.3;
+          }
+          .modal-container p {
+            font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+            font-weight: 500;
+            font-size: 16px;
+            color: #6b7280;
+            margin: 0 0 30px 0;
+            line-height: 1.5;
+          }
+          .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+          }
+          .modal-skip {
+            font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+            font-weight: 500;
+            font-size: 14px;
+            color: #9ca3af;
+            padding: 10px 20px;
+            border-radius: 9999px;
+            border: 1px solid #e5e7eb;
+            background: #f9fafb;
+            cursor: pointer;
+            transition: all 0.2s ease;
+          }
+          .modal-skip:hover:not(:disabled) {
+            background: #f3f4f6;
+            color: #6b7280;
+          }
+          .modal-skip:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+          }
+          .modal-primary {
+            font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+            font-weight: 600;
+            font-size: 16px;
+            color: #ffffff;
+            padding: 12px 30px;
+            border-radius: 9999px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+          }
+          .modal-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.25);
+          }
+          .skip-countdown {
+            font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 8px;
+          }
+          @media (max-width: 640px) {
+            .modal-container {
+              padding: 24px;
+              border-radius: 16px;
+            }
+            .modal-container h2 {
+              font-size: 20px;
+            }
+            .modal-container p {
+              font-size: 14px;
+            }
+            .modal-actions {
+              flex-direction: column;
+            }
+          }
+        `;
+
+        shadow.appendChild(style);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'modal-container';
+        shadow.appendChild(wrapper);
+
+        const expirationDate = buildExpirationDate(YAHOO_PRESET.extraDays);
+        const accent = YAHOO_PRESET.accentHex;
+
+        wrapper.innerHTML = `
+          <img class="logo" src="${YAHOO_PRESET.logoUrl}" alt="Yahoo!ショッピング logo" />
+          <h2>${YAHOO_PRESET.headline}</h2>
+          <p>有効期限: ${expirationDate}（限定オファー）</p>
+          <div class="modal-actions">
+            <button class="modal-skip" type="button" id="skip-btn" disabled>スキップ (5秒)</button>
+            <button class="modal-primary" type="button" id="cta-btn" style="background: linear-gradient(90deg, ${accent}, ${shadeColor(accent, -10)});">
+              今すぐチェック
+            </button>
+          </div>
+          <div class="skip-countdown" id="countdown"></div>
+        `;
+
+        state.stage2Root = overlay;
+        state.stage2Shadow = shadow;
+
+        const skipBtn = wrapper.querySelector('#skip-btn');
+        const ctaBtn = wrapper.querySelector('#cta-btn');
+        const countdown = wrapper.querySelector('#countdown');
+
+        let skipCountdown = 5;
+        state.stage2SkipCounter = skipCountdown;
+
+        const updateCountdown = () => {
+          skipCountdown--;
+          state.stage2SkipCounter = skipCountdown;
+          if (skipCountdown <= 0) {
+            skipBtn.disabled = false;
+            skipBtn.textContent = 'スキップ';
+            countdown.textContent = '';
+            if (state.stage2SkipTimeoutId) {
+              window.clearTimeout(state.stage2SkipTimeoutId);
+            }
+          } else {
+            countdown.textContent = `スキップできるまであと${skipCountdown}秒`;
+            state.stage2SkipTimeoutId = window.setTimeout(updateCountdown, 1000);
+          }
+        };
+
+        countdown.textContent = `スキップできるまであと${skipCountdown}秒`;
+        state.stage2SkipTimeoutId = window.setTimeout(updateCountdown, 1000);
+
+        const handleClose = () => {
+          // Prevent concurrent interactions
+          if (state.processingInteraction) {
+            log('Interaction already in progress, ignoring duplicate');
+            return;
+          }
+          state.processingInteraction = true;
+
+          log('Stage 2: User clicked skip - triggering backgroundOpen');
+          state.interacted = true;
+          markOpened(popup.slug);
+          dismissStage2();
+          backgroundOpen(popup._id, popup.targetUrl, popup.slug);
+        };
+
+        const handleCTA = (event) => {
+          // Prevent concurrent interactions
+          if (state.processingInteraction) {
+            log('Interaction already in progress, ignoring duplicate');
+            return;
+          }
+          state.processingInteraction = true;
+
+          event.preventDefault();
+          event.stopPropagation();
+          log('Stage 2: User clicked CTA', { popupId: popup._id });
+          state.interacted = true;
+          markOpened(popup.slug);
+          dismissStage2();
+          backgroundOpen(popup._id, popup.targetUrl, popup.slug);
+        };
+
+        // Clicking anywhere on the overlay (except the modal) or buttons triggers the CTA
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) {
+            handleCTA(e);
+          }
+        });
+
+        skipBtn.addEventListener('click', handleClose);
+        ctaBtn.addEventListener('click', handleCTA);
+      }
+
+      function dismissStage2() {
+        if (state.stage2SkipTimeoutId) {
+          window.clearTimeout(state.stage2SkipTimeoutId);
+          state.stage2SkipTimeoutId = null;
+        }
+        if (state.stage2Root && state.stage2Root.parentNode) {
+          log('Dismissing Stage 2 popup');
+          state.stage2Root.parentNode.removeChild(state.stage2Root);
+        }
+        state.stage2Root = null;
+        state.stage2Shadow = null;
+        state.stage2SkipCounter = null;
       }
 
       function buildExpirationDate(extraDays) {

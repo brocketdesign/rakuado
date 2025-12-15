@@ -5,44 +5,34 @@ function initializeAnalyticsCronJobs(db) {
   const ANALYTICS_DAILY = db.collection('analyticsDaily');
   const ANALYTICS_WEEKLY = db.collection('analyticsWeekly');
   const ANALYTICS_MONTHLY = db.collection('analyticsMonthly');
+  const ANALYTICS_SNAPSHOTS = db.collection('analyticsSnapshots');
 
   // Run daily at 00:01
   cron.schedule('1 0 * * *', async () => {
     console.log('Running daily analytics aggregation...');
-    await aggregateDailyAnalytics(POPUPS, ANALYTICS_DAILY, ANALYTICS_WEEKLY, ANALYTICS_MONTHLY);
+    await aggregateDailyAnalytics(POPUPS, ANALYTICS_DAILY, ANALYTICS_WEEKLY, ANALYTICS_MONTHLY, ANALYTICS_SNAPSHOTS);
   });
 
   // Run hourly backup to ensure data preservation
   cron.schedule('0 * * * *', async () => {
     console.log('Running hourly analytics backup...');
-    await backupCurrentAnalytics(POPUPS, ANALYTICS_DAILY);
+    await backupCurrentAnalytics(POPUPS, ANALYTICS_SNAPSHOTS);
   });
 
   console.log('Analytics cron jobs initialized');
 }
 
 // Backup current analytics data every hour to prevent data loss
-async function backupCurrentAnalytics(POPUPS, ANALYTICS_DAILY) {
+async function backupCurrentAnalytics(POPUPS, ANALYTICS_SNAPSHOTS) {
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
   
   try {
-    // Get current daily record
-    let dailyRecord = await ANALYTICS_DAILY.findOne({ date: todayStr });
-    
-    if (!dailyRecord) {
-      // Initialize today's record if it doesn't exist
-      dailyRecord = {
-        date: todayStr,
-        timestamp: today.getTime(),
-        total: { views: 0, clicks: 0 },
-        sites: {}
-      };
-    }
-
-    // Get all popups and their current refery data
+    // Build a cumulative snapshot from current popups and store it in snapshots collection
     const popups = await POPUPS.find({}).toArray();
     const currentSiteData = {};
+    let totalViews = 0;
+    let totalClicks = 0;
 
     for (const popup of popups) {
       const refery = popup.refery || [];
@@ -56,32 +46,22 @@ async function backupCurrentAnalytics(POPUPS, ANALYTICS_DAILY) {
       }
     }
 
-    // Merge with existing data (to preserve historical data within the day)
-    for (const [domain, data] of Object.entries(currentSiteData)) {
-      if (!dailyRecord.sites[domain]) {
-        dailyRecord.sites[domain] = { views: 0, clicks: 0 };
-      }
-      // Only update if current data is higher (prevents going backwards)
-      if (data.views > dailyRecord.sites[domain].views) {
-        dailyRecord.sites[domain].views = data.views;
-      }
-      if (data.clicks > dailyRecord.sites[domain].clicks) {
-        dailyRecord.sites[domain].clicks = data.clicks;
-      }
-    }
-
-    // Recalculate totals
-    let totalViews = 0, totalClicks = 0;
-    for (const data of Object.values(dailyRecord.sites)) {
+    for (const data of Object.values(currentSiteData)) {
       totalViews += data.views;
       totalClicks += data.clicks;
     }
-    dailyRecord.total = { views: totalViews, clicks: totalClicks };
 
-    // Store the updated record
-    await ANALYTICS_DAILY.replaceOne(
+    const snapshot = {
+      date: todayStr,
+      timestamp: today.getTime(),
+      total: { views: totalViews, clicks: totalClicks },
+      sites: currentSiteData
+    };
+
+    // Store cumulative snapshot for today (used later to compute daily deltas)
+    await ANALYTICS_SNAPSHOTS.replaceOne(
       { date: todayStr },
-      dailyRecord,
+      snapshot,
       { upsert: true }
     );
 
@@ -90,50 +70,80 @@ async function backupCurrentAnalytics(POPUPS, ANALYTICS_DAILY) {
   }
 }
 
-async function aggregateDailyAnalytics(POPUPS, ANALYTICS_DAILY, ANALYTICS_WEEKLY, ANALYTICS_MONTHLY) {
+async function aggregateDailyAnalytics(POPUPS, ANALYTICS_DAILY, ANALYTICS_WEEKLY, ANALYTICS_MONTHLY, ANALYTICS_SNAPSHOTS) {
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
   const weekStart = getWeekStart(today);
   const monthStart = getMonthStart(today);
   
   try {
-    // Get all popups with their current stats
+    // Build cumulative snapshot from current popups (end-of-day snapshot)
     const popups = await POPUPS.find({}).toArray();
-    
-    let totalViews = 0;
-    let totalClicks = 0;
-    const siteData = {};
+    let cumulativeViews = 0;
+    let cumulativeClicks = 0;
+    const cumulativeSites = {};
 
-    // Process each popup
     for (const popup of popups) {
-      const views = popup.views || 0;
-      const clicks = popup.clicks || 0;
-      totalViews += views;
-      totalClicks += clicks;
-
-      // Aggregate by domain from refery data
       const refery = popup.refery || [];
       for (const ref of refery) {
         const domain = ref.domain || 'unknown';
-        if (!siteData[domain]) {
-          siteData[domain] = { views: 0, clicks: 0 };
+        if (!cumulativeSites[domain]) {
+          cumulativeSites[domain] = { views: 0, clicks: 0 };
         }
-        siteData[domain].views += ref.view || 0;
-        siteData[domain].clicks += ref.click || 0;
+        cumulativeSites[domain].views += ref.view || 0;
+        cumulativeSites[domain].clicks += ref.click || 0;
       }
     }
 
-    // Store daily aggregation
+    for (const data of Object.values(cumulativeSites)) {
+      cumulativeViews += data.views;
+      cumulativeClicks += data.clicks;
+    }
+
+    // Fetch yesterday's cumulative snapshot to compute daily delta
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const prevSnapshot = await ANALYTICS_SNAPSHOTS.findOne({ date: yesterdayStr }) || { total: { views: 0, clicks: 0 }, sites: {} };
+
+    // Compute daily (delta) values = cumulative today - cumulative yesterday
+    const dailySites = {};
+    const allDomains = new Set([...Object.keys(cumulativeSites), ...Object.keys(prevSnapshot.sites || {})]);
+
+    for (const domain of allDomains) {
+      const todayData = cumulativeSites[domain] || { views: 0, clicks: 0 };
+      const prevData = (prevSnapshot.sites && prevSnapshot.sites[domain]) ? prevSnapshot.sites[domain] : { views: 0, clicks: 0 };
+      const dViews = Math.max(0, (todayData.views || 0) - (prevData.views || 0));
+      const dClicks = Math.max(0, (todayData.clicks || 0) - (prevData.clicks || 0));
+      if (dViews > 0 || dClicks > 0) {
+        dailySites[domain] = { views: dViews, clicks: dClicks };
+      }
+    }
+
+    const dailyTotalViews = Math.max(0, cumulativeViews - (prevSnapshot.total ? prevSnapshot.total.views : 0));
+    const dailyTotalClicks = Math.max(0, cumulativeClicks - (prevSnapshot.total ? prevSnapshot.total.clicks : 0));
+
+    // Store daily (delta) aggregation into analyticsDaily
     await ANALYTICS_DAILY.replaceOne(
       { date: todayStr },
       {
         date: todayStr,
         timestamp: today.getTime(),
-        total: { views: totalViews, clicks: totalClicks },
-        sites: siteData
+        total: { views: dailyTotalViews, clicks: dailyTotalClicks },
+        sites: dailySites
       },
       { upsert: true }
     );
+
+    // Also store the cumulative snapshot for today (used for next day's delta)
+    const todaySnapshot = {
+      date: todayStr,
+      timestamp: today.getTime(),
+      total: { views: cumulativeViews, clicks: cumulativeClicks },
+      sites: cumulativeSites
+    };
+
+    await ANALYTICS_SNAPSHOTS.replaceOne({ date: todayStr }, todaySnapshot, { upsert: true });
 
     // Aggregate weekly data
     const weeklyData = await aggregateWeeklyData(ANALYTICS_DAILY, weekStart);
@@ -152,7 +162,7 @@ async function aggregateDailyAnalytics(POPUPS, ANALYTICS_DAILY, ANALYTICS_WEEKLY
     );
 
     // Clean up old data
-    await cleanupOldData(ANALYTICS_DAILY, ANALYTICS_WEEKLY, ANALYTICS_MONTHLY);
+    await cleanupOldData(ANALYTICS_DAILY, ANALYTICS_WEEKLY, ANALYTICS_MONTHLY, ANALYTICS_SNAPSHOTS);
 
     console.log('Daily analytics aggregation completed');
   } catch (error) {
@@ -222,7 +232,7 @@ async function aggregateMonthlyData(ANALYTICS_DAILY, monthStart) {
   return aggregated;
 }
 
-async function cleanupOldData(ANALYTICS_DAILY, ANALYTICS_WEEKLY, ANALYTICS_MONTHLY) {
+async function cleanupOldData(ANALYTICS_DAILY, ANALYTICS_WEEKLY, ANALYTICS_MONTHLY, ANALYTICS_SNAPSHOTS) {
   // Keep 3 months of daily data (for 2 complete periods)
   const threeMonthsAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   // Keep 1 year of weekly data
@@ -233,6 +243,11 @@ async function cleanupOldData(ANALYTICS_DAILY, ANALYTICS_WEEKLY, ANALYTICS_MONTH
   await ANALYTICS_DAILY.deleteMany({ date: { $lt: threeMonthsAgo } });
   await ANALYTICS_WEEKLY.deleteMany({ weekStart: { $lt: oneYearAgo } });
   await ANALYTICS_MONTHLY.deleteMany({ monthStart: { $lt: threeYearsAgo } });
+
+  // Also clean up old cumulative snapshots (we keep the same retention as daily)
+  if (ANALYTICS_SNAPSHOTS) {
+    await ANALYTICS_SNAPSHOTS.deleteMany({ date: { $lt: threeMonthsAgo } });
+  }
 }
 
 function getWeekStart(date) {
@@ -246,4 +261,19 @@ function getMonthStart(date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
-module.exports = { initializeAnalyticsCronJobs };
+async function runBackupNow(db) {
+  const POPUPS = db.collection('referalPopups');
+  const ANALYTICS_SNAPSHOTS = db.collection('analyticsSnapshots');
+  await backupCurrentAnalytics(POPUPS, ANALYTICS_SNAPSHOTS);
+}
+
+async function runAggregateNow(db) {
+  const POPUPS = db.collection('referalPopups');
+  const ANALYTICS_DAILY = db.collection('analyticsDaily');
+  const ANALYTICS_WEEKLY = db.collection('analyticsWeekly');
+  const ANALYTICS_MONTHLY = db.collection('analyticsMonthly');
+  const ANALYTICS_SNAPSHOTS = db.collection('analyticsSnapshots');
+  await aggregateDailyAnalytics(POPUPS, ANALYTICS_DAILY, ANALYTICS_WEEKLY, ANALYTICS_MONTHLY, ANALYTICS_SNAPSHOTS);
+}
+
+module.exports = { initializeAnalyticsCronJobs, runBackupNow, runAggregateNow };

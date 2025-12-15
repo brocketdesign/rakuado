@@ -154,9 +154,12 @@ router.get('/info', async (req, res) => {
   }
 });
 
-// GET all enabled popups (for frontend)
+// GET all enabled popups (for frontend) - Only Yahoo popups
 router.get('/enabled', async (req, res) => {
-  const popups = await POPUPS.find({ enabled: { $ne: false } }).sort({ order: 1 }).toArray();
+  const popups = await POPUPS.find({ 
+    enabled: { $ne: false },
+    slug: { $regex: /yahoo/, $options: 'i' }
+  }).sort({ order: 1 }).toArray();
   res.json(popups.map(p => ({
     _id: p._id,
     imageUrl: p.imageUrl,
@@ -177,8 +180,9 @@ router.get('/register-view', async (req, res) => {
   // Update popup stats
   await POPUPS.updateOne({ _id: popup._id }, { $inc: { views: 1 } });
   
-  // Store analytics data immediately
-  await storeDailyAnalytics(domain, id, 1, 0);
+  // NOTE: analytics are now computed from cumulative snapshots by the analytics cron job.
+  // We retain popup-level counters (`views`) and `refery` for snapshot aggregation,
+  // but we no longer write directly to `analyticsDaily` here to avoid double-counting.
   
   // Update refery data (keep for backward compatibility)
   let refery = filterRecentRefery(popup.refery);
@@ -207,8 +211,9 @@ router.get('/register-click', async (req, res) => {
   // Update popup stats
   await POPUPS.updateOne({ _id: popup._id }, { $inc: { clicks: 1 } });
   
-  // Store analytics data immediately
-  await storeDailyAnalytics(domain, id, 0, 1);
+  // NOTE: analytics are now computed from cumulative snapshots by the analytics cron job.
+  // We retain popup-level counters (`clicks`) and `refery` for snapshot aggregation,
+  // but we no longer write directly to `analyticsDaily` here to avoid double-counting.
   
   // Update refery data (keep for backward compatibility)
   let refery = filterRecentRefery(popup.refery);

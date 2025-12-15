@@ -158,41 +158,70 @@ router.get('/summary', async (req, res) => {
       .sort({ date: 1 })
       .toArray();
 
-    // Calculate totals for the period
+    // Calculate totals for the requested period
     const totals = data.reduce((acc, item) => {
       acc.views += item.total ? item.total.views : 0;
       acc.clicks += item.total ? item.total.clicks : 0;
       return acc;
     }, { views: 0, clicks: 0 });
 
-    // Get today's data
+    // Get today's and yesterday's data (for daily comparison)
     const today = data[data.length - 1] || { total: { views: 0, clicks: 0 } };
-    
-    // Get yesterday's data
     const yesterday = data[data.length - 2] || { total: { views: 0, clicks: 0 } };
+
+    // Determine previous period (one period before the requested period)
+    const monthsBackForThisPeriod = period === 'current' ? 1 : 2;
+    const { startDate: prevStart, endDate: prevEnd } = getCustomMonthPeriod(monthsBackForThisPeriod);
+
+    const prevData = await db.collection('analyticsDaily')
+      .find({
+        date: {
+          $gte: prevStart.toISOString().split('T')[0],
+          $lte: prevEnd.toISOString().split('T')[0]
+        }
+      })
+      .toArray();
+
+    const prevTotals = prevData.reduce((acc, item) => {
+      acc.views += item.total ? item.total.views : 0;
+      acc.clicks += item.total ? item.total.clicks : 0;
+      return acc;
+    }, { views: 0, clicks: 0 });
+
+    const periodCtr = totals.views > 0 ? (totals.clicks / totals.views) * 100 : 0;
+    const prevCtr = prevTotals.views > 0 ? (prevTotals.clicks / prevTotals.views) * 100 : 0;
+
+    // Compute period-over-previous-period percentage changes (safe numeric values)
+    const changePeriodViews = prevTotals.views > 0 ? ((totals.views - prevTotals.views) / prevTotals.views * 100) : 0;
+    const changePeriodClicks = prevTotals.clicks > 0 ? ((totals.clicks - prevTotals.clicks) / prevTotals.clicks * 100) : 0;
+    const changePeriodCtr = prevCtr > 0 ? ((periodCtr - prevCtr) / prevCtr * 100) : 0;
+
+    // Compute today vs yesterday changes (daily)
+    const changeTodayViews = yesterday.total && yesterday.total.views > 0 ? ((today.total.views - yesterday.total.views) / yesterday.total.views * 100) : 0;
+    const changeTodayClicks = yesterday.total && yesterday.total.clicks > 0 ? ((today.total.clicks - yesterday.total.clicks) / yesterday.total.clicks * 100) : 0;
 
     const summary = {
       period: {
         views: totals.views,
         clicks: totals.clicks,
-        ctr: totals.views > 0 ? ((totals.clicks / totals.views) * 100).toFixed(2) : 0,
+        ctr: Number(periodCtr.toFixed(2)),
         startDate: startDate.toISOString().split('T')[0],
         endDate: endDate.toISOString().split('T')[0]
       },
       today: today.total || { views: 0, clicks: 0 },
       yesterday: yesterday.total || { views: 0, clicks: 0 },
+      // Backwards-compatible `change` contains period comparisons (used by summary cards)
       change: {
-        views: 0,
-        clicks: 0
+        views: Number(changePeriodViews.toFixed(1)),
+        clicks: Number(changePeriodClicks.toFixed(1)),
+        ctr: Number(changePeriodCtr.toFixed(1))
+      },
+      // Daily change (today vs yesterday) provided separately for accurate "vs yesterday" UI
+      dailyChange: {
+        views: Number(changeTodayViews.toFixed(1)),
+        clicks: Number(changeTodayClicks.toFixed(1))
       }
     };
-
-    if (summary.yesterday.views > 0) {
-      summary.change.views = ((summary.today.views - summary.yesterday.views) / summary.yesterday.views * 100).toFixed(1);
-    }
-    if (summary.yesterday.clicks > 0) {
-      summary.change.clicks = ((summary.today.clicks - summary.yesterday.clicks) / summary.yesterday.clicks * 100).toFixed(1);
-    }
 
     res.json(summary);
   } catch (error) {
