@@ -13,6 +13,7 @@ const { StableDiffusionApi } = require("stable-diffusion-api");
 const { initializeCronJobs } = require('./modules/cronJobs-bot.js');
 const { initializeCronJobsForBlogs } = require('./modules/cronJobs-blog.js');
 const { initializeAnalyticsCronJobs } = require('./modules/cronjob-analytics.js');
+const { initializePartnersCronJobs } = require('./modules/cronjob-partners.js');
 
 const passport = require("passport");
 const passportConfig = require('./middleware/passport')(passport);
@@ -51,6 +52,7 @@ function startServer() {
       initializeCronJobsForBlogs(db)
       initializeCronJobs(db)
       initializeAnalyticsCronJobs(db)
+      initializePartnersCronJobs(db)
 
       // Use the express-session middleware
       app.use(
@@ -109,6 +111,7 @@ function startServer() {
         ['/api/abtest', './routers/api/abtest'],
         ['/api/referal', './routers/api/referal'],
         ['/api/analytics', './routers/api/analytics'],
+        ['/api/partners', './routers/api/partners'],
       ];
 
       routers.forEach(([route, path]) => app.use(route, require(path)));

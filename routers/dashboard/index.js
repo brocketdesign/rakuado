@@ -184,4 +184,17 @@ router.get('/app/analytics', ensureAuthenticated, ensureMembership, async (req, 
   }
 });
 
+// Partners management route (admin tool)
+router.get('/app/partners', ensureAuthenticated, ensureMembership, async (req, res) => {
+  try {
+    res.render('dashboard/app/partners/index', {
+      user: req.user,
+      title: "RAKUBUN - パートナー支払い管理"
+    });
+  } catch (error) {
+    console.error('Error rendering partners dashboard:', error);
+    res.status(500).send('Internal server error');
+  }
+});
+
 module.exports = router;
