@@ -122,17 +122,39 @@ router.post('/partner-recruitment', async (req, res) => {
 
     // Use user's configured mail settings if available (for admin users submitting from dashboard)
     // Otherwise use system email
+    // Send to both contact@hatoltd.com and rakuadojapan@gmail.com
     try {
+      const adminEmails = ['contact@hatoltd.com', 'rakuadojapan@gmail.com'];
+      const emailPromises = [];
+      
       if (req.user && req.user._id) {
         const user = await global.db.collection('users').findOne({ _id: req.user._id });
         if (user && user.mailSettings && user.mailSettings.email && user.mailSettings.password) {
-          await sendEmailWithUserSettings(user.mailSettings, 'contact@hatoltd.com', 'partner recruitment admin', EmailDataForAdmin);
+          // Send to both emails using user's mail settings
+          for (const adminEmail of adminEmails) {
+            emailPromises.push(
+              sendEmailWithUserSettings(user.mailSettings, adminEmail, 'partner recruitment admin', EmailDataForAdmin)
+            );
+          }
         } else {
-          await sendEmail('contact@hatoltd.com', 'partner recruitment admin', EmailDataForAdmin);
+          // Send to both emails using system email
+          for (const adminEmail of adminEmails) {
+            emailPromises.push(
+              sendEmail(adminEmail, 'partner recruitment admin', EmailDataForAdmin)
+            );
+          }
         }
       } else {
-        await sendEmail('contact@hatoltd.com', 'partner recruitment admin', EmailDataForAdmin);
+        // Send to both emails using system email
+        for (const adminEmail of adminEmails) {
+          emailPromises.push(
+            sendEmail(adminEmail, 'partner recruitment admin', EmailDataForAdmin)
+          );
+        }
       }
+      
+      // Send all emails in parallel
+      await Promise.all(emailPromises);
     } catch (emailError) {
       console.error('Error sending admin notification email:', emailError);
       // Continue even if email fails - don't block the form submission
