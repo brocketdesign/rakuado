@@ -112,6 +112,8 @@ function startServer() {
         ['/api/referal', './routers/api/referal'],
         ['/api/analytics', './routers/api/analytics'],
         ['/api/partners', './routers/api/partners'],
+        ['/api/partner-recruitment', './routers/api/partner-recruitment'],
+        ['/api/partner-ad.js', './routers/api/partner-ad'],
       ];
 
       routers.forEach(([route, path]) => app.use(route, require(path)));

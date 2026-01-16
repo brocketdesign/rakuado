@@ -4,7 +4,7 @@ const axios = require('axios');
 
 // Require and use 'express-session' middleware
 const session = require('express-session');
-const { email, sendEmail } = require('../services/email')
+const { email, sendEmail, sendEmailWithUserSettings } = require('../services/email')
 
 
 router.get('/',async(req, res, next) => {
@@ -69,6 +69,85 @@ router.get('/about-us', (req, res) => {
   const user = req.user 
   // Render the 'about-us' template
   res.render('about-us',{user});
+});
+
+// Partner recruitment landing page
+router.get('/partner-recruitment', async (req, res) => {
+  const sent = req.query.sent === 'true';
+  res.render('partner-recruitment', { user: req.user, sent, error: null });
+});
+
+// Handle partner recruitment form submission
+router.post('/partner-recruitment', async (req, res) => {
+  try {
+    const { email, blogUrl, message } = req.body;
+
+    // Validation
+    if (!email || !blogUrl) {
+      return res.render('partner-recruitment', { 
+        user: req.user, 
+        sent: false, 
+        error: 'メールアドレスとブログURLは必須項目です。' 
+      });
+    }
+
+    // Save to database
+    const partnerRequestsCollection = global.db.collection('partnerRequests');
+    const requestData = {
+      email,
+      blogUrl,
+      message: message || '',
+      status: 'pending', // pending, analytics_requested, approved, rejected
+      currentStep: 'submitted', // submitted, analytics_requested, reviewing, approved, snippet_sent, snippet_verified, rejected
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      googleAnalyticsUrl: null,
+      googleAnalyticsSubmitted: false,
+      snippetSent: false,
+      snippetVerified: false,
+      estimatedMonthlyAmount: null,
+      notes: ''
+    };
+
+    const result = await partnerRequestsCollection.insertOne(requestData);
+
+    // Send email to admin
+    const EmailDataForAdmin = {
+      email,
+      blogUrl,
+      message: message || '（なし）',
+      requestId: result.insertedId.toString(),
+      createdAt: new Date().toLocaleString('ja-JP')
+    };
+
+    // Use user's configured mail settings if available (for admin users submitting from dashboard)
+    // Otherwise use system email
+    try {
+      if (req.user && req.user._id) {
+        const user = await global.db.collection('users').findOne({ _id: req.user._id });
+        if (user && user.mailSettings && user.mailSettings.email && user.mailSettings.password) {
+          await sendEmailWithUserSettings(user.mailSettings, 'contact@hatoltd.com', 'partner recruitment admin', EmailDataForAdmin);
+        } else {
+          await sendEmail('contact@hatoltd.com', 'partner recruitment admin', EmailDataForAdmin);
+        }
+      } else {
+        await sendEmail('contact@hatoltd.com', 'partner recruitment admin', EmailDataForAdmin);
+      }
+    } catch (emailError) {
+      console.error('Error sending admin notification email:', emailError);
+      // Continue even if email fails - don't block the form submission
+    }
+
+    // Redirect to success page
+    res.redirect('/partner-recruitment?sent=true');
+  } catch (error) {
+    console.error('Error processing partner recruitment:', error);
+    res.render('partner-recruitment', { 
+      user: req.user, 
+      sent: false, 
+      error: '送信に失敗しました。もう一度お試しください。' 
+    });
+  }
 });
 
 // Export the router

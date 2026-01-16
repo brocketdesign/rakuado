@@ -1,24 +1,138 @@
 extends ../dashboard/base
 
 block mainContent
-    ul.nav.nav-tabs
-        li.nav-item
-            a.nav-link(href='#personalInfo' data-bs-toggle='tab') Account settings
-    .tab-content.pb-5#updateProfile(style="display:none")
-        #personalInfo.tab-pane.fade
-            .header.pt-3
-                .profile-image.text-start(style="cursor:pointer")
-                    img.shadow.border.border-dark(src=user.profileImage || 'https://placehold.co/51x76', alt='User Profile Image' style="object-fit: contain; width: 100px; height: 100px; border-radius: 50%; object-fit: cover;")
-            form.row.mt-3
-                .form-group.col-12.col-sm-6.d-none
-                    label(for='profileImage') Profile picture
-                    .input-group
-                        input#profileImage.form-control(type='file', name="profileImage", value=user.profileImage)
-                .form-group.col-12.col-sm-6.d-none
-                    label(for='bannerImage') Banner image
-                    .input-group
-                        input#bannerImage.form-control(type='file', name="bannerImage", value=user.bannerImage)
-                .form-group.col-12.col-sm-6
-                    label(for='email') Email
-                    input#email.form-control(name="email", type='email', placeholder='Enter Email' value=user.email)
-                button.btn.btn-primary.my-4(type='submit') 送信する
+    .settings-container
+        .settings-header.mb-4
+            h2.mb-1(style="font-weight: 600; color: #2c3e50;") Settings
+            p.text-muted Manage your account settings and preferences
+        ul.nav.nav-tabs.mb-4(style="border-bottom: 2px solid #e9ecef;")
+            li.nav-item
+                a.nav-link.active(href='#personalInfo' data-bs-toggle='tab' style="border: none; border-bottom: 2px solid #667eea; padding: 12px 24px; color: #667eea; font-weight: 500;")
+                    i.me-2(data-feather="user")
+                    | Account Settings
+            li.nav-item
+                a.nav-link(href='#mailSettings' data-bs-toggle='tab' style="border: none; border-bottom: 2px solid transparent; padding: 12px 24px; color: #6c757d; font-weight: 500;")
+                    i.me-2(data-feather="mail")
+                    | Mail Settings
+        .tab-content.pb-5#updateProfile
+            #personalInfo.tab-pane.fade.show.active(role="tabpanel")
+                .card.shadow-sm(style="border: none; border-radius: 8px;")
+                    .card-body.p-4
+                        .row.mb-4
+                            .col-12.mb-3
+                                h5.mb-3(style="color: #2c3e50; font-weight: 600;") Profile Information
+                                .d-flex.align-items-center.mb-4
+                                    .profile-image-wrapper(style="cursor:pointer; position: relative;")
+                                        img.shadow-sm(src=user.profileImage || 'https://placehold.co/120x120', alt='User Profile Image' style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #fff;")
+                                        .overlay(style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s;")
+                                            i(data-feather="camera" style="color: white;")
+                                    .ms-4
+                                        h6.mb-1(style="color: #2c3e50;") Change Profile Picture
+                                        p.text-muted.mb-0(style="font-size: 0.875rem;") Click on the image to upload a new photo
+                        form.row.g-3
+                            .form-group.col-12.col-sm-6.d-none
+                                label(for='profileImage') Profile picture
+                                .input-group
+                                    input#profileImage.form-control(type='file', name="profileImage", accept="image/*", value=user.profileImage)
+                            .form-group.col-12.col-sm-6.d-none
+                                label(for='bannerImage') Banner image
+                                .input-group
+                                    input#bannerImage.form-control(type='file', name="bannerImage", accept="image/*", value=user.bannerImage)
+                            .form-group.col-12.col-md-6
+                                label.form-label(for='email' style="font-weight: 500; color: #495057; margin-bottom: 8px;") Email Address
+                                input#email.form-control(name="email", type='email', placeholder='your.email@example.com' value=user.email style="border-radius: 6px; border: 1px solid #ced4da; padding: 10px 12px;")
+                                small.form-text.text-muted Your email address for account notifications
+                            .col-12.mt-3
+                                button.btn.btn-primary(type='submit' style="padding: 10px 24px; border-radius: 6px; font-weight: 500; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;")
+                                    i.me-2(data-feather="save")
+                                    | Save Changes
+            
+            #mailSettings.tab-pane.fade(role="tabpanel")
+                .card.shadow-sm(style="border: none; border-radius: 8px;")
+                    .card-body.p-4
+                        .row.mb-4
+                            .col-12
+                                h5.mb-2(style="color: #2c3e50; font-weight: 600;") Email Account Configuration
+                                p.text-muted.mb-4 Configure your email account to send emails from your application
+                        form#mailSettingsForm.row.g-3
+                            .form-group.col-12.col-md-6
+                                label.form-label(for='mailProvider' style="font-weight: 500; color: #495057; margin-bottom: 8px;") Email Provider
+                                select#mailProvider.form-select(name="mailProvider" style="border-radius: 6px; border: 1px solid #ced4da; padding: 10px 12px;")
+                                    option(value="") Select a provider
+                                    option(value="gmail" selected=(user.mailSettings && user.mailSettings.provider === 'gmail')) Gmail
+                                    option(value="zoho" selected=(user.mailSettings && user.mailSettings.provider === 'zoho')) Zoho Mail
+                                small.form-text.text-muted Choose your email service provider
+                            .form-group.col-12.col-md-6
+                                label.form-label(for='mailEmail' style="font-weight: 500; color: #495057; margin-bottom: 8px;") Email Address
+                                input#mailEmail.form-control(name="mailEmail", type='email', placeholder='your.email@example.com' value=(user.mailSettings ? user.mailSettings.email : '') style="border-radius: 6px; border: 1px solid #ced4da; padding: 10px 12px;")
+                                small.form-text.text-muted Your email address for sending emails
+                            .form-group.col-12.col-md-6
+                                label.form-label(for='mailPassword' style="font-weight: 500; color: #495057; margin-bottom: 8px;") App Password
+                                input#mailPassword.form-control(name="mailPassword", type='password', placeholder=(user.mailSettings && user.mailSettings.password ? 'Password is saved - enter new password to update' : 'Enter app password') value='' style="border-radius: 6px; border: 1px solid #ced4da; padding: 10px 12px;")
+                                small.form-text.text-muted 
+                                    | For Gmail, use an 
+                                    a(href="https://support.google.com/accounts/answer/185833" target="_blank") App Password
+                                    | . For Zoho, use your account password or App Password.
+                                if user.mailSettings && user.mailSettings.password
+                                    small.form-text.text-success
+                                        i.me-1(data-feather="check-circle" style="width: 14px; height: 14px;")
+                                        | Password is configured
+                            .form-group.col-12.col-md-6
+                                label.form-label(for='mailHost' style="font-weight: 500; color: #495057; margin-bottom: 8px;") SMTP Host
+                                input#mailHost.form-control(name="mailHost", type='text', placeholder='Auto-filled based on provider' readonly value=(user.mailSettings ? user.mailSettings.host : '') style="border-radius: 6px; border: 1px solid #ced4da; padding: 10px 12px; background-color: #f8f9fa;")
+                                small.form-text.text-muted Automatically set based on your provider
+                            .form-group.col-12.col-md-6
+                                label.form-label(for='mailPort' style="font-weight: 500; color: #495057; margin-bottom: 8px;") SMTP Port
+                                input#mailPort.form-control(name="mailPort", type='number', placeholder='Auto-filled' readonly value=(user.mailSettings ? user.mailSettings.port : '') style="border-radius: 6px; border: 1px solid #ced4da; padding: 10px 12px; background-color: #f8f9fa;")
+                                small.form-text.text-muted Port number for SMTP connection
+                            .col-12.mt-3
+                                .d-flex.gap-2
+                                    button.btn.btn-primary(type='submit' style="padding: 10px 24px; border-radius: 6px; font-weight: 500; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;")
+                                        i.me-2(data-feather="save")
+                                        | Save Mail Settings
+                                    button.btn.btn-outline-secondary(type='button' id="sendTestMailBtn" style="padding: 10px 24px; border-radius: 6px; font-weight: 500;")
+                                        i.me-2(data-feather="send")
+                                        | Send Test Mail
+                        .alert-container.mt-4(style="display: none;")
+                            .alert(role="alert")
+                        
+                        // Default Email System Section
+                        .row.mt-5.pt-4(style="border-top: 2px solid #e9ecef;")
+                            .col-12
+                                h5.mb-3(style="color: #2c3e50; font-weight: 600;") Default Email System (Fallback) - Mailtrap API
+                                p.text-muted.mb-4 The default email system is used as a fallback when user mail settings are not configured. This system uses the Mailtrap API for sending emails.
+                                .card.bg-light(style="border: 1px solid #dee2e6; border-radius: 6px;")
+                                    .card-body.p-4
+                                        .row.g-3
+                                            .form-group.col-12
+                                                label.form-label(style="font-weight: 500; color: #495057; margin-bottom: 8px;") API Key
+                                                input#defaultMailApiKey.form-control(type='text' readonly value=(defaultMailSettings.apiKey ? defaultMailSettings.apiKey.substring(0, 10) + '••••••••' : 'Not configured') style="border-radius: 6px; border: 1px solid #ced4da; padding: 10px 12px; background-color: #ffffff;")
+                                                small.form-text.text-muted Environment variable: MAILTRAP_API_KEY
+                                            .form-group.col-12.col-md-6
+                                                label.form-label(style="font-weight: 500; color: #495057; margin-bottom: 8px;") Sandbox Mode
+                                                input#defaultMailSandbox.form-control(type='text' readonly value=(defaultMailSettings.useSandbox ? 'Enabled' : 'Disabled') style="border-radius: 6px; border: 1px solid #ced4da; padding: 10px 12px; background-color: #ffffff;")
+                                                small.form-text.text-muted Environment variable: MAILTRAP_USE_SANDBOX
+                                            .form-group.col-12.col-md-6
+                                                label.form-label(style="font-weight: 500; color: #495057; margin-bottom: 8px;") From Email
+                                                input#defaultMailFrom.form-control(type='text' readonly value=defaultMailSettings.fromEmail || 'Not configured' style="border-radius: 6px; border: 1px solid #ced4da; padding: 10px 12px; background-color: #ffffff;")
+                                                small.form-text.text-muted Environment variable: MAILTRAP_FROM_EMAIL
+                                            if defaultMailSettings.inboxId
+                                                .form-group.col-12.col-md-6
+                                                    label.form-label(style="font-weight: 500; color: #495057; margin-bottom: 8px;") Inbox ID
+                                                    input#defaultMailInboxId.form-control(type='text' readonly value=defaultMailSettings.inboxId style="border-radius: 6px; border: 1px solid #ced4da; padding: 10px 12px; background-color: #ffffff;")
+                                                    small.form-text.text-muted Environment variable: MAILTRAP_INBOX_ID (optional, for sandbox mode)
+                                            .col-12.mt-3
+                                                .d-flex.align-items-center.gap-2
+                                                    button.btn.btn-outline-primary(type='button' id="sendDefaultTestMailBtn" style="padding: 10px 24px; border-radius: 6px; font-weight: 500;")
+                                                        i.me-2(data-feather="send")
+                                                        | Test Default Email System
+                                                    if defaultMailSettings.configured
+                                                        span.badge.bg-success(style="padding: 8px 12px;")
+                                                            i.me-1(data-feather="check-circle" style="width: 14px; height: 14px;")
+                                                            | Configured
+                                                    else
+                                                        span.badge.bg-warning(style="padding: 8px 12px;")
+                                                            i.me-1(data-feather="alert-circle" style="width: 14px; height: 14px;")
+                                                            | Not Configured
+                                        .alert-container-default.mt-3(style="display: none;")
+                                            .alert(role="alert")

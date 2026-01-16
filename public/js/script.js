@@ -99,6 +99,10 @@ $(document).ready(function() {
     }
 });
 $(document).ready(function() {
+    // Initialize feather icons
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
 
     handleLoginForm()
     
@@ -106,6 +110,7 @@ $(document).ready(function() {
     handleGridRange();
     handleUserProfile();
     handleUserProfileImages();
+    handleMailSettings();
     handleCopyButtons();
     handlePostButtons() ;
 
@@ -1248,55 +1253,281 @@ function handleUserProfileImages(){
 }
 const handleUserProfile = () => {
     let formChanged = false;
-    let form = $('#updateProfile form').not('#reset-form');
-    let inputs = $('#updateProfile form input, #updateProfile form select, #updateProfile form textarea');
-    let initialFormData = new FormData(form[0]);
+    let form = $('#updateProfile form').not('#reset-form').not('#mailSettingsForm');
+    let inputs = $('#updateProfile form').not('#reset-form').not('#mailSettingsForm').find('input, select, textarea');
+    let initialFormData = form.length > 0 ? new FormData(form[0]) : null;
 
-    inputs.change(() => formChanged = true);
-    form.on('submit', () => formChanged = false);
-    window.onbeforeunload = () => formChanged ? "保存されていない変更があります。このページを離れてもよろしいですか？" : undefined;
-    // Form submission handling
-    form.on('submit', function(e) {
-        e.preventDefault();
+    if (inputs.length > 0 && initialFormData) {
+        inputs.change(() => formChanged = true);
+        form.on('submit', () => formChanged = false);
+        window.onbeforeunload = () => formChanged ? "保存されていない変更があります。このページを離れてもよろしいですか？" : undefined;
+        // Form submission handling
+        form.on('submit', function(e) {
+            e.preventDefault();
 
-        let formData = new FormData(this);
+            let formData = new FormData(this);
 
-        console.log(formData);
+            console.log(formData);
 
-        if (!checkFormChange(initialFormData, formData)) {
-            alert('フォームに変更はありません。');
-            return
-        }
+            if (!checkFormChange(initialFormData, formData)) {
+                alert('フォームに変更はありません。');
+                return
+            }
 
-        handleFormSubmission(formData);
-    }); 
+            handleFormSubmission(formData);
+        }); 
+    }
 
     // Image preview and click to trigger file input
     const profileImageInput = document.getElementById('profileImage');
     const bannerImageInput = document.getElementById('bannerImage');
+    const profileImageElement = document.querySelector('.profile-image');
     
-    if (profileImageInput && bannerImageInput ) {
-      inputTrigger(profileImageInput, document.querySelector('.profile-image'));
-      //inputTrigger(bannerImageInput, document.querySelector('.banner-image'));
-  
-      previewImage(profileImageInput, document.querySelector('.profile-image img'));
-      //previewImage(bannerImageInput, document.querySelector('.header img'));
-  
+    if (profileImageInput && profileImageElement) {
+      inputTrigger(profileImageInput, profileImageElement);
+      previewImage(profileImageInput, profileImageElement.querySelector('img'));
     }
+    
     // Active Tab
     if($('#updateProfile').length>0){
         if (document.querySelector('.nav-tabs')) {
+            // Handle tab click events
+            document.querySelectorAll('.nav-tabs a').forEach(tabLink => {
+                tabLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    
+                    // Remove active class from all tabs and panes
+                    document.querySelectorAll('.nav-tabs a').forEach(tab => {
+                        tab.classList.remove('active');
+                        tab.style.borderBottom = '2px solid transparent';
+                        tab.style.color = '#6c757d';
+                    });
+                    document.querySelectorAll('.tab-pane').forEach(pane => {
+                        pane.classList.remove('show', 'active');
+                    });
+                    
+                    // Add active class to clicked tab
+                    this.classList.add('active');
+                    this.style.borderBottom = '2px solid #667eea';
+                    this.style.color = '#667eea';
+                    
+                    // Show corresponding tab pane
+                    const targetPane = document.querySelector(targetId);
+                    if (targetPane) {
+                        targetPane.classList.add('show', 'active');
+                    }
+                    
+                    // Save to localStorage
+                    localStorage.setItem('activeTab', targetId);
+                });
+            });
+            
+            // Set initial active tab from localStorage or default to first tab
             let activeTab = localStorage.getItem('activeTab');
-            if(activeTab){
-              new bootstrap.Tab(document.querySelector(`a[href="${activeTab}"]`)).show();
-            }else{
-              new bootstrap.Tab(document.querySelector(`a[href="#personalInfo"]`)).show();
+            let initialTab = document.querySelector(activeTab ? `a[href="${activeTab}"]` : 'a[href="#personalInfo"]');
+            if(initialTab){
+                // Set up the initial tab state
+                const targetId = initialTab.getAttribute('href');
+                document.querySelectorAll('.nav-tabs a').forEach(tab => {
+                    tab.classList.remove('active');
+                    tab.style.borderBottom = '2px solid transparent';
+                    tab.style.color = '#6c757d';
+                });
+                document.querySelectorAll('.tab-pane').forEach(pane => {
+                    pane.classList.remove('show', 'active');
+                });
+                
+                initialTab.classList.add('active');
+                initialTab.style.borderBottom = '2px solid #667eea';
+                initialTab.style.color = '#667eea';
+                
+                const targetPane = document.querySelector(targetId);
+                if (targetPane) {
+                    targetPane.classList.add('show', 'active');
+                }
             }
-            $('#updateProfile').fadeIn()
-            document.querySelectorAll('.nav-tabs a').forEach(t => t.addEventListener('shown.bs.tab', (e) => {
-                localStorage.setItem('activeTab', e.target.getAttribute('href'));
-            }));
           }
+    }
+}
+
+const handleMailSettings = () => {
+    // Auto-populate SMTP settings based on provider on change
+    $('#mailProvider').on('change', function() {
+        const provider = $(this).val();
+        let host = '';
+        let port = '';
+        
+        if (provider === 'gmail') {
+            host = 'smtp.gmail.com';
+            port = '587';
+        } else if (provider === 'zoho') {
+            host = 'smtp.zoho.com';
+            port = '587';
+        }
+        
+        $('#mailHost').val(host);
+        $('#mailPort').val(port);
+    });
+    
+    // Auto-populate SMTP settings on page load if provider is already selected
+    const selectedProvider = $('#mailProvider').val();
+    if (selectedProvider) {
+        $('#mailProvider').trigger('change');
+    }
+    
+    // Handle profile image overlay hover effect
+    $('.profile-image-wrapper').hover(
+        function() {
+            $(this).find('.overlay').css('opacity', '1');
+        },
+        function() {
+            $(this).find('.overlay').css('opacity', '0');
+        }
+    );
+    
+    // Handle mail settings form submission
+    $('#mailSettingsForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            mailProvider: $('#mailProvider').val(),
+            mailEmail: $('#mailEmail').val(),
+            mailPassword: $('#mailPassword').val(),
+            mailHost: $('#mailHost').val(),
+            mailPort: $('#mailPort').val()
+        };
+        
+        // Validate required fields
+        if (!formData.mailProvider || !formData.mailEmail) {
+            showMailSettingsAlert('Please fill in all required fields.', 'danger');
+            return;
+        }
+        
+        // Show loading state
+        const submitBtn = $(this).find('button[type="submit"]');
+        const originalText = submitBtn.html();
+        submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status"></span>Saving...');
+        
+        $.ajax({
+            url: '/user/mailSettings',
+            type: 'POST',
+            data: formData,
+            success: function(response) {
+                showMailSettingsAlert(response.message, response.status === 'success' ? 'success' : 'danger');
+                // Clear password field and mark as saved if it was saved successfully
+                if (response.status === 'success' && $('#mailPassword').val()) {
+                    $('#mailPassword').val('').attr('placeholder', 'Password is saved - enter new password to update');
+                    $('#mailSettingsForm').data('has-saved-password', true);
+                    // Initialize feather icons for check mark
+                    if (typeof feather !== 'undefined') {
+                        feather.replace();
+                    }
+                }
+            },
+            error: function(xhr) {
+                const message = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'An error occurred while saving mail settings.';
+                showMailSettingsAlert(message, 'danger');
+            },
+            complete: function() {
+                submitBtn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
+    
+    // Handle test mail button
+    $('#sendTestMailBtn').on('click', function(e) {
+        e.preventDefault();
+        
+        // Basic validation - backend will check if settings are saved
+        const provider = $('#mailProvider').val();
+        const email = $('#mailEmail').val();
+        
+        if (!provider || !email) {
+            showMailSettingsAlert('Please configure your mail settings before sending a test email.', 'warning');
+            return;
+        }
+        
+        const btn = $(this);
+        const originalText = btn.html();
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status"></span>Sending...');
+        
+        $.ajax({
+            url: '/user/sendTestMail',
+            type: 'POST',
+            success: function(response) {
+                showMailSettingsAlert(response.message, response.status === 'success' ? 'success' : 'danger');
+            },
+            error: function(xhr) {
+                const message = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'An error occurred while sending the test email.';
+                showMailSettingsAlert(message, 'danger');
+            },
+            complete: function() {
+                btn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
+    
+    // Handle default email system test button
+    $('#sendDefaultTestMailBtn').on('click', function(e) {
+        e.preventDefault();
+        
+        const btn = $(this);
+        const originalText = btn.html();
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status"></span>Sending...');
+        
+        $.ajax({
+            url: '/user/sendDefaultTestMail',
+            type: 'POST',
+            success: function(response) {
+                showDefaultMailSettingsAlert(response.message, response.status === 'success' ? 'success' : 'danger');
+            },
+            error: function(xhr) {
+                const message = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'An error occurred while sending the test email.';
+                showDefaultMailSettingsAlert(message, 'danger');
+            },
+            complete: function() {
+                btn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
+}
+
+const showDefaultMailSettingsAlert = (message, type) => {
+    const alertContainer = $('.alert-container-default');
+    const alertClass = type === 'success' ? 'alert-success' : type === 'warning' ? 'alert-warning' : 'alert-danger';
+    
+    alertContainer.html(`
+        <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `).fadeIn();
+    
+    // Auto-hide after 5 seconds for success messages
+    if (type === 'success') {
+        setTimeout(function() {
+            alertContainer.fadeOut();
+        }, 5000);
+    }
+}
+
+const showMailSettingsAlert = (message, type) => {
+    const alertContainer = $('#mailSettingsForm').siblings('.alert-container');
+    const alertClass = type === 'success' ? 'alert-success' : type === 'warning' ? 'alert-warning' : 'alert-danger';
+    
+    alertContainer.html(`
+        <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `).fadeIn();
+    
+    // Auto-hide after 5 seconds for success messages
+    if (type === 'success') {
+        setTimeout(function() {
+            alertContainer.fadeOut();
+        }, 5000);
     }
 }
 const handleEvents = () => {

@@ -151,7 +151,7 @@ async function updateFavicon() {
   }
 }
 async function checkIfAdmin(user){
-  return ['japanclassicstore@gmail.com','maho@gmail.com'].includes(user.email)
+  return ['rakuadojapan@gmail.com','maho@gmail.com'].includes(user.email)
 }
 
 module.exports = {

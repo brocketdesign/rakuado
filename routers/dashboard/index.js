@@ -197,4 +197,17 @@ router.get('/app/partners', ensureAuthenticated, ensureMembership, async (req, r
   }
 });
 
+// Partner recruitment management route
+router.get('/app/partner-recruitment', ensureAuthenticated, ensureMembership, async (req, res) => {
+  try {
+    res.render('dashboard/app/partner-recruitment/index', {
+      user: req.user,
+      title: "RAKUBUN - パートナー募集管理"
+    });
+  } catch (error) {
+    console.error('Error rendering partner recruitment dashboard:', error);
+    res.status(500).send('Internal server error');
+  }
+});
+
 module.exports = router;

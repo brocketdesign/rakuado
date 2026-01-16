@@ -20,7 +20,25 @@ function isValidObjectId(id) {
 
 router.get('/setting', (req, res) => {
   console.log('User setting page requested');
-  res.render('user/setting',{user:req.user}); // Render the login template
+  
+  // Get default mail settings from environment variables (Mailtrap API)
+  const defaultMailSettings = {
+    apiKey: process.env.MAILTRAP_API_KEY || '',
+    useSandbox: process.env.MAILTRAP_USE_SANDBOX === 'true',
+    inboxId: process.env.MAILTRAP_INBOX_ID || '',
+    fromEmail: process.env.MAILTRAP_FROM_EMAIL || process.env.MAIL_TRAP_USERNAME || '',
+    configured: !!process.env.MAILTRAP_API_KEY,
+    // Legacy SMTP settings (for reference)
+    host: process.env.MAIL_TRAP_SMTP || '',
+    port: process.env.MAIL_TRAP_PORT || '',
+    user: process.env.MAIL_TRAP_USERNAME || '',
+    pass: process.env.MAIL_TRAP_PASSWORD || ''
+  };
+  
+  res.render('user/setting', {
+    user: req.user,
+    defaultMailSettings: defaultMailSettings
+  }); // Render the login template
 });
 
 const storage = multer.diskStorage({
@@ -367,7 +385,7 @@ router.get('/credits', async (req, res) => {
 router.get('/is-admin', async (req, res) => {
   if (!req.user || !req.user.email) return res.status(401).json({ error: 'Unauthorized' });
   try {
-      const adminEmails = ["japanclassicstore@gmail.com"]; // List of administrator emails
+      const adminEmails = ["rakuadojapan@gmail.com","japanclassicstore@gmail.com"]; // List of administrator emails
       const userEmail = req.user.email;
 
       if (adminEmails.includes(userEmail)) {
@@ -380,4 +398,199 @@ router.get('/is-admin', async (req, res) => {
       res.status(500).json({ error: 'Internal server error.' });
   }
 });
+
+// Endpoint to save mail settings
+router.post('/mailSettings', async (req, res) => {
+  if (!req.user || !req.user._id) return res.status(401).json({ error: 'Unauthorized' });
+  
+  try {
+    const { mailProvider, mailEmail, mailPassword, mailHost, mailPort } = req.body;
+
+    // Validate required fields
+    if (!mailProvider || !mailEmail) {
+      return res.status(400).json({ status: 'error', message: 'Provider and email are required.' });
+    }
+
+    // Define SMTP settings based on provider
+    let host, port;
+    if (mailProvider === 'gmail') {
+      host = 'smtp.gmail.com';
+      port = 587;
+    } else if (mailProvider === 'zoho') {
+      host = 'smtp.zoho.com';
+      port = 587;
+    } else {
+      return res.status(400).json({ status: 'error', message: 'Invalid email provider.' });
+    }
+
+    // Prepare mail settings object
+    const mailSettings = {
+      provider: mailProvider,
+      email: mailEmail,
+      host: host,
+      port: port
+    };
+
+    // Only update password if it was provided (not masked)
+    if (mailPassword && !mailPassword.startsWith('••••')) {
+      mailSettings.password = mailPassword;
+    } else if (req.user.mailSettings && req.user.mailSettings.password) {
+      // Keep existing password if not changed
+      mailSettings.password = req.user.mailSettings.password;
+    }
+
+    // Update user in the collection
+    await global.db.collection('users').updateOne(
+      { _id: new ObjectId(req.user._id) },
+      { $set: { mailSettings: mailSettings } }
+    );
+
+    res.json({ status: 'success', message: 'Mail settings have been saved successfully.' });
+  } catch (error) {
+    console.error('Failed to save mail settings:', error);
+    res.status(500).json({ status: 'error', message: 'An error occurred while saving mail settings.' });
+  }
+});
+
+// Endpoint to send test mail
+router.post('/sendTestMail', async (req, res) => {
+  if (!req.user || !req.user._id) return res.status(401).json({ error: 'Unauthorized' });
+  
+  try {
+    const user = await global.db.collection('users').findOne({ _id: new ObjectId(req.user._id) });
+
+    if (!user || !user.mailSettings || !user.mailSettings.email || !user.mailSettings.password) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'Please configure your mail settings first before sending a test email.' 
+      });
+    }
+
+    // Create nodemailer transport with user's mail settings
+    const nodemailer = require('nodemailer');
+    const userTransport = nodemailer.createTransport({
+      host: user.mailSettings.host,
+      port: user.mailSettings.port,
+      secure: user.mailSettings.port === 465, // true for 465, false for other ports
+      auth: {
+        user: user.mailSettings.email,
+        pass: user.mailSettings.password
+      }
+    });
+
+    // Send test email
+    const testEmailData = {
+      from: user.mailSettings.email,
+      to: req.user.email, // Send to user's account email
+      subject: 'Test Email from Rakuado',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #667eea;">Test Email Successful!</h2>
+          <p>Congratulations! Your email configuration is working correctly.</p>
+          <p>This is a test email sent from your configured mail account (<strong>${user.mailSettings.email}</strong>) using <strong>${user.mailSettings.provider}</strong>.</p>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+          <p style="color: #666; font-size: 12px;">Sent at: ${new Date().toLocaleString()}</p>
+        </div>
+      `,
+      text: `Test Email Successful! Your email configuration is working correctly. This is a test email sent from ${user.mailSettings.email} using ${user.mailSettings.provider}.`
+    };
+
+    await userTransport.sendMail(testEmailData);
+
+    res.json({ 
+      status: 'success', 
+      message: `Test email has been sent successfully to ${req.user.email}. Please check your inbox.` 
+    });
+  } catch (error) {
+    console.error('Failed to send test email:', error);
+    
+    let errorMessage = 'An error occurred while sending the test email.';
+    if (error.code === 'EAUTH') {
+      errorMessage = 'Authentication failed. Please check your email and app password.';
+    } else if (error.code === 'ECONNECTION') {
+      errorMessage = 'Connection failed. Please check your SMTP settings.';
+    }
+
+    res.status(500).json({ status: 'error', message: errorMessage });
+  }
+});
+
+// Endpoint to send test mail using default email system (Mailtrap API)
+router.post('/sendDefaultTestMail', async (req, res) => {
+  if (!req.user || !req.user._id) return res.status(401).json({ error: 'Unauthorized' });
+  
+  try {
+    // Check if Mailtrap API is configured
+    const apiKey = process.env.MAILTRAP_API_KEY;
+    const useSandbox = process.env.MAILTRAP_USE_SANDBOX === 'true';
+    const inboxId = process.env.MAILTRAP_INBOX_ID ? parseInt(process.env.MAILTRAP_INBOX_ID) : undefined;
+    const fromEmail = process.env.MAILTRAP_FROM_EMAIL || process.env.MAIL_TRAP_USERNAME || 'noreply@rakuado.com';
+    const fromName = process.env.MAILTRAP_FROM_NAME || process.env.COMPANY_NAME || 'Rakuado';
+
+    if (!apiKey) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'Default email system is not configured. Please set MAILTRAP_API_KEY in environment variables.' 
+      });
+    }
+
+    // Initialize Mailtrap client
+    const { MailtrapClient } = require('mailtrap');
+    const mailtrapClient = new MailtrapClient({
+      token: apiKey,
+      sandbox: useSandbox,
+      testInboxId: inboxId,
+    });
+
+    // Send test email via Mailtrap API
+    const testEmailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #667eea;">Default Email System Test Successful!</h2>
+        <p>Congratulations! The default email system (Mailtrap API) is working correctly.</p>
+        <p>This is a test email sent from the default email system (fallback system).</p>
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #495057;">Configuration Details:</h3>
+          <ul style="color: #6c757d;">
+            <li><strong>API Key:</strong> ${apiKey.substring(0, 10)}••••••••</li>
+            <li><strong>Mode:</strong> ${useSandbox ? 'Sandbox' : 'Production'}</li>
+            <li><strong>From Email:</strong> ${fromEmail}</li>
+            ${inboxId ? `<li><strong>Inbox ID:</strong> ${inboxId}</li>` : ''}
+          </ul>
+        </div>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="color: #666; font-size: 12px;">Sent at: ${new Date().toLocaleString('ja-JP')}</p>
+        <p style="color: #666; font-size: 12px;">This email is used as a fallback when user mail settings are not configured.</p>
+      </div>
+    `;
+
+    await mailtrapClient.send({
+      from: {
+        name: fromName,
+        email: fromEmail
+      },
+      to: [{ email: req.user.email }],
+      subject: 'Test Email from Default Email System (Mailtrap API) - Rakuado',
+      html: testEmailHtml,
+      text: `Default Email System Test Successful!\n\nThis is a test email sent from the default email system using Mailtrap API.\n\nConfiguration:\n- Mode: ${useSandbox ? 'Sandbox' : 'Production'}\n- From Email: ${fromEmail}\n\nSent at: ${new Date().toLocaleString('ja-JP')}`,
+      category: 'Test Email'
+    });
+
+    res.json({ 
+      status: 'success', 
+      message: `Test email has been sent successfully to ${req.user.email} using the Mailtrap API. Please check your inbox${useSandbox ? ' or Mailtrap sandbox' : ''}.` 
+    });
+  } catch (error) {
+    console.error('Failed to send test email with default system:', error);
+    
+    let errorMessage = 'An error occurred while sending the test email.';
+    if (error.response && error.response.data) {
+      errorMessage = `Mailtrap API error: ${JSON.stringify(error.response.data)}`;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+
+    res.status(500).json({ status: 'error', message: errorMessage });
+  }
+});
+
 module.exports = router;

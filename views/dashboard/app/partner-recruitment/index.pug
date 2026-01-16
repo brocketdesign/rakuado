@@ -1,0 +1,524 @@
+extends ../../base
+
+block mainContent
+    // Hero Section
+    .hero-section.mb-5
+        .container
+            .row.align-items-center
+                .col-md-8
+                    h1.display-4.fw-bold.mb-3 
+                        i.fas.fa-user-plus.me-3
+                        span パートナー募集管理
+                    p.lead Partner Recruitment Management - 新しいパートナーの申請を管理・審査するツール
+                .col-md-4.text-end
+                    .stats-card.bg-white.text-dark.p-4.rounded-3.shadow
+                        h3.mb-1#pending-count 0
+                        small 保留中の申請
+
+    // Alert Messages
+    #alert-container.container.mb-4
+
+    // Filter and Status Tabs
+    section.filter-section.mb-4
+        .container
+            .card.border-0.shadow-sm
+                .card-body
+                    .row.align-items-center
+                        .col-md-8
+                            .btn-group(role="group" aria-label="Status filter")
+                                button#filter-all.btn.btn-outline-primary.status-filter.active すべて
+                                button#filter-pending.btn.btn-outline-warning.status-filter 保留中
+                                button#filter-analytics-requested.btn.btn-outline-info.status-filter アナリティクス待ち
+                                button#filter-reviewing.btn.btn-outline-secondary.status-filter 審査中
+                                button#filter-approved.btn.btn-outline-success.status-filter 承認済み
+                                button#filter-rejected.btn.btn-outline-danger.status-filter 却下
+                        .col-md-4.text-end
+                            input.form-control(type="text" id="search-input" placeholder="メール・URLで検索...")
+
+    // Partner Requests List
+    section.requests-section.mb-5
+        .container
+            .card.border-0.shadow-sm
+                .card-header.bg-white
+                    h5.fw-bold.mb-0
+                        i.fas.fa-list.me-2.text-primary
+                        | 申請一覧
+                .card-body.p-0
+                    .table-responsive
+                        table.table.table-hover.mb-0
+                            thead.table-light
+                                tr
+                                    th.fw-bold 申請日
+                                    th.fw-bold メール
+                                    th.fw-bold ブログURL
+                                    th.fw-bold ステップ
+                                    th.fw-bold ステータス
+                                    th.fw-bold 操作
+                            tbody#requests-table-body
+                                tr
+                                    td(colspan="6" class="text-center py-5 text-muted")
+                                        i.fas.fa-spinner.fa-spin.me-2
+                                        | 読み込み中...
+
+    // Detail Modal
+    .modal.fade#detail-modal(tabindex="-1")
+        .modal-dialog.modal-xl
+            .modal-content
+                .modal-header.bg-primary.text-white
+                    h5.modal-title#detail-modal-title
+                        i.fas.fa-file-alt.me-2
+                        | 申請詳細
+                    button.btn-close.btn-close-white(type="button" data-bs-dismiss="modal")
+                .modal-body
+                    .row
+                        .col-md-6
+                            h6.fw-bold.text-primary.border-bottom.pb-2.mb-3 基本情報
+                            table.table.table-sm
+                                tbody
+                                    tr
+                                        td.fw-bold 申請ID
+                                        td#detail-id
+                                    tr
+                                        td.fw-bold 申請日時
+                                        td#detail-created
+                                    tr
+                                        td.fw-bold メールアドレス
+                                        td#detail-email
+                                    tr
+                                        td.fw-bold ブログURL
+                                        td
+                                            a#detail-blog-url(href="#" target="_blank")
+                                    tr
+                                        td.fw-bold メッセージ
+                                        td#detail-message
+                        .col-md-6
+                            h6.fw-bold.text-primary.border-bottom.pb-2.mb-3 進行状況
+                            .mb-3
+                                label.form-label 現在のステップ
+                                select.form-select#detail-step
+                                    option(value="submitted") 申請受付済み
+                                    option(value="analytics_requested") アナリティクス依頼済み
+                                    option(value="reviewing") 審査中
+                                    option(value="approved") 承認済み
+                                    option(value="snippet_sent") スニペット送信済み
+                                    option(value="snippet_verified") スニペット確認済み
+                                    option(value="rejected") 却下
+                            .mb-3
+                                label.form-label ステータス
+                                select.form-select#detail-status
+                                    option(value="pending") 保留中
+                                    option(value="analytics_requested") アナリティクス待ち
+                                    option(value="approved") 承認済み
+                                    option(value="rejected") 却下
+                            .mb-3
+                                label.form-label GoogleアナリティクスURL
+                                input.form-control(type="url" id="detail-analytics-url" placeholder="https://analytics.google.com/...")
+                                small.text-muted 申請者から提出されたアナリティクスURL
+                            .mb-3
+                                label.form-label 月額見積もり額 (円)
+                                input.form-control(type="number" id="detail-estimated-amount" placeholder="5000")
+                            .mb-3
+                                label.form-label メモ
+                                textarea.form-control(rows="4" id="detail-notes" placeholder="内部メモ...")
+                .modal-footer
+                    .me-auto
+                        button#request-analytics-btn.btn.btn-info(type="button")
+                            i.fas.fa-chart-line.me-2
+                            | アナリティクス依頼
+                        button#send-snippet-btn.btn.btn-success(type="button" style="display:none;")
+                            i.fas.fa-code.me-2
+                            | スニペット送信
+                        button#verify-snippet-btn.btn.btn-warning(type="button" style="display:none;")
+                            i.fas.fa-check-circle.me-2
+                            | スニペット確認
+                    button#reject-btn.btn.btn-danger(type="button")
+                        i.fas.fa-times.me-2
+                        | 却下
+                    button#save-btn.btn.btn-primary(type="button")
+                        i.fas.fa-save.me-2
+                        | 保存
+
+    style.
+        .status-badge {
+            padding: 0.35rem 0.65rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-analytics_requested { background: #cfe2ff; color: #084298; }
+        .status-reviewing { background: #e2e3e5; color: #383d41; }
+        .status-approved { background: #d1e7dd; color: #0f5132; }
+        .status-rejected { background: #f8d7da; color: #842029; }
+        .status-snippet_sent { background: #d4edda; color: #155724; }
+        .status-snippet_verified { background: #d1e7dd; color: #0f5132; }
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 3rem 0;
+            color: white;
+            margin: -1rem -1rem 0 -1rem;
+        }
+        .status-filter.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border-color: #667eea !important;
+            color: white !important;
+        }
+        .step-indicator {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .step-submitted { background: #fff3cd; color: #856404; }
+        .step-analytics_requested { background: #cfe2ff; color: #084298; }
+        .step-reviewing { background: #e2e3e5; color: #383d41; }
+        .step-approved { background: #d1e7dd; color: #0f5132; }
+        .step-snippet_sent { background: #d4edda; color: #155724; }
+        .step-snippet_verified { background: #d1e7dd; color: #0f5132; }
+        .step-rejected { background: #f8d7da; color: #842029; }
+
+    script.
+        let currentFilter = 'all';
+        let currentRequestId = null;
+        let allRequests = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRequests();
+            
+            // Filter buttons
+            document.querySelectorAll('.status-filter').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.status-filter').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentFilter = this.id.replace('filter-', '');
+                    filterRequests();
+                });
+            });
+            
+            // Search input
+            document.getElementById('search-input').addEventListener('input', filterRequests);
+            
+            // Modal buttons
+            document.getElementById('save-btn').addEventListener('click', saveRequest);
+            document.getElementById('request-analytics-btn').addEventListener('click', requestAnalytics);
+            document.getElementById('send-snippet-btn').addEventListener('click', sendSnippet);
+            document.getElementById('verify-snippet-btn').addEventListener('click', verifySnippet);
+            document.getElementById('reject-btn').addEventListener('click', rejectRequest);
+        });
+
+        function getStatusLabel(status) {
+            const labels = {
+                'pending': '保留中',
+                'analytics_requested': 'アナリティクス待ち',
+                'approved': '承認済み',
+                'rejected': '却下'
+            };
+            return labels[status] || status;
+        }
+
+        function getStepLabel(step) {
+            const labels = {
+                'submitted': '申請受付済み',
+                'analytics_requested': 'アナリティクス依頼済み',
+                'reviewing': '審査中',
+                'approved': '承認済み',
+                'snippet_sent': 'スニペット送信済み',
+                'snippet_verified': 'スニペット確認済み',
+                'rejected': '却下'
+            };
+            return labels[step] || step;
+        }
+
+        function getStatusClass(status) {
+            return `status-${status}`;
+        }
+
+        function getStepClass(step) {
+            return `step-${step}`;
+        }
+
+        async function loadRequests() {
+            try {
+                const response = await fetch('/api/partner-recruitment');
+                const data = await response.json();
+                
+                if (!data.success) throw new Error(data.error);
+                
+                allRequests = data.requests;
+                filterRequests();
+                updatePendingCount();
+                
+            } catch (error) {
+                console.error('Error loading requests:', error);
+                showAlert('申請の読み込みに失敗しました', 'danger');
+            }
+        }
+
+        function filterRequests() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            
+            let filtered = allRequests;
+            
+            // Filter by status
+            if (currentFilter !== 'all') {
+                const filterMap = {
+                    'pending': 'pending',
+                    'analytics-requested': 'analytics_requested',
+                    'reviewing': 'reviewing',
+                    'approved': 'approved',
+                    'rejected': 'rejected'
+                };
+                filtered = filtered.filter(r => {
+                    if (currentFilter === 'reviewing') {
+                        return r.currentStep === 'reviewing';
+                    }
+                    return r.status === filterMap[currentFilter];
+                });
+            }
+            
+            // Filter by search term
+            if (searchTerm) {
+                filtered = filtered.filter(r => 
+                    r.email.toLowerCase().includes(searchTerm) || 
+                    r.blogUrl.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            // Sort by date (newest first)
+            filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            
+            renderRequests(filtered);
+        }
+
+        function renderRequests(requests) {
+            const tbody = document.getElementById('requests-table-body');
+            
+            if (requests.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted">申請が見つかりませんでした</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = requests.map(r => `
+                <tr style="cursor: pointer;" onclick="showDetail('${r._id}')">
+                    <td class="py-3">${formatDate(r.createdAt)}</td>
+                    <td class="py-3">${r.email}</td>
+                    <td class="py-3">
+                        <a href="${r.blogUrl}" target="_blank" onclick="event.stopPropagation()">
+                            ${r.blogUrl}
+                            <i class="fas fa-external-link-alt ms-1 small"></i>
+                        </a>
+                    </td>
+                    <td class="py-3">
+                        <span class="step-indicator ${getStepClass(r.currentStep)}">
+                            ${getStepLabel(r.currentStep)}
+                        </span>
+                    </td>
+                    <td class="py-3">
+                        <span class="status-badge ${getStatusClass(r.status)}">
+                            ${getStatusLabel(r.status)}
+                        </span>
+                    </td>
+                    <td class="py-3">
+                        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); showDetail('${r._id}')">
+                            <i class="fas fa-eye"></i> 詳細
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function updatePendingCount() {
+            const pending = allRequests.filter(r => r.status === 'pending').length;
+            document.getElementById('pending-count').textContent = pending;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleString('ja-JP');
+        }
+
+        async function showDetail(requestId) {
+            try {
+                const response = await fetch(`/api/partner-recruitment/${requestId}`);
+                const data = await response.json();
+                
+                if (!data.success) throw new Error(data.error);
+                
+                const r = data.request;
+                currentRequestId = requestId;
+                
+                // Populate modal
+                document.getElementById('detail-id').textContent = r._id;
+                document.getElementById('detail-created').textContent = formatDate(r.createdAt);
+                document.getElementById('detail-email').textContent = r.email;
+                document.getElementById('detail-blog-url').href = r.blogUrl;
+                document.getElementById('detail-blog-url').textContent = r.blogUrl;
+                document.getElementById('detail-message').textContent = r.message || '（なし）';
+                document.getElementById('detail-step').value = r.currentStep || 'submitted';
+                document.getElementById('detail-status').value = r.status || 'pending';
+                document.getElementById('detail-analytics-url').value = r.googleAnalyticsUrl || '';
+                document.getElementById('detail-estimated-amount').value = r.estimatedMonthlyAmount || '';
+                document.getElementById('detail-notes').value = r.notes || '';
+                
+                // Show/hide action buttons based on step
+                document.getElementById('request-analytics-btn').style.display = 
+                    r.currentStep === 'submitted' ? 'inline-block' : 'none';
+                document.getElementById('send-snippet-btn').style.display = 
+                    r.currentStep === 'approved' ? 'inline-block' : 'none';
+                document.getElementById('verify-snippet-btn').style.display = 
+                    r.currentStep === 'snippet_sent' ? 'inline-block' : 'none';
+                
+                const modal = new bootstrap.Modal(document.getElementById('detail-modal'));
+                modal.show();
+                
+            } catch (error) {
+                console.error('Error loading detail:', error);
+                showAlert('詳細の読み込みに失敗しました', 'danger');
+            }
+        }
+
+        async function saveRequest() {
+            if (!currentRequestId) return;
+            
+            // Check if we should send payment proposal email
+            const estimatedAmount = document.getElementById('detail-estimated-amount').value ? 
+                parseInt(document.getElementById('detail-estimated-amount').value) : null;
+            const currentStep = document.getElementById('detail-step').value;
+            const sendPaymentProposal = estimatedAmount && 
+                (currentStep === 'approved' || currentStep === 'reviewing') &&
+                confirm('支払い提案メールを送信しますか？');
+            
+            const data = {
+                currentStep: currentStep,
+                status: document.getElementById('detail-status').value,
+                googleAnalyticsUrl: document.getElementById('detail-analytics-url').value,
+                estimatedMonthlyAmount: estimatedAmount,
+                notes: document.getElementById('detail-notes').value,
+                sendPaymentProposal: sendPaymentProposal
+            };
+            
+            try {
+                const response = await fetch(`/api/partner-recruitment/${currentRequestId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (!result.success) throw new Error(result.error);
+                
+                showAlert('更新しました', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('detail-modal')).hide();
+                loadRequests();
+                
+            } catch (error) {
+                console.error('Error saving request:', error);
+                showAlert('保存に失敗しました: ' + error.message, 'danger');
+            }
+        }
+
+        async function requestAnalytics() {
+            if (!currentRequestId) return;
+            
+            try {
+                const response = await fetch(`/api/partner-recruitment/${currentRequestId}/request-analytics`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (!result.success) throw new Error(result.error);
+                
+                showAlert('アナリティクス依頼メールを送信しました', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('detail-modal')).hide();
+                loadRequests();
+                
+            } catch (error) {
+                console.error('Error requesting analytics:', error);
+                showAlert('依頼メールの送信に失敗しました: ' + error.message, 'danger');
+            }
+        }
+
+        async function sendSnippet() {
+            if (!currentRequestId) return;
+            
+            try {
+                const response = await fetch(`/api/partner-recruitment/${currentRequestId}/send-snippet`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (!result.success) throw new Error(result.error);
+                
+                showAlert('スニペットを送信しました', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('detail-modal')).hide();
+                loadRequests();
+                
+            } catch (error) {
+                console.error('Error sending snippet:', error);
+                showAlert('スニペットの送信に失敗しました: ' + error.message, 'danger');
+            }
+        }
+
+        async function verifySnippet() {
+            if (!currentRequestId) return;
+            
+            try {
+                const response = await fetch(`/api/partner-recruitment/${currentRequestId}/verify-snippet`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (!result.success) throw new Error(result.error);
+                
+                showAlert('スニペットの確認を完了しました', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('detail-modal')).hide();
+                loadRequests();
+                
+            } catch (error) {
+                console.error('Error verifying snippet:', error);
+                showAlert('確認に失敗しました: ' + error.message, 'danger');
+            }
+        }
+
+        async function rejectRequest() {
+            if (!currentRequestId) return;
+            
+            if (!confirm('この申請を却下しますか？')) return;
+            
+            try {
+                const response = await fetch(`/api/partner-recruitment/${currentRequestId}/reject`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (!result.success) throw new Error(result.error);
+                
+                showAlert('申請を却下しました', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('detail-modal')).hide();
+                loadRequests();
+                
+            } catch (error) {
+                console.error('Error rejecting request:', error);
+                showAlert('却下に失敗しました: ' + error.message, 'danger');
+            }
+        }
+
+        function showAlert(message, type = 'success') {
+            const container = document.getElementById('alert-container');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-dismissible fade show`;
+            alert.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            container.appendChild(alert);
+            setTimeout(() => alert.remove(), 5000);
+        }

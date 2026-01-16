@@ -1,0 +1,416 @@
+doctype html
+html(lang="ja")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1.0")
+    title 確実な収入でブログの可能性を広げよう！| Blog Ad Service
+    meta(name="description" content="アクセス数に応じた固定報酬で、ブログ運営のモチベーションをさらに向上。日々の訪問者数1,000人で、毎月最大10,000円の確実な報酬をお約束します。")
+    link(rel="preconnect" href="https://fonts.googleapis.com")
+    link(rel="preconnect" href="https://fonts.gstatic.com" crossorigin)
+    link(href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet")
+    script(src="https://cdn.tailwindcss.com")
+    link(rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css")
+    link(rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css")
+    script.
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Noto Sans JP', 'Poppins', 'sans-serif']
+            },
+            colors: {
+              'brand-blue': '#0ea5e9',
+              'brand-yellow': '#facc15',
+              'brand-dark-blue': '#0369a1',
+              'content-bg': '#0ea5e9',
+              'card-bg': '#075985',
+              'text-light': '#FFFFFF',
+              'text-secondary': '#e0f2fe',
+            }
+          }
+        }
+      }
+    style.
+      body {
+        font-family: 'Noto Sans JP', sans-serif !important;
+      }
+      h1, h2, h3 {
+        font-family: 'Poppins', sans-serif !important;
+      }
+      .hero-bg-new {
+        background-color: #0ea5e9;
+      }
+      .blog-hero-img {
+        animation: float 4s ease-in-out infinite;
+      }
+      @keyframes float {
+        0%, 100% { transform: translateY(0);}
+        50% { transform: translateY(-10px);}
+      }
+      .shine-yellow {
+        background: linear-gradient(90deg, #facc15 0%, #fffbeb 50%, #facc15 100%);
+        background-size: 200% 100%;
+        background-position: 100% 0;
+        -webkit-background-clip: text;
+        color: transparent;
+        animation: shine 2.5s linear infinite;
+      }
+      @keyframes shine {
+        0% { background-position: 100% 0; }
+        100% { background-position: 0 0; }
+      }
+      .step-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(250, 204, 21, 0.3);
+      }
+      .text-yellow-gradient {
+        background: linear-gradient(90deg, #facc15, #fef3c7, #facc15);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        animation: gradient 3s linear infinite;
+      }
+      @keyframes gradient {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+      .section-bg-icon {
+        position: absolute;
+        font-size: 8rem;
+        opacity: 0.05;
+        z-index: 0;
+        user-select: none;
+        pointer-events: none;
+      }
+      .form-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        border: 2px solid #075985;
+        background-color: #0ea5e9;
+        color: white;
+        font-size: 1rem;
+      }
+      .form-input::placeholder {
+        color: #e0f2fe;
+      }
+      .form-input:focus {
+        outline: none;
+        border-color: #facc15;
+        box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.1);
+      }
+      .form-textarea {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        border: 2px solid #075985;
+        background-color: #0ea5e9;
+        color: white;
+        font-size: 1rem;
+        min-height: 120px;
+        resize: vertical;
+      }
+      .form-textarea::placeholder {
+        color: #e0f2fe;
+      }
+      .form-textarea:focus {
+        outline: none;
+        border-color: #facc15;
+        box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.1);
+      }
+      .alert-success {
+        background-color: #10b981;
+        color: white;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+      }
+      .alert-error {
+        background-color: #ef4444;
+        color: white;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+      }
+      .success-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+  body.bg-brand-blue.text-text-light.font-sans.min-h-screen
+    if sent === true
+      .success-page
+        .max-w-2xl.mx-auto.px-6.text-center
+          .bg-card-bg.rounded-xl.shadow-2xl.p-12.relative.overflow-hidden
+            i.bi.bi-check-circle-fill.text-brand-yellow.text-8xl.mb-6
+            h1.text-4xl.font-bold.text-brand-yellow.mb-4(class="md:text-5xl") お問い合わせありがとうございます！
+            p.text-xl.text-text-secondary.mb-8 メールにてご連絡させていただきます。<br>しばらくお待ちください。
+            a(href="/partner-recruitment").bg-brand-yellow.text-brand-dark-blue.font-bold.py-3.px-8.rounded-full.text-lg.shadow-lg.transition.transform.inline-block(class="hover:bg-yellow-300 hover:scale-105") トップページに戻る
+    else
+      nav.fixed.top-0.left-0.right-0.bg-brand-dark-blue.bg-opacity-80.backdrop-blur-md.shadow-lg.z-50
+        .container.mx-auto.px-6.py-3.flex.justify-between.items-center
+          .text-xl.font-bold.text-brand-yellow ブログ広告パートナー
+          button#nav-toggle.text-brand-yellow.text-3xl(class="md:hidden focus:outline-none" aria-label="メニューを開く")
+            i.bi.bi-list
+          .hidden.flex-row.gap-4(class="md:flex")
+            a(href="#service").text-text-secondary.transition.duration-300(class="hover:text-brand-yellow") サービス内容
+            a(href="#why-us").text-text-secondary.transition.duration-300(class="hover:text-brand-yellow") 選ばれる理由
+            a(href="#process").text-text-secondary.transition.duration-300(class="hover:text-brand-yellow") 利用の流れ
+            a(href="#contact").text-brand-yellow.transition.duration-300(class="hover:text-yellow-300") お問い合わせ
+        #mobile-menu.fixed.top-0.left-0.right-0.bg-brand-dark-blue.bg-opacity-95.shadow-lg.z-50.flex.flex-col.items-center.gap-6.py-8.transition-transform.duration-300.transform.-translate-y-full(class="md:hidden")
+          button#nav-close.absolute.top-4.right-6.text-brand-yellow.text-3xl(class="focus:outline-none" aria-label="メニューを閉じる")
+            i.bi.bi-x-lg
+          a(href="#service" onclick="closeMobileMenu()").text-text-secondary.text-xl.transition.duration-300(class="hover:text-brand-yellow") サービス内容
+          a(href="#why-us" onclick="closeMobileMenu()").text-text-secondary.text-xl.transition.duration-300(class="hover:text-brand-yellow") 選ばれる理由
+          a(href="#process" onclick="closeMobileMenu()").text-text-secondary.text-xl.transition.duration-300(class="hover:text-brand-yellow") 利用の流れ
+          a(href="#contact" onclick="closeMobileMenu()").text-brand-yellow.text-xl.transition.duration-300(class="hover:text-yellow-300") お問い合わせ
+      script.
+        const navToggle = document.getElementById('nav-toggle');
+        const navClose = document.getElementById('nav-close');
+        const mobileMenu = document.getElementById('mobile-menu');
+
+        function openMobileMenu() {
+          mobileMenu.classList.remove('-translate-y-full');
+          mobileMenu.classList.add('translate-y-0');
+          document.body.style.overflow = 'hidden';
+        }
+        function closeMobileMenu() {
+          mobileMenu.classList.remove('translate-y-0');
+          mobileMenu.classList.add('-translate-y-full');
+          document.body.style.overflow = '';
+        }
+
+        navToggle && navToggle.addEventListener('click', openMobileMenu);
+        navClose && navClose.addEventListener('click', closeMobileMenu);
+        window.closeMobileMenu = closeMobileMenu;
+
+      .bg-brand-blue.pt-32.pb-16.flex.flex-col.items-center.justify-center.text-center.relative.overflow-hidden.px-4(class="min-h-[70vh]")
+        i.bi.bi-graph-up-arrow.section-bg-icon.text-white.-left-10.top-10.transform(class="rotate-[-15deg]")
+        i.bi.bi-bullseye.section-bg-icon.text-white.-right-10.bottom-10.transform(class="rotate-[15deg]")
+        .flex.flex-col.items-center.justify-center.w-full.max-w-5xl.mx-auto
+          h1.text-4xl.font-bold.text-text-light.mb-3.animate__animated.animate__fadeInDown(class="md:text-5xl") ブログ運営者向け
+          h2.text-5xl.font-extrabold.text-text-light.mb-6.animate__animated.animate__fadeInDown(class="md:text-7xl animate__delay-0.5s") 広告サービス 🚀
+          .flex.items-center.justify-center.mb-8.animate__animated.animate__fadeInUp.animate__delay-1s
+            span.bg-brand-dark-blue.text-text-light.text-lg.font-semibold.px-3.py-2.rounded-md.mr-2(class="sm:text-xl sm:px-4 sm:py-2") 最低報酬
+            span.text-brand-yellow.text-6xl.font-bold.shine-yellow(class="sm:text-7xl md:text-8xl") 5,000
+            span.text-brand-yellow.text-3xl.font-bold.ml-1(class="sm:text-4xl md:text-5xl") 円~
+          p.text-xl.text-text-secondary.mb-10.animate__animated.animate__fadeInUp.max-w-2xl.mx-auto(class="md:text-2xl animate__delay-1.5s")
+            | あなたのブログ記事、もっと価値を高めませんか？<br>今あるブログに"もうひとつの収益源"をプラス！
+          a(href="#contact").bg-brand-yellow.text-brand-dark-blue.font-bold.py-3.px-8.rounded-full.text-xl.shadow-xl.transition.transform.animate__animated.animate__pulse.animate__infinite.animate__slower.animate__delay-2s(class="sm:py-4 sm:px-10 sm:text-2xl hover:bg-yellow-300 hover:scale-105") 無料見積もりを依頼する
+
+    .bg-brand-blue.text-text-light.font-sans.min-h-screen.relative.z-10
+      .container.mx-auto.px-6.py-12
+        section#service.mb-20.max-w-4xl.mx-auto.relative
+          i.bi.bi-lightbulb-fill.section-bg-icon.text-brand-yellow.top-0.transform(class="left-1/2 -translate-x-1/2 -translate-y-1/2")
+          h2.text-3xl.font-bold.mb-10.text-brand-yellow.text-center.animate__animated.animate__fadeInDown 💡 サービスの特徴とメリット 💡
+          
+          .grid.grid-cols-1.gap-8(class="md:grid-cols-2")
+            .bg-card-bg.rounded-xl.p-8.shadow-2xl.transition-all.duration-300.animate__animated.animate__fadeInLeft.relative.overflow-hidden(class="hover:shadow-yellow-500/30")
+              i.bi.bi-shield-lock-fill.section-bg-icon.text-brand-yellow.-top-5.-left-5.opacity-5
+              h3.text-xl.font-bold.mb-4.text-brand-yellow.flex.items-center
+                i.bi.bi-bar-chart-line-fill.mr-2
+                | 安定した収入源
+              p.text-text-secondary クリックや成果に左右されず、アクセス数に応じた固定報酬。毎月の収入が安定し、ブログ運営のモチベーションもアップ！
+              .mt-4.text-brand-yellow.font-semibold ⭐ 毎月確実に報酬GET！
+            
+            .bg-card-bg.rounded-xl.p-8.shadow-2xl.transition-all.duration-300.animate__animated.animate__fadeInRight.relative.overflow-hidden(class="hover:shadow-yellow-500/30")
+              i.bi.bi-palette-fill.section-bg-icon.text-brand-yellow.-top-5.-right-5.opacity-5
+              h3.text-xl.font-bold.mb-4.text-brand-yellow.flex.items-center
+                i.bi.bi-magic.mr-2
+                | いつでもOFF可能
+              p.text-text-secondary プラグインを無効化するだけで広告は非表示に。再開もワンクリックでOK。気軽に始めて、いつでもやめられる安心設計です。
+              .mt-4.text-brand-yellow.font-semibold 🪄 面倒な手続きは一切なし！
+            
+            .bg-card-bg.rounded-xl.p-8.shadow-2xl.transition-all.duration-300.animate__animated.animate__fadeInLeft.animate__delay-1s.relative.overflow-hidden(class="hover:shadow-yellow-500/30")
+              i.bi.bi-rocket-takeoff-fill.section-bg-icon.text-brand-yellow.-bottom-5.-left-5.opacity-5
+              h3.text-xl.font-bold.mb-4.text-brand-yellow.flex.items-center
+                i.bi.bi-gear-fill.mr-2
+                | 簡単な導入と運用
+              p.text-text-secondary プラグインを入れるだけで、すぐに広告が表示されます。コードの知識は一切不要!
+              .mt-4.text-brand-yellow.font-semibold ⏱️ 5分で設定完了！
+            
+            .bg-card-bg.rounded-xl.p-8.shadow-2xl.transition-all.duration-300.animate__animated.animate__fadeInRight.animate__delay-1s.relative.overflow-hidden(class="hover:shadow-yellow-500/30")
+              i.bi.bi-person-check-fill.section-bg-icon.text-brand-yellow.-bottom-5.-right-5.opacity-5
+              h3.text-xl.font-bold.mb-4.text-brand-yellow.flex.items-center
+                i.bi.bi-headset.mr-2
+                | 手厚いサポート
+              p.text-text-secondary 導入から運用まで、日本人スタッフが丁寧にサポート。安心してご利用いただけます。
+              .mt-4.text-brand-yellow.font-semibold 🤝 安心の日本語サポート！
+
+        section#why-us.mb-20.py-16.bg-card-bg.rounded-xl.shadow-2xl.relative.overflow-hidden
+          i.bi.bi-stars.section-bg-icon.text-brand-yellow.transform.opacity-10(class="text-[12rem] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2")
+          .container.mx-auto.px-6.text-center.relative.z-10
+            h2.text-3xl.font-bold.mb-12.text-brand-yellow 🎉 RakuAdoを選ぶべき3つの理由 🎉
+            .grid.gap-8.text-left(class="md:grid-cols-3")
+              .bg-brand-blue.bg-opacity-50.p-6.rounded-lg.shadow-xl.text-text-light.transform.transition-transform.duration-300(class="hover:scale-105")
+                .flex.items-center.mb-3
+                  i.bi.bi-cash-coin.text-brand-yellow.text-4xl.mr-3
+                  h3.text-2xl.font-semibold.text-brand-yellow 安定 & 高い報酬 💰
+                p.text-text-secondary Google AdSenseでは僅かな収益だったブログも、RakuAdoなら月数万円の安定収入に！あなたの努力が報われます。
+              .bg-brand-blue.bg-opacity-50.p-6.rounded-lg.shadow-xl.text-text-light.transform.transition-transform.duration-300(class="hover:scale-105")
+                .flex.items-center.mb-3
+                  i.bi.bi-gear-wide-connected.text-brand-yellow.text-4xl.mr-3
+                  h3.text-2xl.font-semibold.text-brand-yellow 超カンタン設定 🛠️
+                p.text-text-secondary 専門知識は一切不要！数クリックで導入完了。あなたはコンテンツ作成に集中できます。
+              .bg-brand-blue.bg-opacity-50.p-6.rounded-lg.shadow-xl.text-text-light.transform.transition-transform.duration-300(class="hover:scale-105")
+                .flex.items-center.mb-3
+                  i.bi.bi-shield-check.text-brand-yellow.text-4xl.mr-3
+                  h3.text-2xl.font-semibold.text-brand-yellow 安心のサポート体制 🤝
+                p.text-text-secondary 日本人スタッフによる丁寧なサポート。不明点もすぐに解決、安心して利用開始できます。
+            a(href="#contact").mt-12.inline-block.bg-brand-yellow.text-brand-dark-blue.font-bold.py-3.px-8.rounded-full.text-xl.shadow-lg.transition.transform(class="hover:bg-yellow-300 hover:scale-105") いますぐ収益化を始める！
+
+        section#process.mb-16.max-w-3xl.mx-auto.relative
+          i.bi.bi-signpost-2-fill.section-bg-icon.text-brand-yellow.top-10.right-0.transform(class="rotate-[15deg]")
+          h2.text-3xl.font-bold.mb-10.text-brand-yellow.text-center.animate__animated.animate__fadeInUp 🚀 5つの簡単ステップで収益化スタート 🚀
+          
+          .space-y-6.relative
+            .absolute.left-4.top-0.bottom-0.bg-gradient-to-b.from-brand-yellow.via-yellow-500.to-transparent.hidden(class="md:left-5 md:block w-0.5")
+            - var steps = [{num: 1, icon: '📝', title: '見積もりを依頼', desc: '下部のフォームからメールアドレスとブログURLを送信！弊社からメールにてご連絡させていただきます。'}, {num: 2, icon: '📄', title: 'サイト情報提出', desc: 'ブログのジャンル・運営期間・アクセス状況などを確認させていただきます。最適なプランをご提案するため、Googleアナリティクスのご提出をお願いしております。'}, {num: 3, icon: '🧐', title: '審査', desc: '最短24時間以内に審査完了。承認されれば、月々のお見積額をご提案させていただきます。'}, {num: 4, icon: '🔌', title: 'プラグイン設置', desc: '内容にOKをいただけたら、専用プラグインをお送りします。WordPressに入れて有効化すれば、すぐに広告が表示されます！'}, {num: 5, icon: '💸', title: '報酬発生！', desc: '設置後すぐに報酬発生開始！毎月末に指定口座へお振込み。'}]
+            each step, index in steps
+              .bg-card-bg.rounded-xl.p-6.shadow-xl.relative.step-card.transition-all.duration-300.animate__animated(class=(index % 2 === 0 ? 'animate__fadeInLeft md:ml-12' : 'animate__fadeInRight md:ml-12'))
+                .absolute.-left-4.transform.w-8.h-8.rounded-full.bg-brand-yellow.flex.items-center.justify-center.text-brand-dark-blue.font-bold.text-lg(class="md:-left-12 md:w-10 md:h-10 top-1/2 -translate-y-1/2")= step.num
+                h3.text-xl.font-bold.text-brand-yellow.mb-1.ml-6(class="md:ml-0")= step.icon + ' ' + step.title
+                p.text-text-secondary.ml-6(class="md:ml-0")= step.desc
+
+        section.mb-16.max-w-4xl.mx-auto.relative
+          i.bi.bi-chat-quote-fill.section-bg-icon.text-brand-yellow.bottom-0.transform(class="left-1/2 -translate-x-1/2 translate-y-1/4")
+          h2.text-3xl.font-bold.mb-10.text-brand-yellow.text-center.animate__animated.animate__fadeInUp 💬 利用者の喜びの声 💬
+          
+          .grid.grid-cols-1.gap-8(class="md:grid-cols-2")
+            .bg-card-bg.rounded-xl.p-6.shadow-2xl.animate__animated.animate__fadeInLeft.relative.overflow-hidden
+              i.bi.bi-person-heart.section-bg-icon.text-brand-yellow.-top-5.-left-5.opacity-5
+              .flex.items-center.mb-4
+                .text-brand-yellow.mr-2.text-2xl ★★★★★
+                .text-sm.text-text-secondary 5.0/5.0
+              p.italic.text-text-secondary.mb-4 "ブログ作成には時間も労力もかかるのに、Google AdSenseでは雀の涙ほどの収益でした...😢 RakuAdoを導入してからは、毎月コンスタントに<strong.text-brand-yellow.font-bold>30,000円以上</strong>の報酬があり、本当に感謝しています！もっと早く出会いたかった！"
+              .flex.items-center
+                .w-10.h-10.rounded-full.bg-brand-yellow.flex.items-center.justify-center.text-brand-dark-blue.font-bold T
+                .ml-3
+                  .font-bold.text-text-light 田中さん
+                  .text-xs.text-text-secondary 芸能人の情報などを主に扱うエンタメブログ運営 / 2年利用
+            
+            .bg-card-bg.rounded-xl.p-6.shadow-2xl.animate__animated.animate__fadeInRight.relative.overflow-hidden
+              i.bi.bi-emoji-laughing-fill.section-bg-icon.text-brand-yellow.-top-5.-right-5.opacity-5
+              .flex.items-center.mb-4
+                .text-brand-yellow.mr-2.text-2xl ★★★★★
+                .text-sm.text-text-secondary 5.0/5.0
+              p.italic.text-text-secondary.mb-4 "アフィリエイト収入が不安定だった時、このサービスを知りました。毎月確実な収入で生活設計が楽になり、ブログ運営の不安が激減しました。サポートも親切で最高です！"
+              .flex.items-center
+                .w-10.h-10.rounded-full.bg-brand-yellow.flex.items-center.justify-center.text-brand-dark-blue.font-bold S
+                .ml-3
+                  .font-bold.text-text-light 鈴木さん
+                  .text-xs.text-text-secondary 旅行ブログ運営 / 1年利用
+
+        section.mb-16.max-w-3xl.mx-auto.relative
+          i.bi.bi-question-circle-fill.section-bg-icon.text-brand-yellow.top-0.left-0.transform(class="-translate-x-1/4 -translate-y-1/4")
+          h2.text-3xl.font-bold.mb-10.text-brand-yellow.text-center.animate__animated.animate__fadeInUp ❓ よくある質問 ❓
+          
+          .space-y-4
+            .bg-card-bg.rounded-xl.p-6.shadow-xl.animate__animated.animate__fadeInUp
+              h3.text-xl.font-bold.text-brand-yellow.mb-2.flex.items-center
+                i.bi.bi-graph-down.mr-2
+                | 訪問者数が変動したら？
+              p.text-text-secondary 毎月の平均訪問者数で計算。月の途中で大きく変動しても、その月の報酬額は保証されるので安心です。
+            
+            .bg-card-bg.rounded-xl.p-6.shadow-xl.animate__animated.animate__fadeInUp.animate__delay-1s
+              h3.text-xl.font-bold.text-brand-yellow.mb-2.flex.items-center
+                i.bi.bi-brush.mr-2
+                | 広告を一時的に止めたいときは？
+              p.text-text-secondary WordPressの管理画面で、プラグインを無効化するだけでOK！すぐに停止できます。再開したい時も同様にプラグインを有効化するだけです。
+            
+            .bg-card-bg.rounded-xl.p-6.shadow-xl.animate__animated.animate__fadeInUp.animate__delay-2s
+              h3.text-xl.font-bold.text-brand-yellow.mb-2.flex.items-center
+                i.bi.bi-credit-card.mr-2
+                | 支払い方法と時期は？
+              p.text-text-secondary 毎月20日締めで報酬確定、翌月末に指定銀行口座へお振込みします。
+
+        section#contact.max-w-2xl.mx-auto.bg-card-bg.rounded-xl.shadow-2xl.p-8.animate__animated.animate__fadeInUp.relative.overflow-hidden
+          i.bi.bi-envelope-paper-heart-fill.section-bg-icon.text-brand-yellow.-bottom-10.-right-10.opacity-10(class="text-[10rem]")
+          h2.text-3xl.font-bold.mb-8.text-brand-yellow.text-center.relative.z-10 あなたのブログ収益はいくらになる？<br>今すぐチェック！
+          
+          .relative.z-10
+            if error
+              .alert-error= error
+            form(action="/partner-recruitment" method="POST" id="partner-form")
+              .mb-6
+                label.block.text-brand-yellow.font-semibold.mb-2(for="email") メールアドレス *
+                input.form-input(type="email" id="email" name="email" required placeholder="example@example.com")
+              .mb-6
+                label.block.text-brand-yellow.font-semibold.mb-2(for="blogUrl") ブログURL *
+                input.form-input(type="url" id="blogUrl" name="blogUrl" required placeholder="https://example.com")
+              .mb-6
+                label.block.text-brand-yellow.font-semibold.mb-2(for="message") メッセージ（任意）
+                textarea.form-textarea(id="message" name="message" placeholder="ブログのジャンル、運営期間、アクセス数などの情報があればご記入ください")
+              button.bg-brand-yellow.text-brand-dark-blue.font-bold.py-3.px-8.rounded-full.text-lg.shadow-lg.transition.transform.w-full(type="submit" id="submit-btn" class="hover:bg-yellow-300 hover:scale-105") 無料見積もりを依頼する
+
+      footer#contact.bg-brand-dark-blue.mt-16.pt-10.pb-6.text-text-secondary
+        .container.mx-auto.px-6
+          .flex.flex-col.justify-between.items-center.mb-8(class="md:flex-row")
+            .mb-8.text-center(class="md:mb-0 md:text-left")
+              h3.text-xl.font-bold.text-brand-yellow.mb-2 ブログ広告パートナープログラム
+              p.max-w-md.text-sm あなたのブログの価値を最大化。安定収入で情熱をビジネスに！
+            .flex.space-x-6
+              a(href="https://hatoltd.com/" target="_blank" rel="noopener noreferrer").transition(class="hover:text-brand-yellow") 弊社について
+              a(href="https://hatoltd.com/blog/" target="_blank" rel="noopener noreferrer").transition(class="hover:text-brand-yellow") ブログ一覧
+              a(href="https://hatoltd.com/contact/" target="_blank" rel="noopener noreferrer").transition(class="hover:text-brand-yellow") お問い合わせ
+          .border-t.border-sky-600.pt-6.flex.flex-col.justify-between.items-center(class="md:flex-row")
+            .text-xs.mb-4(class="md:mb-0") © 2024 All rights Reserved. 合同会社はと
+            .flex.space-x-4
+              a(href="#" aria-label="Facebook").transition(class="hover:text-brand-yellow")
+                i.bi.bi-facebook.text-xl
+              a(href="#" aria-label="Twitter").transition(class="hover:text-brand-yellow")
+                i.bi.bi-twitter-x.text-xl
+              a(href="#" aria-label="Instagram").transition(class="hover:text-brand-yellow")
+                i.bi.bi-instagram.text-xl
+
+      #sticky-cta-banner.fixed.bottom-0.left-0.right-0.bg-brand-dark-blue.p-3.text-center.shadow-2xl.animate__animated.animate__fadeInUp.animate__delay-1s(class="sm:p-4 z-[100]")
+        a(href="#contact").text-text-light.text-lg.font-bold.transition.duration-300.flex.items-center.justify-center(class="sm:text-xl md:text-2xl hover:text-brand-yellow")
+          span.mr-2.hidden(class="sm:inline") ブログ収益化のチャンス！
+          | 詳しくはこちらをタップ 👇 
+          span.ml-2.text-brand-yellow.animate__animated.animate__flash.animate__slower_2s 今すぐ相談！
+
+      script.
+        document.addEventListener('DOMContentLoaded', function() {
+          const animatedElements = document.querySelectorAll('.animate__animated');
+          
+          const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+              if (entry.isIntersecting) {
+                entry.target.style.visibility = 'visible';
+              }
+            });
+          }, { threshold: 0.1 });
+          
+          animatedElements.forEach(el => {
+            el.style.visibility = 'hidden';
+            observer.observe(el);
+          });
+          
+          document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+              e.preventDefault();
+              const targetId = this.getAttribute('href');
+              const targetElement = document.querySelector(targetId);
+              
+              if (targetElement) {
+                let offset = 80;
+                window.scrollTo({
+                  top: targetElement.offsetTop - offset,
+                  behavior: 'smooth'
+                });
+              }
+            });
+          });
+
+          const form = document.getElementById('partner-form');
+          if (form) {
+            form.addEventListener('submit', function(e) {
+              const submitBtn = document.getElementById('submit-btn');
+              submitBtn.disabled = true;
+              submitBtn.textContent = '送信中...';
+            });
+          }
+        });
