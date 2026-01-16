@@ -8,27 +8,14 @@ block mainContent
                 .col-md-8
                     h1.display-4.fw-bold.mb-3 ダッシュボード
                     p.lead.text-white データとツールを一箇所で管理
-    // Main Tools Section
-    section.tools-section.mb-5
+    // Manage Partners Section
+    section.partners-section.mb-5
         .container
             h2.section-title.mb-4
-                i.fas.fa-tools.me-2
-                | メインツール
+                i.fas.fa-handshake.me-2
+                | パートナー管理
             .row.g-4
-                // Testing & Analytics Tools
-                .col-lg-6.col-md-12.mb-3
-                    .card.tool-card.h-100.border-0.shadow-sm
-                        .card-body
-                            .row.align-items-center
-                                .col-2
-                                    .icon-wrapper.bg-primary.bg-opacity-10.rounded-circle.p-3.text-center
-                                        i.fas.fa-flask.text-primary.fs-4
-                                .col-10
-                                    h5.card-title.fw-bold.mb-2 A/Bテスト
-                                    p.card-text.text-muted.mb-0 A/Bテストを作成・管理
-                                    a.stretched-link(href="/dashboard/app/ab-test-results")
-                
-                .col-lg-6.col-md-12.mb-3
+                .col-lg-4.col-md-12.mb-3
                     .card.tool-card.h-100.border-0.shadow-sm
                         .card-body
                             .row.align-items-center
@@ -39,39 +26,8 @@ block mainContent
                                     h5.card-title.fw-bold.mb-2 アナリティクス
                                     p.card-text.text-muted.mb-0 サイトの分析データとインサイトを表示
                                     a.stretched-link(href="/dashboard/app/analytics")
-    
-    // Admin Tools Section
-    section.admin-tools-section.mb-5.isAdmin
-        .container
-            h2.section-title.mb-4
-                i.fas.fa-shield-alt.me-2
-                | 管理者ツール
-            .row.g-4
-                .col-lg-6.col-md-12.mb-3
-                    .card.tool-card.h-100.border-0.shadow-sm
-                        .card-body
-                            .row.align-items-center
-                                .col-2
-                                    .icon-wrapper.bg-warning.bg-opacity-10.rounded-circle.p-3.text-center
-                                        i.fab.fa-wordpress.text-warning.fs-4
-                                .col-10
-                                    h5.card-title.fw-bold.mb-2 アフィリエイト
-                                    p.card-text.text-muted.mb-0 パートナーアフィリエイトを管理
-                                    a.stretched-link(href="/dashboard/app/affiliate/")
                 
-                .col-lg-6.col-md-12.mb-3
-                    .card.tool-card.h-100.border-0.shadow-sm
-                        .card-body
-                            .row.align-items-center
-                                .col-2
-                                    .icon-wrapper.bg-info.bg-opacity-10.rounded-circle.p-3.text-center
-                                        i.fas.fa-bullhorn.text-info.fs-4
-                                .col-10
-                                    h5.card-title.fw-bold.mb-2 リファラル
-                                    p.card-text.text-muted.mb-0 リファラルポップアップとキャンペーンを管理
-                                    a.stretched-link(href="/dashboard/app/referal")
-                
-                .col-lg-6.col-md-12.mb-3
+                .col-lg-4.col-md-12.mb-3
                     .card.tool-card.h-100.border-0.shadow-sm
                         .card-body
                             .row.align-items-center
@@ -83,7 +39,7 @@ block mainContent
                                     p.card-text.text-muted.mb-0 パートナーの支払い計算・管理
                                     a.stretched-link(href="/dashboard/app/partners")
                 
-                .col-lg-6.col-md-12.mb-3
+                .col-lg-4.col-md-12.mb-3
                     .card.tool-card.h-100.border-0.shadow-sm
                         .card-body
                             .row.align-items-center
@@ -94,6 +50,49 @@ block mainContent
                                     h5.card-title.fw-bold.mb-2 パートナー募集管理
                                     p.card-text.text-muted.mb-0 新しいパートナーの申請を管理・審査
                                     a.stretched-link(href="/dashboard/app/partner-recruitment")
+    
+    // Manage Advertisement Section
+    section.advertisement-section.mb-5.isAdmin
+        .container
+            h2.section-title.mb-4
+                i.fas.fa-bullhorn.me-2
+                | 広告管理
+            .row.g-4
+                .col-lg-4.col-md-12.mb-3
+                    .card.tool-card.h-100.border-0.shadow-sm
+                        .card-body
+                            .row.align-items-center
+                                .col-2
+                                    .icon-wrapper.bg-primary.bg-opacity-10.rounded-circle.p-3.text-center
+                                        i.fas.fa-flask.text-primary.fs-4
+                                .col-10
+                                    h5.card-title.fw-bold.mb-2 A/Bテスト
+                                    p.card-text.text-muted.mb-0 A/Bテストを作成・管理
+                                    a.stretched-link(href="/dashboard/app/ab-test-results")
+                
+                .col-lg-4.col-md-12.mb-3
+                    .card.tool-card.h-100.border-0.shadow-sm
+                        .card-body
+                            .row.align-items-center
+                                .col-2
+                                    .icon-wrapper.bg-warning.bg-opacity-10.rounded-circle.p-3.text-center
+                                        i.fab.fa-wordpress.text-warning.fs-4
+                                .col-10
+                                    h5.card-title.fw-bold.mb-2 アフィリエイト
+                                    p.card-text.text-muted.mb-0 パートナーアフィリエイトを管理
+                                    a.stretched-link(href="/dashboard/app/affiliate/")
+                
+                .col-lg-4.col-md-12.mb-3
+                    .card.tool-card.h-100.border-0.shadow-sm
+                        .card-body
+                            .row.align-items-center
+                                .col-2
+                                    .icon-wrapper.bg-info.bg-opacity-10.rounded-circle.p-3.text-center
+                                        i.fas.fa-bullhorn.text-info.fs-4
+                                .col-10
+                                    h5.card-title.fw-bold.mb-2 リファラル
+                                    p.card-text.text-muted.mb-0 リファラルポップアップとキャンペーンを管理
+                                    a.stretched-link(href="/dashboard/app/referal")
     
     // Quick Actions & Settings Section
     section.quick-actions-section.mb-5
