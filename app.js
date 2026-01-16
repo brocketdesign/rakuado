@@ -98,6 +98,10 @@ function startServer() {
       app.set('view engine', 'pug');
       app.set('views', './views');
 
+      // Handle partner-ad.js route directly (before other routers to avoid conflicts)
+      const partnerAdModule = require('./routers/api/partner-ad');
+      app.get('/api/partner-ad.js', partnerAdModule.servePartnerAdScript);
+
       // Define and use routers concisely
       const routers = [
         ['/', './routers/index'],
@@ -113,7 +117,7 @@ function startServer() {
         ['/api/analytics', './routers/api/analytics'],
         ['/api/partners', './routers/api/partners'],
         ['/api/partner-recruitment', './routers/api/partner-recruitment'],
-        ['/api/partner-ad.js', './routers/api/partner-ad'],
+        ['/api/partner-ad', './routers/api/partner-ad'],
       ];
 
       routers.forEach(([route, path]) => app.use(route, require(path)));

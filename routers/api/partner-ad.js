@@ -2,13 +2,14 @@ const express = require('express');
 const router = express.Router();
 const { ObjectId } = require('mongodb');
 
-// Serve the partner ad widget script
-router.get('/', async (req, res) => {
+// Handler function for serving the partner ad widget script
+async function servePartnerAdScript(req, res) {
   try {
     // Get partner ID from query parameter (set by the snippet)
     const partnerId = req.query.partnerId;
     
     if (!partnerId) {
+      res.setHeader('Content-Type', 'application/javascript');
       return res.status(400).send('// Partner ID is required');
     }
 
@@ -20,15 +21,17 @@ router.get('/', async (req, res) => {
         status: { $in: ['approved', 'snippet_sent', 'snippet_verified'] }
       });
     } catch (error) {
+      res.setHeader('Content-Type', 'application/javascript');
       return res.status(400).send('// Invalid partner ID');
     }
 
     if (!partner) {
+      res.setHeader('Content-Type', 'application/javascript');
       return res.status(404).send('// Partner not found or not approved');
     }
 
-    // Set content type to JavaScript
-    res.setHeader('Content-Type', 'application/javascript');
+    // Set content type to JavaScript with charset
+    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     
     // Get the app domain from environment or use default
     const appDomain = process.env.PRODUCT_URL || 'https://app.rakuado.net';
@@ -835,9 +838,13 @@ router.get('/', async (req, res) => {
     res.send(widgetScript);
   } catch (error) {
     console.error('Error serving partner ad script:', error);
+    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     res.status(500).send('// Error loading partner ad script');
   }
-});
+}
+
+// Serve the partner ad widget script - handle both with and without .js extension
+router.get(['/', '/.js'], servePartnerAdScript);
 
 // GET enabled popups for a partner
 router.get('/enabled', async (req, res) => {
@@ -1030,4 +1037,6 @@ router.get('/register-click', async (req, res) => {
   }
 });
 
+// Export both the router and the handler function
 module.exports = router;
+module.exports.servePartnerAdScript = servePartnerAdScript;
