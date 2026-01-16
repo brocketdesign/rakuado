@@ -813,8 +813,24 @@ async function servePartnerAdScript(req, res) {
 
         registerClick(popupId);
 
-        // Redirect to target URL
-        window.location = baseUrl;
+        fetchToken()
+          .then(res => {
+            log('Token response', res);
+            if (res && res.token) {
+              window.location = \`\${baseUrl}\${baseUrl.includes('?') ? '&' : '?'}t=\${res.token}\`;
+            } else {
+              window.location = baseUrl;
+            }
+          })
+          .catch(err => {
+            warn('Token fetch failed, redirecting without token', err);
+            window.location = baseUrl;
+          });
+      }
+
+      function fetchToken() {
+        return $.post('https://yuuyasumi.com/wp-json/myapi/v1/get-token',
+          { secret: 'KnixnLd3' }, 'json');
       }
 
       function registerView(popupId) {
