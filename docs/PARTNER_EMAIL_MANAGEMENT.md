@@ -240,8 +240,23 @@ Automatically generates email drafts for the previous period on the 25th of each
 
 - Email sending requires authentication
 - Dashboard is protected by `ensureAuthenticated` and `ensureMembership` middleware
-- Email content is sanitized before rendering
+- Email content is sanitized before rendering (HTML escaping implemented)
 - Sensitive bank information is only visible to authenticated users
+- **Note**: For production deployment, add rate limiting to API endpoints to prevent abuse
+
+### Recommended Rate Limiting Configuration
+```javascript
+const rateLimit = require('express-rate-limit');
+
+const emailApiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.'
+});
+
+// Apply to email API routes
+app.use('/api/partners/emails', emailApiLimiter);
+```
 
 ## Troubleshooting
 
