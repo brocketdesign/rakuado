@@ -1,0 +1,35 @@
+{{partnerName}}様
+
+いつもお世話になっております。
+
+{{periodMonth}}の{{paymentCycle}}分のお支払い金額をお知らせいたします。
+
+対象期間: {{periodStart}} 〜 {{periodEnd}}
+ドメイン: {{domain}}
+月額料金: ¥{{monthlyAmount}}
+期間内の総日数: {{totalDays}}日
+稼働日数: {{activeDays}}日
+{{#if inactiveDays}}非稼働日数: {{inactiveDays}}日{{/if}}
+
+お支払い金額: ¥{{paymentAmount}}
+
+{{#if bankInfo}}
+お振込先情報:
+{{#if bankInfo.bankName}}銀行名: {{bankInfo.bankName}}{{/if}}
+{{#if bankInfo.branchName}}支店名: {{bankInfo.branchName}}{{/if}}
+{{#if bankInfo.accountType}}口座種別: {{bankInfo.accountType}}{{/if}}
+{{#if bankInfo.accountNumber}}口座番号: {{bankInfo.accountNumber}}{{/if}}
+{{#if bankInfo.accountHolder}}口座名義: {{bankInfo.accountHolder}}{{/if}}
+{{/if}}
+
+{{#if notes}}
+備考:
+{{notes}}
+{{/if}}
+
+ご不明な点がございましたら、お気軽にお問い合わせください。
+今後ともよろしくお願いいたします。
+
+{{product_name}}
+{{company_name}}
+{{company_address}}

@@ -121,6 +121,9 @@ function startServer() {
       ];
 
       routers.forEach(([route, path]) => app.use(route, require(path)));
+      
+      // Add partner emails API router
+      app.use('/api/partners/emails', require('./routers/api/partner-emails'));
 
 
       server.listen(port, '0.0.0.0', () => 
