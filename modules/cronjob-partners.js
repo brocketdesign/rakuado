@@ -58,6 +58,163 @@ async function countActiveDaysFromAnalytics(db, domain, periodStart, periodEnd) 
   return activeDays;
 }
 
+// Helper function to calculate partner payment
+async function calculatePartnerPayment(db, partner, periodStart, periodEnd, customInactiveDays = null) {
+  const startDate = new Date(partner.startDate);
+  const stopDate = partner.stopDate ? new Date(partner.stopDate) : null;
+  const partnerStatus = partner.status || (stopDate ? 'stopped' : 'active');
+  const monthlyRate = partner.monthlyAmount || 0;
+  
+  // If partner status is stopped, inactive, or pending, no payment
+  if (partnerStatus === 'stopped' || partnerStatus === 'inactive' || partnerStatus === 'pending') {
+    return { amount: 0, daysActive: 0, totalDays: 0, status: partnerStatus };
+  }
+  
+  // If partner started after period end, no payment
+  if (startDate > periodEnd) {
+    return { amount: 0, daysActive: 0, totalDays: 0, status: 'not_started' };
+  }
+  
+  // If partner stopped before period start, no payment
+  if (stopDate && stopDate < periodStart) {
+    return { amount: 0, daysActive: 0, totalDays: 0, status: 'stopped' };
+  }
+  
+  // Calculate the effective start and end dates within the period
+  const effectiveStart = startDate > periodStart ? startDate : periodStart;
+  const effectiveEnd = stopDate && stopDate < periodEnd ? stopDate : periodEnd;
+  
+  // Calculate total days in period
+  const totalDays = Math.ceil((periodEnd - periodStart) / (1000 * 60 * 60 * 24)) + 1;
+  
+  // Get actual active days from analytics data (dynamic check)
+  const daysActiveFromAnalytics = await countActiveDaysFromAnalytics(db, partner.domain, effectiveStart, effectiveEnd);
+  
+  // Use custom inactive days if provided
+  let daysActive;
+  if (customInactiveDays !== null && customInactiveDays !== undefined) {
+    daysActive = totalDays - customInactiveDays;
+  } else {
+    daysActive = daysActiveFromAnalytics;
+  }
+  
+  // Calculate prorated payment based on active days
+  const dailyRate = monthlyRate / totalDays;
+  const amount = Math.round(dailyRate * daysActive);
+  
+  let status = 'active';
+  if (daysActive < totalDays) {
+    status = 'partial';
+  }
+  if (stopDate && stopDate <= periodEnd) {
+    status = 'stopped';
+  }
+  
+  return { 
+    amount, 
+    daysActive, 
+    totalDays, 
+    status, 
+    dailyRate: Math.round(dailyRate),
+    inactiveDays: totalDays - daysActive
+  };
+}
+
+// Generate email drafts for all partners
+async function generateEmailDrafts(db, period = 'previous') {
+  try {
+    console.log(`Starting email draft generation for ${period} period...`);
+    
+    let periodDates;
+    switch (period) {
+      case 'current':
+        periodDates = getCustomMonthPeriod(0);
+        break;
+      case 'previous':
+        periodDates = getCustomMonthPeriod(1);
+        break;
+      default:
+        throw new Error('Invalid period');
+    }
+    
+    const { startDate, endDate } = periodDates;
+    const periodStartStr = startDate.toISOString().split('T')[0];
+    const periodEndStr = endDate.toISOString().split('T')[0];
+    
+    // Get all active partners
+    const partners = await db.collection('partners').find({}).sort({ order: 1 }).toArray();
+    
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+    
+    for (const partner of partners) {
+      // Check if draft already exists for this partner and period
+      const existingDraft = await db.collection('partnerEmailDrafts').findOne({
+        partnerId: partner._id.toString(),
+        periodStart: periodStartStr,
+        periodEnd: periodEndStr
+      });
+      
+      if (existingDraft && existingDraft.status === 'sent') {
+        skipped++;
+        continue;
+      }
+      
+      // Calculate payment
+      const calculation = await calculatePartnerPayment(db, partner, startDate, endDate);
+      
+      // Check if there's data available (if activeDays > 0 or if partner was active)
+      const hasData = calculation.daysActive > 0 || calculation.status === 'active' || calculation.status === 'partial';
+      
+      const periodMonth = startDate.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' });
+      
+      const emailData = {
+        partnerId: partner._id.toString(),
+        partnerName: partner.name,
+        partnerEmail: partner.email,
+        domain: partner.domain,
+        periodStart: periodStartStr,
+        periodEnd: periodEndStr,
+        periodMonth: periodMonth,
+        paymentCycle: partner.paymentCycle || '当月',
+        monthlyAmount: partner.monthlyAmount,
+        totalDays: calculation.totalDays,
+        activeDays: calculation.daysActive,
+        inactiveDays: calculation.inactiveDays,
+        paymentAmount: calculation.amount,
+        bankInfo: partner.bankInfo || {},
+        notes: partner.notes || '',
+        status: existingDraft ? existingDraft.status : (hasData ? 'draft' : 'no_data'),
+        hasData: hasData,
+        errorMessage: hasData ? null : 'No analytics data available for this period',
+        createdAt: existingDraft ? existingDraft.createdAt : new Date(),
+        updatedAt: new Date()
+      };
+      
+      if (existingDraft) {
+        // Update existing draft
+        await db.collection('partnerEmailDrafts').updateOne(
+          { _id: existingDraft._id },
+          { $set: emailData }
+        );
+        updated++;
+      } else {
+        // Create new draft
+        await db.collection('partnerEmailDrafts').insertOne(emailData);
+        created++;
+      }
+    }
+    
+    console.log(`Email draft generation completed: created ${created}, updated ${updated}, skipped ${skipped}`);
+    return { success: true, created, updated, skipped };
+    
+  } catch (error) {
+    console.error('Error generating email drafts:', error);
+    throw error;
+  }
+}
+
 async function recalculatePartnerActiveDays(db) {
   const PARTNERS = db.collection('partners');
   const ANALYTICS_DAILY = db.collection('analyticsDaily');
@@ -127,7 +284,19 @@ function initializePartnersCronJobs(db) {
     }
   });
   
+  // Run on the 25th of each month at 09:00 to generate email drafts for the previous period
+  cron.schedule('0 9 25 * *', async () => {
+    console.log('Running monthly email draft generation (25th of month)...');
+    try {
+      await generateEmailDrafts(db, 'previous');
+    } catch (error) {
+      console.error('Error in monthly email draft generation:', error);
+    }
+  });
+  
   console.log('Partners cron jobs initialized');
+  console.log('- Daily partner active days recalculation: 01:00');
+  console.log('- Monthly email draft generation: 25th at 09:00');
 }
 
 async function runRecalculateNow(db) {
@@ -139,4 +308,17 @@ async function runRecalculateNow(db) {
   }
 }
 
-module.exports = { initializePartnersCronJobs, runRecalculateNow };
+async function runGenerateEmailDraftsNow(db, period = 'previous') {
+  try {
+    return await generateEmailDrafts(db, period);
+  } catch (error) {
+    console.error('Error in manual email draft generation:', error);
+    throw error;
+  }
+}
+
+module.exports = { 
+  initializePartnersCronJobs, 
+  runRecalculateNow,
+  runGenerateEmailDraftsNow 
+};
