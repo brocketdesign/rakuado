@@ -360,7 +360,17 @@ block mainContent
                 return;
             }
             
-            tbody.innerHTML = filteredDrafts.map(draft => `
+            tbody.innerHTML = filteredDrafts.map(draft => {
+                const partnerName = escapeHtml(draft.partnerName || '-');
+                const domain = escapeHtml(draft.domain || '-');
+                const partnerEmail = draft.partnerEmail 
+                    ? escapeHtml(draft.partnerEmail) 
+                    : '<span class="text-muted">未設定</span>';
+                const errorMessage = draft.errorMessage 
+                    ? `<br><small class="text-danger">${escapeHtml(draft.errorMessage)}</small>` 
+                    : '';
+                
+                return `
                 <tr data-draft-id="${draft._id}">
                     <td>
                         <input type="checkbox" class="email-checkbox form-check-input" 
@@ -368,16 +378,16 @@ block mainContent
                                ${draft.status === 'sent' || !draft.hasData ? 'disabled' : ''}
                                ${selectedDraftIds.has(draft._id) ? 'checked' : ''}>
                     </td>
-                    <td>${draft.partnerName || '-'}</td>
-                    <td>${draft.domain || '-'}</td>
-                    <td>${draft.partnerEmail || '<span class="text-muted">未設定</span>'}</td>
+                    <td>${partnerName}</td>
+                    <td>${domain}</td>
+                    <td>${partnerEmail}</td>
                     <td>${draft.activeDays || 0} / ${draft.totalDays || 0}日</td>
                     <td>¥${(draft.paymentAmount || 0).toLocaleString('ja-JP')}</td>
                     <td>
                         <span class="status-badge status-${draft.status}">
                             ${getStatusLabel(draft.status)}
                         </span>
-                        ${draft.errorMessage ? `<br><small class="text-danger">${draft.errorMessage}</small>` : ''}
+                        ${errorMessage}
                     </td>
                     <td>
                         <button class="btn btn-sm btn-outline-primary action-btn me-1" 
@@ -398,7 +408,8 @@ block mainContent
                         ` : ''}
                     </td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
             
             // Re-attach checkbox event listeners
             document.querySelectorAll('.email-checkbox').forEach(cb => {
@@ -488,18 +499,23 @@ block mainContent
             const modal = new bootstrap.Modal(document.getElementById('email-preview-modal'));
             const content = document.getElementById('email-preview-content');
             
-            // Build email preview
+            // Build email preview with proper escaping
+            const partnerName = escapeHtml(draft.partnerName);
+            const periodMonth = escapeHtml(draft.periodMonth);
+            const domain = escapeHtml(draft.domain);
+            const paymentCycle = escapeHtml(draft.paymentCycle);
+            
             content.innerHTML = `
                 <div class="border rounded p-4">
-                    <h5 class="mb-3">件名: 【${draft.periodMonth}】お支払い金額のお知らせ - ${draft.partnerName}様</h5>
+                    <h5 class="mb-3">件名: 【${periodMonth}】お支払い金額のお知らせ - ${partnerName}様</h5>
                     <hr>
-                    <p><strong>${draft.partnerName}様</strong></p>
+                    <p><strong>${partnerName}様</strong></p>
                     <p>いつもお世話になっております。</p>
-                    <p>${draft.periodMonth}の${draft.paymentCycle}分のお支払い金額をお知らせいたします。</p>
+                    <p>${periodMonth}の${paymentCycle}分のお支払い金額をお知らせいたします。</p>
                     
                     <div class="alert alert-light border">
-                        <p><strong>対象期間:</strong> ${draft.periodStart} 〜 ${draft.periodEnd}</p>
-                        <p><strong>ドメイン:</strong> ${draft.domain}</p>
+                        <p><strong>対象期間:</strong> ${escapeHtml(draft.periodStart)} 〜 ${escapeHtml(draft.periodEnd)}</p>
+                        <p><strong>ドメイン:</strong> ${domain}</p>
                         <p><strong>月額料金:</strong> ¥${draft.monthlyAmount.toLocaleString('ja-JP')}</p>
                         <p><strong>期間内の総日数:</strong> ${draft.totalDays}日</p>
                         <p><strong>稼働日数:</strong> ${draft.activeDays}日</p>
@@ -507,6 +523,10 @@ block mainContent
                         <p class="mb-0"><strong style="font-size: 1.2rem; color: #28a745;">お支払い金額: ¥${draft.paymentAmount.toLocaleString('ja-JP')}</strong></p>
                     </div>
                     
+                    <p>ご不明な点がございましたら、お気軽にお問い合わせください。</p>
+                    <p>今後ともよろしくお願いいたします。</p>
+                </div>
+            `;
                     <p>ご不明な点がございましたら、お気軽にお問い合わせください。</p>
                     <p>今後ともよろしくお願いいたします。</p>
                 </div>
@@ -686,4 +706,12 @@ block mainContent
             setTimeout(() => {
                 alert.remove();
             }, 5000);
+        }
+        
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
