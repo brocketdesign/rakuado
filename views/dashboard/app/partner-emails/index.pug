@@ -1,0 +1,717 @@
+extends ../../base
+
+block mainContent
+    // Hero Section
+    .hero-section.mb-5
+        .container
+            .row.align-items-center
+                .col-md-8
+                    h1.display-4.fw-bold.mb-3 
+                        i.fas.fa-envelope.me-3
+                        span パートナーメール管理
+                    p.lead Partner Email Management - パートナーへの支払い通知メール管理ツール
+                .col-md-4.text-end
+                    .stats-card.bg-white.text-dark.p-4.rounded-3.shadow
+                        h3.mb-1#total-drafts 0
+                        small メールドラフト総数
+
+    // Alert Messages
+    #alert-container.container.mb-4
+
+    // Period Controls Section
+    section.period-controls-section.mb-5
+        .container
+            .card.border-0.shadow-sm
+                .card-header.bg-white.border-0.pb-0
+                    h5.fw-bold.mb-0
+                        i.fas.fa-calendar-alt.me-2.text-primary
+                        | 期間選択 / Period Selection
+                .card-body
+                    .row.align-items-center
+                        .col-auto
+                            .btn-group(role="group")
+                                button#current-period-btn.btn.btn-primary.period-btn.active
+                                    | 現在の期間 / Current Period
+                                button#previous-period-btn.btn.btn-outline-primary.period-btn
+                                    | 前期間 / Previous Period
+                        .col-auto
+                            span#period-info.text-muted.small
+                        .col-auto
+                            button#generate-drafts-btn.btn.btn-success
+                                i.fas.fa-magic.me-2
+                                | ドラフト生成 / Generate Drafts
+                            button#send-all-btn.btn.btn-primary.ms-2(disabled)
+                                i.fas.fa-paper-plane.me-2
+                                | 一括送信 / Send All
+                            span#action-status.text-muted.small.ms-2
+
+    // Email Status Overview
+    section.status-overview.mb-5
+        .container
+            .row.g-4#status-cards
+                .col-md-3
+                    .card.border-0.shadow-sm.bg-light
+                        .card-body.text-center
+                            h3.mb-1#count-draft 0
+                            small.text-muted ドラフト / Draft
+                .col-md-3
+                    .card.border-0.shadow-sm.bg-success.text-white
+                        .card-body.text-center
+                            h3.mb-1#count-sent 0
+                            small 送信済 / Sent
+                .col-md-3
+                    .card.border-0.shadow-sm.bg-warning
+                        .card-body.text-center
+                            h3.mb-1#count-no-data 0
+                            small.text-white データなし / No Data
+                .col-md-3
+                    .card.border-0.shadow-sm.bg-danger.text-white
+                        .card-body.text-center
+                            h3.mb-1#count-error 0
+                            small エラー / Error
+
+    // Email List Section
+    section.emails-content.mb-5
+        .container
+            .card.border-0.shadow-sm
+                .card-header.bg-white.border-0
+                    .d-flex.justify-content-between.align-items-center.flex-wrap.gap-2
+                        h5.fw-bold.mb-0
+                            i.fas.fa-list.me-2.text-secondary
+                            | メール一覧 / Email List
+                        .btn-group(role="group")
+                            button.btn.btn-sm.btn-outline-secondary.filter-btn.active(data-status="all")
+                                | すべて / All
+                            button.btn.btn-sm.btn-outline-secondary.filter-btn(data-status="draft")
+                                | ドラフト / Draft
+                            button.btn.btn-sm.btn-outline-secondary.filter-btn(data-status="sent")
+                                | 送信済 / Sent
+                            button.btn.btn-sm.btn-outline-secondary.filter-btn(data-status="no_data")
+                                | データなし / No Data
+                            button.btn.btn-sm.btn-outline-secondary.filter-btn(data-status="error")
+                                | エラー / Error
+
+                .card-body.p-0
+                    .table-responsive
+                        table#emails-table.table.table-hover.mb-0
+                            thead.table-light
+                                tr
+                                    th
+                                        input#select-all(type="checkbox")
+                                    th.fw-bold パートナー名
+                                    th.fw-bold ドメイン
+                                    th.fw-bold メールアドレス
+                                    th.fw-bold 稼働日数
+                                    th.fw-bold 支払い額
+                                    th.fw-bold ステータス
+                                    th.fw-bold アクション
+                            tbody#emails-tbody
+                                tr
+                                    td.text-center(colspan="8")
+                                        .spinner-border.text-primary(role="status")
+                                            span.visually-hidden Loading...
+
+    // Email Preview Modal
+    #email-preview-modal.modal.fade(tabindex="-1")
+        .modal-dialog.modal-xl
+            .modal-content
+                .modal-header
+                    h5.modal-title
+                        i.fas.fa-eye.me-2
+                        | メールプレビュー / Email Preview
+                    button.btn-close(type="button" data-bs-dismiss="modal")
+                .modal-body
+                    #email-preview-content
+                        .text-center
+                            .spinner-border.text-primary(role="status")
+                .modal-footer
+                    button.btn.btn-secondary(type="button" data-bs-dismiss="modal") 閉じる / Close
+                    button#send-from-preview-btn.btn.btn-primary(type="button" disabled)
+                        i.fas.fa-paper-plane.me-2
+                        | 送信 / Send
+
+    // Edit Inactive Days Modal
+    #edit-draft-modal.modal.fade(tabindex="-1")
+        .modal-dialog
+            .modal-content
+                .modal-header
+                    h5.modal-title
+                        i.fas.fa-edit.me-2
+                        | ドラフト編集 / Edit Draft
+                    button.btn-close(type="button" data-bs-dismiss="modal")
+                .modal-body
+                    form#edit-draft-form
+                        input#edit-draft-id(type="hidden")
+                        .mb-3
+                            label.form-label パートナー名 / Partner Name
+                            input#edit-partner-name.form-control(type="text" readonly)
+                        .mb-3
+                            label.form-label 期間内の総日数 / Total Days
+                            input#edit-total-days.form-control(type="number" readonly)
+                        .mb-3
+                            label.form-label 非稼働日数 / Inactive Days
+                            input#edit-inactive-days.form-control(type="number" min="0" required)
+                            small.text-muted 非稼働日数を入力すると、稼働日数と支払い額が自動計算されます
+                        .mb-3
+                            label.form-label 計算結果プレビュー
+                            .alert.alert-info
+                                p.mb-1
+                                    strong 稼働日数: 
+                                    span#preview-active-days -
+                                p.mb-0
+                                    strong 支払い額: 
+                                    span#preview-payment-amount -
+                        .mb-3
+                            label.form-label 備考 / Notes (オプション)
+                            textarea#edit-notes.form-control(rows="3")
+                .modal-footer
+                    button.btn.btn-secondary(type="button" data-bs-dismiss="modal") キャンセル / Cancel
+                    button#save-draft-btn.btn.btn-primary(type="button")
+                        i.fas.fa-save.me-2
+                        | 保存 / Save
+
+    style.
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        .stats-card {
+            border-radius: 15px;
+        }
+        
+        .stats-card h3 {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        
+        .period-btn {
+            transition: all 0.3s ease;
+        }
+        
+        .tab-button {
+            cursor: pointer;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            background: transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-button.active {
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .status-badge {
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .status-draft {
+            background-color: #e9ecef;
+            color: #495057;
+        }
+        
+        .status-sent {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-no_data {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .filter-btn.active {
+            background-color: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .action-btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+
+    script.
+        let currentPeriod = 'current';
+        let drafts = [];
+        let currentDraftId = null;
+        let currentFilterStatus = 'all';
+        let selectedDraftIds = new Set();
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadDrafts();
+            setupEventListeners();
+        });
+        
+        // Setup event listeners
+        function setupEventListeners() {
+            // Period buttons
+            document.getElementById('current-period-btn').addEventListener('click', () => {
+                currentPeriod = 'current';
+                document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById('current-period-btn').classList.add('active');
+                loadDrafts();
+            });
+            
+            document.getElementById('previous-period-btn').addEventListener('click', () => {
+                currentPeriod = 'previous';
+                document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById('previous-period-btn').classList.add('active');
+                loadDrafts();
+            });
+            
+            // Generate drafts button
+            document.getElementById('generate-drafts-btn').addEventListener('click', generateDrafts);
+            
+            // Send all button
+            document.getElementById('send-all-btn').addEventListener('click', sendAllDrafts);
+            
+            // Filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    currentFilterStatus = e.target.dataset.status;
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    renderDrafts();
+                });
+            });
+            
+            // Select all checkbox
+            document.getElementById('select-all').addEventListener('change', (e) => {
+                const checkboxes = document.querySelectorAll('.email-checkbox:not(:disabled)');
+                checkboxes.forEach(cb => {
+                    cb.checked = e.target.checked;
+                    if (e.target.checked) {
+                        selectedDraftIds.add(cb.dataset.draftId);
+                    } else {
+                        selectedDraftIds.delete(cb.dataset.draftId);
+                    }
+                });
+                updateSendAllButton();
+            });
+            
+            // Edit draft form
+            document.getElementById('edit-inactive-days').addEventListener('input', updateDraftPreview);
+            document.getElementById('save-draft-btn').addEventListener('click', saveDraft);
+            
+            // Send from preview
+            document.getElementById('send-from-preview-btn').addEventListener('click', sendFromPreview);
+        }
+        
+        // Load drafts
+        async function loadDrafts() {
+            try {
+                const response = await fetch(`/api/partners/emails/drafts?period=${currentPeriod}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    drafts = data.drafts;
+                    document.getElementById('period-info').textContent = 
+                        `${data.period.startDate} 〜 ${data.period.endDate}`;
+                    renderDrafts();
+                    updateStatusCards();
+                } else {
+                    showAlert('error', 'ドラフトの読み込みに失敗しました');
+                }
+            } catch (error) {
+                console.error('Error loading drafts:', error);
+                showAlert('error', 'ドラフトの読み込み中にエラーが発生しました');
+            }
+        }
+        
+        // Render drafts table
+        function renderDrafts() {
+            const tbody = document.getElementById('emails-tbody');
+            
+            // Filter drafts
+            let filteredDrafts = drafts;
+            if (currentFilterStatus !== 'all') {
+                filteredDrafts = drafts.filter(d => d.status === currentFilterStatus);
+            }
+            
+            if (filteredDrafts.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            データがありません / No data available
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = filteredDrafts.map(draft => {
+                const partnerName = escapeHtml(draft.partnerName || '-');
+                const domain = escapeHtml(draft.domain || '-');
+                const partnerEmail = draft.partnerEmail 
+                    ? escapeHtml(draft.partnerEmail) 
+                    : '<span class="text-muted">未設定</span>';
+                const errorMessage = draft.errorMessage 
+                    ? `<br><small class="text-danger">${escapeHtml(draft.errorMessage)}</small>` 
+                    : '';
+                
+                return `
+                <tr data-draft-id="${draft._id}">
+                    <td>
+                        <input type="checkbox" class="email-checkbox form-check-input" 
+                               data-draft-id="${draft._id}"
+                               ${draft.status === 'sent' || !draft.hasData ? 'disabled' : ''}
+                               ${selectedDraftIds.has(draft._id) ? 'checked' : ''}>
+                    </td>
+                    <td>${partnerName}</td>
+                    <td>${domain}</td>
+                    <td>${partnerEmail}</td>
+                    <td>${draft.activeDays || 0} / ${draft.totalDays || 0}日</td>
+                    <td>¥${(draft.paymentAmount || 0).toLocaleString('ja-JP')}</td>
+                    <td>
+                        <span class="status-badge status-${draft.status}">
+                            ${getStatusLabel(draft.status)}
+                        </span>
+                        ${errorMessage}
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary action-btn me-1" 
+                                onclick="previewEmail('${draft._id}')">
+                            <i class="fas fa-eye"></i> プレビュー
+                        </button>
+                        ${draft.status !== 'sent' ? `
+                            <button class="btn btn-sm btn-outline-warning action-btn me-1" 
+                                    onclick="editDraft('${draft._id}')">
+                                <i class="fas fa-edit"></i> 編集
+                            </button>
+                        ` : ''}
+                        ${draft.status === 'draft' && draft.hasData && draft.partnerEmail ? `
+                            <button class="btn btn-sm btn-outline-success action-btn" 
+                                    onclick="sendEmail('${draft._id}')">
+                                <i class="fas fa-paper-plane"></i> 送信
+                            </button>
+                        ` : ''}
+                    </td>
+                </tr>
+            `;
+            }).join('');
+            
+            // Re-attach checkbox event listeners
+            document.querySelectorAll('.email-checkbox').forEach(cb => {
+                cb.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        selectedDraftIds.add(e.target.dataset.draftId);
+                    } else {
+                        selectedDraftIds.delete(e.target.dataset.draftId);
+                    }
+                    updateSendAllButton();
+                });
+            });
+            
+            document.getElementById('total-drafts').textContent = drafts.length;
+        }
+        
+        // Update status cards
+        function updateStatusCards() {
+            const counts = {
+                draft: 0,
+                sent: 0,
+                no_data: 0,
+                error: 0
+            };
+            
+            drafts.forEach(draft => {
+                if (counts.hasOwnProperty(draft.status)) {
+                    counts[draft.status]++;
+                }
+            });
+            
+            document.getElementById('count-draft').textContent = counts.draft;
+            document.getElementById('count-sent').textContent = counts.sent;
+            document.getElementById('count-no-data').textContent = counts.no_data;
+            document.getElementById('count-error').textContent = counts.error;
+        }
+        
+        // Get status label
+        function getStatusLabel(status) {
+            const labels = {
+                'draft': 'ドラフト',
+                'sent': '送信済',
+                'no_data': 'データなし',
+                'error': 'エラー'
+            };
+            return labels[status] || status;
+        }
+        
+        // Generate drafts
+        async function generateDrafts() {
+            const btn = document.getElementById('generate-drafts-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>生成中...';
+            
+            try {
+                const response = await fetch('/api/partners/emails/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ period: currentPeriod })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('success', 
+                        `ドラフト生成完了: 新規作成 ${data.summary.created}件、更新 ${data.summary.updated}件、スキップ ${data.summary.skipped}件`);
+                    await loadDrafts();
+                } else {
+                    showAlert('error', 'ドラフト生成に失敗しました');
+                }
+            } catch (error) {
+                console.error('Error generating drafts:', error);
+                showAlert('error', 'ドラフト生成中にエラーが発生しました');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-magic me-2"></i>ドラフト生成 / Generate Drafts';
+            }
+        }
+        
+        // Preview email
+        async function previewEmail(draftId) {
+            currentDraftId = draftId;
+            const draft = drafts.find(d => d._id === draftId);
+            
+            if (!draft) return;
+            
+            const modal = new bootstrap.Modal(document.getElementById('email-preview-modal'));
+            const content = document.getElementById('email-preview-content');
+            
+            // Build email preview with proper escaping
+            const partnerName = escapeHtml(draft.partnerName);
+            const periodMonth = escapeHtml(draft.periodMonth);
+            const domain = escapeHtml(draft.domain);
+            const paymentCycle = escapeHtml(draft.paymentCycle);
+            
+            content.innerHTML = `
+                <div class="border rounded p-4">
+                    <h5 class="mb-3">件名: 【${periodMonth}】お支払い金額のお知らせ - ${partnerName}様</h5>
+                    <hr>
+                    <p><strong>${partnerName}様</strong></p>
+                    <p>いつもお世話になっております。</p>
+                    <p>${periodMonth}の${paymentCycle}分のお支払い金額をお知らせいたします。</p>
+                    
+                    <div class="alert alert-light border">
+                        <p><strong>対象期間:</strong> ${escapeHtml(draft.periodStart)} 〜 ${escapeHtml(draft.periodEnd)}</p>
+                        <p><strong>ドメイン:</strong> ${domain}</p>
+                        <p><strong>月額料金:</strong> ¥${draft.monthlyAmount.toLocaleString('ja-JP')}</p>
+                        <p><strong>期間内の総日数:</strong> ${draft.totalDays}日</p>
+                        <p><strong>稼働日数:</strong> ${draft.activeDays}日</p>
+                        ${draft.inactiveDays > 0 ? `<p><strong>非稼働日数:</strong> ${draft.inactiveDays}日</p>` : ''}
+                        <p class="mb-0"><strong style="font-size: 1.2rem; color: #28a745;">お支払い金額: ¥${draft.paymentAmount.toLocaleString('ja-JP')}</strong></p>
+                    </div>
+                    
+                    <p>ご不明な点がございましたら、お気軽にお問い合わせください。</p>
+                    <p>今後ともよろしくお願いいたします。</p>
+                </div>
+            `;
+                    <p>ご不明な点がございましたら、お気軽にお問い合わせください。</p>
+                    <p>今後ともよろしくお願いいたします。</p>
+                </div>
+            `;
+            
+            // Enable/disable send button
+            const sendBtn = document.getElementById('send-from-preview-btn');
+            sendBtn.disabled = draft.status === 'sent' || !draft.hasData || !draft.partnerEmail;
+            
+            modal.show();
+        }
+        
+        // Edit draft
+        function editDraft(draftId) {
+            currentDraftId = draftId;
+            const draft = drafts.find(d => d._id === draftId);
+            
+            if (!draft) return;
+            
+            document.getElementById('edit-draft-id').value = draftId;
+            document.getElementById('edit-partner-name').value = draft.partnerName;
+            document.getElementById('edit-total-days').value = draft.totalDays;
+            document.getElementById('edit-inactive-days').value = draft.inactiveDays || 0;
+            document.getElementById('edit-notes').value = draft.notes || '';
+            
+            // Store monthly amount for calculation
+            document.getElementById('edit-inactive-days').dataset.monthlyAmount = draft.monthlyAmount;
+            document.getElementById('edit-inactive-days').dataset.totalDays = draft.totalDays;
+            
+            updateDraftPreview();
+            
+            const modal = new bootstrap.Modal(document.getElementById('edit-draft-modal'));
+            modal.show();
+        }
+        
+        // Update draft preview
+        function updateDraftPreview() {
+            const inactiveDaysInput = document.getElementById('edit-inactive-days');
+            const inactiveDays = parseInt(inactiveDaysInput.value) || 0;
+            const totalDays = parseInt(inactiveDaysInput.dataset.totalDays) || 0;
+            const monthlyAmount = parseInt(inactiveDaysInput.dataset.monthlyAmount) || 0;
+            
+            const activeDays = totalDays - inactiveDays;
+            const dailyRate = monthlyAmount / totalDays;
+            const paymentAmount = Math.round(dailyRate * activeDays);
+            
+            document.getElementById('preview-active-days').textContent = `${activeDays}日`;
+            document.getElementById('preview-payment-amount').textContent = `¥${paymentAmount.toLocaleString('ja-JP')}`;
+        }
+        
+        // Save draft
+        async function saveDraft() {
+            const draftId = document.getElementById('edit-draft-id').value;
+            const inactiveDays = parseInt(document.getElementById('edit-inactive-days').value);
+            const notes = document.getElementById('edit-notes').value;
+            
+            const btn = document.getElementById('save-draft-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>保存中...';
+            
+            try {
+                const response = await fetch(`/api/partners/emails/draft/${draftId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ inactiveDays, notes })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('success', 'ドラフトを更新しました');
+                    await loadDrafts();
+                    bootstrap.Modal.getInstance(document.getElementById('edit-draft-modal')).hide();
+                } else {
+                    showAlert('error', 'ドラフトの更新に失敗しました');
+                }
+            } catch (error) {
+                console.error('Error saving draft:', error);
+                showAlert('error', 'ドラフトの更新中にエラーが発生しました');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save me-2"></i>保存 / Save';
+            }
+        }
+        
+        // Send email
+        async function sendEmail(draftId) {
+            if (!confirm('このメールを送信してもよろしいですか？')) return;
+            
+            try {
+                const response = await fetch(`/api/partners/emails/send/${draftId}`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('success', 'メールを送信しました');
+                    await loadDrafts();
+                } else {
+                    showAlert('error', `メール送信に失敗しました: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error sending email:', error);
+                showAlert('error', 'メール送信中にエラーが発生しました');
+            }
+        }
+        
+        // Send from preview
+        async function sendFromPreview() {
+            if (currentDraftId) {
+                bootstrap.Modal.getInstance(document.getElementById('email-preview-modal')).hide();
+                await sendEmail(currentDraftId);
+            }
+        }
+        
+        // Update send all button
+        function updateSendAllButton() {
+            const btn = document.getElementById('send-all-btn');
+            btn.disabled = selectedDraftIds.size === 0;
+            btn.textContent = selectedDraftIds.size > 0 
+                ? `一括送信 (${selectedDraftIds.size}件) / Send All (${selectedDraftIds.size})`
+                : '一括送信 / Send All';
+        }
+        
+        // Send all selected drafts
+        async function sendAllDrafts() {
+            if (selectedDraftIds.size === 0) return;
+            
+            if (!confirm(`${selectedDraftIds.size}件のメールを送信してもよろしいですか？`)) return;
+            
+            const btn = document.getElementById('send-all-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>送信中...';
+            
+            try {
+                const response = await fetch('/api/partners/emails/send-batch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ draftIds: Array.from(selectedDraftIds) })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const { sent, failed, skipped } = data.results;
+                    showAlert('success', 
+                        `一括送信完了: 送信 ${sent.length}件、失敗 ${failed.length}件、スキップ ${skipped.length}件`);
+                    selectedDraftIds.clear();
+                    await loadDrafts();
+                } else {
+                    showAlert('error', '一括送信に失敗しました');
+                }
+            } catch (error) {
+                console.error('Error sending batch emails:', error);
+                showAlert('error', '一括送信中にエラーが発生しました');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>一括送信 / Send All';
+            }
+        }
+        
+        // Show alert
+        function showAlert(type, message) {
+            const alertContainer = document.getElementById('alert-container');
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            
+            const alert = document.createElement('div');
+            alert.className = `alert ${alertClass} alert-dismissible fade show`;
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            alertContainer.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+        
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }

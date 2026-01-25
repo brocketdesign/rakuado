@@ -210,4 +210,17 @@ router.get('/app/partner-recruitment', ensureAuthenticated, ensureMembership, as
   }
 });
 
+// Partner emails management route
+router.get('/app/partner-emails', ensureAuthenticated, ensureMembership, async (req, res) => {
+  try {
+    res.render('dashboard/app/partner-emails/index', {
+      user: req.user,
+      title: "RAKUBUN - パートナーメール管理"
+    });
+  } catch (error) {
+    console.error('Error rendering partner emails dashboard:', error);
+    res.status(500).send('Internal server error');
+  }
+});
+
 module.exports = router;

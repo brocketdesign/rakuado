@@ -1,62 +1,9 @@
 const cron = require('node-cron');
-
-// Helper function to get custom month period dates (21st to 20th)
-function getCustomMonthPeriod(monthsBack = 0) {
-  const now = new Date();
-  
-  if (monthsBack === 0) {
-    if (now.getDate() < 21) {
-      const startDate = new Date(now.getFullYear(), now.getMonth() - 1, 21);
-      const endDate = new Date(now.getFullYear(), now.getMonth(), 20, 23, 59, 59, 999);
-      return { startDate, endDate };
-    } else {
-      const startDate = new Date(now.getFullYear(), now.getMonth(), 21);
-      const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 20, 23, 59, 59, 999);
-      return { startDate, endDate };
-    }
-  } else {
-    let targetDate = new Date(now);
-    
-    if (now.getDate() < 21) {
-      targetDate = new Date(now.getFullYear(), now.getMonth() - monthsBack - 1, 21);
-    } else {
-      targetDate = new Date(now.getFullYear(), now.getMonth() - monthsBack, 21);
-    }
-    
-    const startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), 21);
-    const endDate = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 20, 23, 59, 59, 999);
-    
-    return { startDate, endDate };
-  }
-}
-
-// Helper function to count active days from analytics data
-async function countActiveDaysFromAnalytics(db, domain, periodStart, periodEnd) {
-  const ANALYTICS_DAILY = db.collection('analyticsDaily');
-  
-  // Get analytics data for the period
-  const analyticsData = await ANALYTICS_DAILY.find({
-    date: {
-      $gte: periodStart.toISOString().split('T')[0],
-      $lte: periodEnd.toISOString().split('T')[0]
-    }
-  }).sort({ date: 1 }).toArray();
-  
-  let activeDays = 0;
-  
-  for (const dayData of analyticsData) {
-    // Check if this domain has views or clicks for this day
-    if (dayData.sites && dayData.sites[domain]) {
-      const siteData = dayData.sites[domain];
-      // Day is active if there are views > 0 OR clicks > 0
-      if ((siteData.views && siteData.views > 0) || (siteData.clicks && siteData.clicks > 0)) {
-        activeDays++;
-      }
-    }
-  }
-  
-  return activeDays;
-}
+const { 
+  getCustomMonthPeriod, 
+  countActiveDaysFromAnalytics, 
+  calculatePartnerPayment 
+} = require('../utils/partner-payment');
 
 async function recalculatePartnerActiveDays(db) {
   const PARTNERS = db.collection('partners');
@@ -116,6 +63,101 @@ async function recalculatePartnerActiveDays(db) {
   }
 }
 
+// Generate email drafts for all partners
+async function generateEmailDrafts(db, period = 'previous') {
+  try {
+    console.log(`Starting email draft generation for ${period} period...`);
+    
+    let periodDates;
+    switch (period) {
+      case 'current':
+        periodDates = getCustomMonthPeriod(0);
+        break;
+      case 'previous':
+        periodDates = getCustomMonthPeriod(1);
+        break;
+      default:
+        throw new Error('Invalid period');
+    }
+    
+    const { startDate, endDate } = periodDates;
+    const periodStartStr = startDate.toISOString().split('T')[0];
+    const periodEndStr = endDate.toISOString().split('T')[0];
+    
+    // Get all active partners
+    const partners = await db.collection('partners').find({}).sort({ order: 1 }).toArray();
+    
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+    
+    for (const partner of partners) {
+      // Check if draft already exists for this partner and period
+      const existingDraft = await db.collection('partnerEmailDrafts').findOne({
+        partnerId: partner._id.toString(),
+        periodStart: periodStartStr,
+        periodEnd: periodEndStr
+      });
+      
+      if (existingDraft && existingDraft.status === 'sent') {
+        skipped++;
+        continue;
+      }
+      
+      // Calculate payment
+      const calculation = await calculatePartnerPayment(db, partner, startDate, endDate);
+      
+      // Check if there's data available (if activeDays > 0 or if partner was active)
+      const hasData = calculation.daysActive > 0 || calculation.status === 'active' || calculation.status === 'partial';
+      
+      const periodMonth = startDate.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' });
+      
+      const emailData = {
+        partnerId: partner._id.toString(),
+        partnerName: partner.name,
+        partnerEmail: partner.email,
+        domain: partner.domain,
+        periodStart: periodStartStr,
+        periodEnd: periodEndStr,
+        periodMonth: periodMonth,
+        paymentCycle: partner.paymentCycle || '当月',
+        monthlyAmount: partner.monthlyAmount,
+        totalDays: calculation.totalDays,
+        activeDays: calculation.daysActive,
+        inactiveDays: calculation.inactiveDays,
+        paymentAmount: calculation.amount,
+        bankInfo: partner.bankInfo || {},
+        notes: partner.notes || '',
+        status: existingDraft ? existingDraft.status : (hasData ? 'draft' : 'no_data'),
+        hasData: hasData,
+        errorMessage: hasData ? null : 'No analytics data available for this period',
+        createdAt: existingDraft ? existingDraft.createdAt : new Date(),
+        updatedAt: new Date()
+      };
+      
+      if (existingDraft) {
+        // Update existing draft
+        await db.collection('partnerEmailDrafts').updateOne(
+          { _id: existingDraft._id },
+          { $set: emailData }
+        );
+        updated++;
+      } else {
+        // Create new draft
+        await db.collection('partnerEmailDrafts').insertOne(emailData);
+        created++;
+      }
+    }
+    
+    console.log(`Email draft generation completed: created ${created}, updated ${updated}, skipped ${skipped}`);
+    return { success: true, created, updated, skipped };
+    
+  } catch (error) {
+    console.error('Error generating email drafts:', error);
+    throw error;
+  }
+}
+
 function initializePartnersCronJobs(db) {
   // Run daily at 01:00 (after analytics cron at 00:01)
   cron.schedule('0 1 * * *', async () => {
@@ -127,7 +169,19 @@ function initializePartnersCronJobs(db) {
     }
   });
   
+  // Run on the 25th of each month at 09:00 to generate email drafts for the previous period
+  cron.schedule('0 9 25 * *', async () => {
+    console.log('Running monthly email draft generation (25th of month)...');
+    try {
+      await generateEmailDrafts(db, 'previous');
+    } catch (error) {
+      console.error('Error in monthly email draft generation:', error);
+    }
+  });
+  
   console.log('Partners cron jobs initialized');
+  console.log('- Daily partner active days recalculation: 01:00');
+  console.log('- Monthly email draft generation: 25th at 09:00');
 }
 
 async function runRecalculateNow(db) {
@@ -139,4 +193,17 @@ async function runRecalculateNow(db) {
   }
 }
 
-module.exports = { initializePartnersCronJobs, runRecalculateNow };
+async function runGenerateEmailDraftsNow(db, period = 'previous') {
+  try {
+    return await generateEmailDrafts(db, period);
+  } catch (error) {
+    console.error('Error in manual email draft generation:', error);
+    throw error;
+  }
+}
+
+module.exports = { 
+  initializePartnersCronJobs, 
+  runRecalculateNow,
+  runGenerateEmailDraftsNow 
+};
