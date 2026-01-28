@@ -87,8 +87,10 @@ async function calculatePartnerPayment(db, partner, periodStart, periodEnd, cust
   const effectiveStart = startDate > periodStart ? startDate : periodStart;
   const effectiveEnd = stopDate && stopDate < periodEnd ? stopDate : periodEnd;
   
-  // Calculate total days in period
-  const totalDays = Math.ceil((periodEnd - periodStart) / (1000 * 60 * 60 * 24)) + 1;
+  // Calculate total days in period (normalize to midnight to avoid time component issues)
+  const startMidnight = new Date(periodStart.getFullYear(), periodStart.getMonth(), periodStart.getDate());
+  const endMidnight = new Date(periodEnd.getFullYear(), periodEnd.getMonth(), periodEnd.getDate());
+  const totalDays = Math.round((endMidnight - startMidnight) / (1000 * 60 * 60 * 24)) + 1;
   
   // Get actual active days from analytics data (dynamic check)
   const daysActiveFromAnalytics = await countActiveDaysFromAnalytics(db, partner.domain, effectiveStart, effectiveEnd);
