@@ -5,6 +5,14 @@ const {
   calculatePartnerPayment 
 } = require('../utils/partner-payment');
 
+// Helper function to format date as YYYY-MM-DD in local timezone
+const formatLocalDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 async function recalculatePartnerActiveDays(db) {
   const PARTNERS = db.collection('partners');
   const ANALYTICS_DAILY = db.collection('analyticsDaily');
@@ -81,8 +89,8 @@ async function generateEmailDrafts(db, period = 'previous') {
     }
     
     const { startDate, endDate } = periodDates;
-    const periodStartStr = startDate.toISOString().split('T')[0];
-    const periodEndStr = endDate.toISOString().split('T')[0];
+    const periodStartStr = formatLocalDate(startDate);
+    const periodEndStr = formatLocalDate(endDate);
     
     // Get all active partners
     const partners = await db.collection('partners').find({}).sort({ order: 1 }).toArray();

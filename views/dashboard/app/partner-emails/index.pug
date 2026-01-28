@@ -43,6 +43,9 @@ block mainContent
                             button#send-all-btn.btn.btn-primary.ms-2(disabled)
                                 i.fas.fa-paper-plane.me-2
                                 | 一括送信 / Send All
+                            button#test-email-btn.btn.btn-outline-info.ms-2
+                                i.fas.fa-flask.me-2
+                                | テスト送信 / Test Email
                             span#action-status.text-muted.small.ms-2
 
     // Email Status Overview
@@ -170,6 +173,30 @@ block mainContent
                         i.fas.fa-save.me-2
                         | 保存 / Save
 
+    // Test Email Modal
+    #test-email-modal.modal.fade(tabindex="-1")
+        .modal-dialog
+            .modal-content
+                .modal-header
+                    h5.modal-title
+                        i.fas.fa-flask.me-2
+                        | テストメール送信 / Send Test Email
+                    button.btn-close(type="button" data-bs-dismiss="modal")
+                .modal-body
+                    p.text-muted テストメールを送信して、メールの表示と送信元を確認できます。
+                    form#test-email-form
+                        .mb-3
+                            label.form-label(for="test-email-address") 送信先メールアドレス / Recipient Email
+                            input#test-email-address.form-control(type="email" placeholder="test@example.com" required)
+                        .alert.alert-info
+                            i.fas.fa-info-circle.me-2
+                            | サンプルデータを使用してテストメールを送信します。送信元の名前とメールアドレスを確認できます。
+                .modal-footer
+                    button.btn.btn-secondary(type="button" data-bs-dismiss="modal") キャンセル / Cancel
+                    button#send-test-email-btn.btn.btn-info(type="button")
+                        i.fas.fa-paper-plane.me-2
+                        | テスト送信 / Send Test
+
     style.
         .hero-section {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -285,6 +312,15 @@ block mainContent
             
             // Send all button
             document.getElementById('send-all-btn').addEventListener('click', sendAllDrafts);
+            
+            // Test email button
+            document.getElementById('test-email-btn').addEventListener('click', () => {
+                const modal = new bootstrap.Modal(document.getElementById('test-email-modal'));
+                modal.show();
+            });
+            
+            // Send test email button
+            document.getElementById('send-test-email-btn').addEventListener('click', sendTestEmail);
             
             // Filter buttons
             document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -523,7 +559,8 @@ block mainContent
                         <p class="mb-0"><strong style="font-size: 1.2rem; color: #28a745;">お支払い金額: ¥${draft.paymentAmount.toLocaleString('ja-JP')}</strong></p>
                     </div>
                     
-                    <p>ご不明な点がございましたら、お気軽にお問い合わせください。</p>
+                    <p>ご不明な点がございましたら、下記メールアドレスまでお気軽にお問い合わせください。</p>
+                    <p><strong>お問い合わせ:</strong> <a href="mailto:rakuadojapan@gmail.com">rakuadojapan@gmail.com</a></p>
                     <p>今後ともよろしくお願いいたします。</p>
                 </div>
             `;
@@ -710,4 +747,43 @@ block mainContent
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+        
+        // Send test email
+        async function sendTestEmail() {
+            const emailInput = document.getElementById('test-email-address');
+            const email = emailInput.value.trim();
+            
+            if (!email) {
+                showAlert('error', 'メールアドレスを入力してください');
+                return;
+            }
+            
+            const btn = document.getElementById('send-test-email-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>送信中...';
+            
+            try {
+                const response = await fetch('/api/partners/emails/send-test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('success', `テストメールを ${email} に送信しました。送信元: ${data.fromName} <${data.fromEmail}>`);
+                    bootstrap.Modal.getInstance(document.getElementById('test-email-modal')).hide();
+                    emailInput.value = '';
+                } else {
+                    showAlert('error', data.error || 'テストメールの送信に失敗しました');
+                }
+            } catch (error) {
+                console.error('Error sending test email:', error);
+                showAlert('error', 'テストメールの送信中にエラーが発生しました');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>テスト送信 / Send Test';
+            }
         }

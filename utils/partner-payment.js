@@ -37,11 +37,19 @@ function getCustomMonthPeriod(monthsBack = 0) {
 async function countActiveDaysFromAnalytics(db, domain, periodStart, periodEnd) {
   const ANALYTICS_DAILY = db.collection('analyticsDaily');
   
+  // Format date as YYYY-MM-DD in local timezone (avoid toISOString which uses UTC)
+  const formatLocalDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
   // Get analytics data for the period
   const analyticsData = await ANALYTICS_DAILY.find({
     date: {
-      $gte: periodStart.toISOString().split('T')[0],
-      $lte: periodEnd.toISOString().split('T')[0]
+      $gte: formatLocalDate(periodStart),
+      $lte: formatLocalDate(periodEnd)
     }
   }).sort({ date: 1 }).toArray();
   

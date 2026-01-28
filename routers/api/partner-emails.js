@@ -8,6 +8,14 @@ const {
   calculatePartnerPayment 
 } = require('../../utils/partner-payment');
 
+// Helper function to format date as YYYY-MM-DD in local timezone
+const formatLocalDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // GET all email drafts with their status
 router.get('/drafts', async (req, res) => {
   try {
@@ -30,16 +38,16 @@ router.get('/drafts', async (req, res) => {
     
     // Get all drafts for the period
     const drafts = await db.collection('partnerEmailDrafts').find({
-      periodStart: startDate.toISOString().split('T')[0],
-      periodEnd: endDate.toISOString().split('T')[0]
+      periodStart: formatLocalDate(startDate),
+      periodEnd: formatLocalDate(endDate)
     }).sort({ createdAt: -1 }).toArray();
     
     res.json({
       success: true,
       period: {
         name: period,
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0]
+        startDate: formatLocalDate(startDate),
+        endDate: formatLocalDate(endDate)
       },
       drafts
     });
@@ -87,8 +95,8 @@ router.post('/generate', async (req, res) => {
     }
     
     const { startDate, endDate } = periodDates;
-    const periodStartStr = startDate.toISOString().split('T')[0];
-    const periodEndStr = endDate.toISOString().split('T')[0];
+    const periodStartStr = formatLocalDate(startDate);
+    const periodEndStr = formatLocalDate(endDate);
     
     // Get all active partners
     const partners = await db.collection('partners').find({}).sort({ order: 1 }).toArray();
@@ -509,6 +517,62 @@ router.delete('/draft/:draftId', async (req, res) => {
   } catch (error) {
     console.error('Error deleting draft:', error);
     res.status(500).json({ success: false, error: 'Failed to delete draft' });
+  }
+});
+
+// POST send test email to verify email configuration
+router.post('/send-test', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Email address is required' 
+      });
+    }
+    
+    // Sample data for test email
+    const testData = {
+      partnerName: 'テストパートナー',
+      domain: 'test-domain.com',
+      periodStart: '2026-01-21',
+      periodEnd: '2026-02-20',
+      periodMonth: '2026年2月',
+      paymentCycle: '当月',
+      monthlyAmount: '10,000',
+      totalDays: 31,
+      activeDays: 28,
+      inactiveDays: 3,
+      paymentAmount: '9,032',
+      bankInfo: {
+        bankName: 'テスト銀行',
+        branchName: 'テスト支店',
+        accountType: '普通',
+        accountNumber: '1234567',
+        accountHolder: 'テスト タロウ'
+      },
+      notes: 'これはテストメールです。実際の支払いではありません。'
+    };
+    
+    // Get the from email from environment
+    const fromEmail = process.env.MAILTRAP_FROM_EMAIL || process.env.MAIL_TRAP_USERNAME || 'noreply@rakuado.com';
+    const fromName = process.env.PRODUCT_NAME || 'Rakuado';
+    
+    await sendEmail(email, 'partner payment notification', testData);
+    
+    res.json({
+      success: true,
+      message: 'Test email sent successfully',
+      fromEmail,
+      fromName
+    });
+  } catch (error) {
+    console.error('Error sending test email:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Failed to send test email' 
+    });
   }
 });
 

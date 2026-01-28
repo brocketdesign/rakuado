@@ -1,0 +1,471 @@
+extends ../../base
+
+block mainContent
+    // Hero Section
+    .hero-section.mb-5
+        .container
+            .row.align-items-center
+                .col-md-8
+                    h1.display-4.fw-bold.mb-3 
+                        i.fas.fa-users.me-3
+                        span パートナー一覧
+                    p.lead Partner List - パートナー情報の管理ツール
+                .col-md-4.text-end
+                    .stats-card.bg-white.text-dark.p-4.rounded-3.shadow
+                        h3.mb-1#total-partners 0
+                        small 登録パートナー数
+
+    // Alert Messages
+    #alert-container.container.mb-4
+
+    // Partners List Section
+    section.partners-content.mb-5
+        .container
+            .card.border-0.shadow-sm
+                .card-header.bg-white.border-0
+                    .d-flex.justify-content-between.align-items-center.flex-wrap.gap-2
+                        h5.fw-bold.mb-0
+                            i.fas.fa-list.me-2.text-primary
+                            | パートナー一覧 / Partner List
+                        button#add-partner-btn.btn.btn-success
+                            i.fas.fa-plus.me-2
+                            | 新規パートナー追加
+
+                .card-body.p-4
+                    .mb-4
+                        .alert.alert-secondary.border-0
+                            i.fas.fa-info-circle.me-2
+                            | パートナー情報を管理します。クリックして詳細を編集できます。
+                    
+                    .row.g-4#partners-cards
+
+    // Partner Modal
+    .modal.fade#partner-modal(tabindex="-1")
+        .modal-dialog.modal-lg
+            .modal-content
+                .modal-header.bg-primary.text-white
+                    h5.modal-title#partner-modal-title
+                        i.fas.fa-user-edit.me-2
+                        | パートナー情報
+                    button.btn-close.btn-close-white(type="button" data-bs-dismiss="modal")
+                .modal-body
+                    form#partner-form
+                        input#partner-id(type="hidden")
+                        
+                        // Basic Info Section
+                        .mb-4
+                            h6.fw-bold.text-primary.border-bottom.pb-2
+                                i.fas.fa-globe.me-2
+                                | 基本情報 / Basic Information
+                            .row.g-3
+                                .col-md-6
+                                    label.form-label.required ドメイン / Domain
+                                    input#partner-domain.form-control(type="text" required placeholder="example.com")
+                                    .form-text サイトのドメイン名
+                                .col-md-6
+                                    label.form-label.required パートナー名 / Name
+                                    input#partner-name.form-control(type="text" required placeholder="株式会社〇〇")
+                                .col-md-6
+                                    label.form-label フリガナ / Name (Katakana)
+                                    input#partner-name-katakana.form-control(type="text" placeholder="カブシキガイシャ〇〇")
+                                .col-md-6
+                                    label.form-label.required 月額料金 / Monthly Amount
+                                    .input-group
+                                        span.input-group-text ¥
+                                        input#partner-monthly-amount.form-control(type="number" required placeholder="10000")
+                        
+                        // Contract Info Section
+                        .mb-4
+                            h6.fw-bold.text-primary.border-bottom.pb-2
+                                i.fas.fa-file-contract.me-2
+                                | 契約情報 / Contract Information
+                            .row.g-3
+                                .col-md-4
+                                    label.form-label.required ステータス / Status
+                                    select#partner-status.form-select
+                                        option(value="active") 稼働中 / Active
+                                        option(value="stopped") 停止 / Stopped
+                                        option(value="pending") 保留 / Pending
+                                        option(value="inactive") 非稼働 / Inactive
+                                    .form-text パートナーのステータス
+                                .col-md-4
+                                    label.form-label.required 支払サイクル / Payment Cycle
+                                    select#partner-payment-cycle.form-select
+                                        option(value="当月") 当月払い
+                                        option(value="翌月") 翌月払い
+                                    .form-text 支払いタイミング
+                                .col-md-4
+                                    label.form-label.required 開始日 / Start Date
+                                    input#partner-start-date.form-control(type="date" required)
+                                .col-md-4
+                                    label.form-label 終了日 / Stop Date
+                                    input#partner-stop-date.form-control(type="date")
+                                    .form-text 空欄=継続中
+                        
+                        // Contact Info Section
+                        .mb-4
+                            h6.fw-bold.text-primary.border-bottom.pb-2
+                                i.fas.fa-address-book.me-2
+                                | 連絡先情報 / Contact Information
+                            .row.g-3
+                                .col-md-6
+                                    label.form-label メールアドレス / Email
+                                    input#partner-email.form-control(type="email" placeholder="contact@example.com")
+                                .col-md-6
+                                    label.form-label 電話番号 / Phone
+                                    input#partner-phone.form-control(type="tel" placeholder="03-1234-5678")
+                                .col-12
+                                    label.form-label 住所 / Address
+                                    textarea#partner-address.form-control(rows="2" placeholder="〒100-0000 東京都...")
+                        
+                        // Bank Info Section
+                        .mb-4
+                            h6.fw-bold.text-primary.border-bottom.pb-2
+                                i.fas.fa-university.me-2
+                                | 銀行情報 / Bank Information
+                            .row.g-3
+                                .col-md-4
+                                    label.form-label 銀行名 / Bank Name
+                                    input#partner-bank-name.form-control(type="text" placeholder="〇〇銀行")
+                                .col-md-4
+                                    label.form-label 支店名 / Branch Name
+                                    input#partner-bank-branch.form-control(type="text" placeholder="〇〇支店")
+                                .col-md-4
+                                    label.form-label 口座種別 / Account Type
+                                    select#partner-account-type.form-select
+                                        option(value="普通") 普通
+                                        option(value="当座") 当座
+                                .col-md-6
+                                    label.form-label 口座番号 / Account Number
+                                    input#partner-account-number.form-control(type="text" placeholder="1234567")
+                                .col-md-6
+                                    label.form-label 口座名義 / Account Holder
+                                    input#partner-account-holder.form-control(type="text" placeholder="カ）〇〇")
+                        
+                        // Notes Section
+                        .mb-3
+                            h6.fw-bold.text-primary.border-bottom.pb-2
+                                i.fas.fa-sticky-note.me-2
+                                | メモ / Notes
+                            textarea#partner-notes.form-control(rows="3" placeholder="備考があればここに記入...")
+                
+                .modal-footer
+                    button#delete-partner-btn.btn.btn-danger.me-auto(type="button" style="display: none;")
+                        i.fas.fa-trash.me-2
+                        | 削除
+                    button.btn.btn-secondary(type="button" data-bs-dismiss="modal")
+                        i.fas.fa-times.me-2
+                        | キャンセル
+                    button#save-partner-btn.btn.btn-primary(type="submit" form="partner-form")
+                        i.fas.fa-save.me-2
+                        | 保存
+
+    // Confirm Delete Modal
+    .modal.fade#confirm-delete-modal(tabindex="-1")
+        .modal-dialog.modal-sm
+            .modal-content
+                .modal-header.bg-danger.text-white
+                    h5.modal-title
+                        i.fas.fa-exclamation-triangle.me-2
+                        | 削除確認
+                    button.btn-close.btn-close-white(type="button" data-bs-dismiss="modal")
+                .modal-body.text-center
+                    p このパートナーを削除しますか？
+                    p.text-muted.small この操作は取り消せません。
+                .modal-footer.justify-content-center
+                    button.btn.btn-secondary(type="button" data-bs-dismiss="modal") キャンセル
+                    button#confirm-delete-btn.btn.btn-danger 削除する
+
+    style.
+        .partner-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border: 1px solid #e9ecef;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .partner-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+        .partner-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        .partner-card.stopped::before {
+            background: linear-gradient(90deg, #dc3545, #c82333);
+        }
+        .status-badge {
+            padding: 0.35rem 0.65rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-active { background: #d4edda; color: #155724; }
+        .status-partial { background: #fff3cd; color: #856404; }
+        .status-stopped { background: #f8d7da; color: #721c24; }
+        .status-pending { background: #cfe2ff; color: #084298; }
+        .status-inactive { background: #e2e3e5; color: #383d41; }
+        .status-not_started { background: #e2e3e5; color: #383d41; }
+        .required::after {
+            content: ' *';
+            color: #dc3545;
+        }
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 3rem 0;
+            color: white;
+            margin: -1rem -1rem 0 -1rem;
+        }
+
+    script.
+        let partnersData = [];
+        let partnerModal, confirmDeleteModal;
+        let partnerToDelete = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            partnerModal = new bootstrap.Modal(document.getElementById('partner-modal'));
+            confirmDeleteModal = new bootstrap.Modal(document.getElementById('confirm-delete-modal'));
+            
+            loadPartners();
+            
+            // Add partner button
+            document.getElementById('add-partner-btn').addEventListener('click', showAddPartnerModal);
+            
+            // Partner form submit
+            document.getElementById('partner-form').addEventListener('submit', savePartner);
+            
+            // Delete button
+            document.getElementById('delete-partner-btn').addEventListener('click', () => {
+                const partnerId = document.getElementById('partner-id').value;
+                if (partnerId) {
+                    partnerToDelete = partnerId;
+                    partnerModal.hide();
+                    confirmDeleteModal.show();
+                }
+            });
+            
+            // Confirm delete
+            document.getElementById('confirm-delete-btn').addEventListener('click', deletePartner);
+        });
+
+        function showAlert(message, type = 'success') {
+            const container = document.getElementById('alert-container');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-dismissible fade show`;
+            alert.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            container.appendChild(alert);
+            setTimeout(() => alert.remove(), 5000);
+        }
+
+        async function loadPartners() {
+            try {
+                const response = await fetch('/api/partners');
+                const data = await response.json();
+                
+                if (!data.success) throw new Error(data.error);
+                
+                partnersData = data.partners;
+                
+                // Update total partners count
+                document.getElementById('total-partners').textContent = data.partners.length;
+                
+                const container = document.getElementById('partners-cards');
+                container.innerHTML = data.partners.map(p => `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="partner-card ${(p.status || (p.stopDate ? 'stopped' : 'active')) === 'stopped' ? 'stopped' : ''}" onclick="editPartner('${p._id}')">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <h5 class="mb-1">${p.name}</h5>
+                                    <small class="text-muted">${p.nameKatakana || ''}</small>
+                                </div>
+                                <span class="status-badge ${getStatusBadgeClass(p.status || (p.stopDate ? 'stopped' : 'active'))}">
+                                    ${getStatusLabel(p.status || (p.stopDate ? 'stopped' : 'active'))}
+                                </span>
+                            </div>
+                            <p class="mb-2">
+                                <i class="fas fa-globe text-primary me-2"></i>
+                                <a href="https://${p.domain}" target="_blank" class="text-decoration-none" onclick="event.stopPropagation()">
+                                    ${p.domain}
+                                </a>
+                            </p>
+                            <p class="mb-2">
+                                <i class="fas fa-yen-sign text-success me-2"></i>
+                                ¥${p.monthlyAmount.toLocaleString()} / 月
+                            </p>
+                            <p class="mb-2">
+                                <i class="fas fa-calendar text-info me-2"></i>
+                                ${formatDate(p.startDate)} ~
+                                ${p.stopDate ? formatDate(p.stopDate) : '継続中'}
+                            </p>
+                            <p class="mb-0 small text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                ${p.paymentCycle}払い
+                            </p>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Error loading partners:', error);
+                showAlert('パートナー情報の読み込みに失敗しました', 'danger');
+            }
+        }
+
+        function showAddPartnerModal() {
+            document.getElementById('partner-modal-title').innerHTML = 
+                '<i class="fas fa-user-plus me-2"></i>新規パートナー追加';
+            document.getElementById('partner-form').reset();
+            document.getElementById('partner-id').value = '';
+            document.getElementById('delete-partner-btn').style.display = 'none';
+            partnerModal.show();
+        }
+
+        function editPartner(partnerId) {
+            const partner = partnersData.find(p => p._id === partnerId);
+            if (!partner) return;
+            
+            document.getElementById('partner-modal-title').innerHTML = 
+                '<i class="fas fa-user-edit me-2"></i>パートナー情報編集';
+            document.getElementById('partner-id').value = partner._id;
+            document.getElementById('partner-domain').value = partner.domain || '';
+            document.getElementById('partner-name').value = partner.name || '';
+            document.getElementById('partner-name-katakana').value = partner.nameKatakana || '';
+            document.getElementById('partner-monthly-amount').value = partner.monthlyAmount || '';
+            document.getElementById('partner-status').value = partner.status || (partner.stopDate ? 'stopped' : 'active');
+            document.getElementById('partner-payment-cycle').value = partner.paymentCycle || '当月';
+            document.getElementById('partner-start-date').value = formatDateInput(partner.startDate);
+            document.getElementById('partner-stop-date').value = partner.stopDate ? formatDateInput(partner.stopDate) : '';
+            document.getElementById('partner-email').value = partner.email || '';
+            document.getElementById('partner-phone').value = partner.phone || '';
+            document.getElementById('partner-address').value = partner.address || '';
+            document.getElementById('partner-bank-name').value = partner.bankInfo?.bankName || '';
+            document.getElementById('partner-bank-branch').value = partner.bankInfo?.branchName || '';
+            document.getElementById('partner-account-type').value = partner.bankInfo?.accountType || '普通';
+            document.getElementById('partner-account-number').value = partner.bankInfo?.accountNumber || '';
+            document.getElementById('partner-account-holder').value = partner.bankInfo?.accountHolder || '';
+            document.getElementById('partner-notes').value = partner.notes || '';
+            
+            document.getElementById('delete-partner-btn').style.display = 'block';
+            partnerModal.show();
+        }
+
+        async function savePartner(e) {
+            e.preventDefault();
+            
+            const partnerId = document.getElementById('partner-id').value;
+            const formData = {
+                domain: document.getElementById('partner-domain').value,
+                name: document.getElementById('partner-name').value,
+                nameKatakana: document.getElementById('partner-name-katakana').value,
+                monthlyAmount: document.getElementById('partner-monthly-amount').value,
+                paymentCycle: document.getElementById('partner-payment-cycle').value,
+                startDate: document.getElementById('partner-start-date').value,
+                stopDate: document.getElementById('partner-stop-date').value || null,
+                status: document.getElementById('partner-status').value,
+                email: document.getElementById('partner-email').value,
+                phone: document.getElementById('partner-phone').value,
+                address: document.getElementById('partner-address').value,
+                bankName: document.getElementById('partner-bank-name').value,
+                bankBranch: document.getElementById('partner-bank-branch').value,
+                accountType: document.getElementById('partner-account-type').value,
+                accountNumber: document.getElementById('partner-account-number').value,
+                accountHolder: document.getElementById('partner-account-holder').value,
+                notes: document.getElementById('partner-notes').value
+            };
+            
+            try {
+                const url = partnerId ? `/api/partners/${partnerId}` : '/api/partners';
+                const method = partnerId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) throw new Error(data.error);
+                
+                partnerModal.hide();
+                showAlert(partnerId ? 'パートナー情報を更新しました' : '新規パートナーを追加しました', 'success');
+                loadPartners();
+                
+            } catch (error) {
+                console.error('Error saving partner:', error);
+                showAlert('保存に失敗しました: ' + error.message, 'danger');
+            }
+        }
+
+        async function deletePartner() {
+            if (!partnerToDelete) return;
+            
+            try {
+                const response = await fetch(`/api/partners/${partnerToDelete}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) throw new Error(data.error);
+                
+                confirmDeleteModal.hide();
+                showAlert('パートナーを削除しました', 'success');
+                partnerToDelete = null;
+                loadPartners();
+                
+            } catch (error) {
+                console.error('Error deleting partner:', error);
+                showAlert('削除に失敗しました: ' + error.message, 'danger');
+            }
+        }
+
+        function getStatusLabel(status) {
+            const labels = {
+                'active': '稼働中',
+                'partial': '日割り',
+                'stopped': '停止',
+                'pending': '保留',
+                'inactive': '非稼働',
+                'not_started': '未開始'
+            };
+            return labels[status] || status;
+        }
+        
+        function getStatusBadgeClass(status) {
+            const classes = {
+                'active': 'status-active',
+                'partial': 'status-partial',
+                'stopped': 'status-stopped',
+                'pending': 'status-pending',
+                'inactive': 'status-inactive',
+                'not_started': 'status-not_started'
+            };
+            return classes[status] || 'status-inactive';
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('ja-JP');
+        }
+
+        function formatDateInput(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toISOString().split('T')[0];
+        }

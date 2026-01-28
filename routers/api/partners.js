@@ -2,6 +2,14 @@ const express = require('express');
 const router = express.Router();
 const { ObjectId } = require('mongodb');
 
+// Helper function to format date as YYYY-MM-DD in local timezone
+const formatLocalDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // Helper function to get custom month period dates (21st to 20th)
 function getCustomMonthPeriod(monthsBack = 0) {
   const now = new Date();
@@ -37,11 +45,19 @@ async function countActiveDaysFromAnalytics(domain, periodStart, periodEnd) {
   const db = global.db;
   const ANALYTICS_DAILY = db.collection('analyticsDaily');
   
+  // Format date as YYYY-MM-DD in local timezone (avoid toISOString which uses UTC)
+  const formatLocalDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
   // Get analytics data for the period
   const analyticsData = await ANALYTICS_DAILY.find({
     date: {
-      $gte: periodStart.toISOString().split('T')[0],
-      $lte: periodEnd.toISOString().split('T')[0]
+      $gte: formatLocalDate(periodStart),
+      $lte: formatLocalDate(periodEnd)
     }
   }).sort({ date: 1 }).toArray();
   
@@ -334,6 +350,15 @@ router.get('/payments/calculate', async (req, res) => {
     const { startDate, endDate } = periodDates;
     const partners = await db.collection('partners').find({}).sort({ order: 1 }).toArray();
     
+    // Get payment confirmations for this period
+    const periodKey = `${formatLocalDate(startDate)}_${formatLocalDate(endDate)}`;
+    const confirmationCollection = db.collection('partnerPaymentConfirmations');
+    const confirmations = await confirmationCollection.find({ periodKey }).toArray();
+    const confirmationMap = {};
+    confirmations.forEach(c => {
+      confirmationMap[c.partnerId.toString()] = c.confirmed;
+    });
+    
     const payments = [];
     for (const partner of partners) {
       const calculation = await calculatePartnerPayment(partner, startDate, endDate);
@@ -345,7 +370,8 @@ router.get('/payments/calculate', async (req, res) => {
         monthlyAmount: partner.monthlyAmount,
         paymentCycle: partner.paymentCycle,
         ...calculation,
-        bankInfo: partner.bankInfo
+        bankInfo: partner.bankInfo,
+        paymentConfirmed: confirmationMap[partner._id.toString()] || false
       });
     }
     
@@ -355,8 +381,8 @@ router.get('/payments/calculate', async (req, res) => {
       success: true,
       period: {
         name: period,
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0]
+        startDate: formatLocalDate(startDate),
+        endDate: formatLocalDate(endDate)
       },
       payments,
       totalPayment
@@ -397,8 +423,8 @@ router.get('/payments/history', async (req, res) => {
       
       periods.push({
         periodName,
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0],
+        startDate: formatLocalDate(startDate),
+        endDate: formatLocalDate(endDate),
         payments,
         total
       });
@@ -446,8 +472,8 @@ router.get('/public/summary', async (req, res) => {
         domain: partner.domain,
         name: partner.name,
         period: {
-          start: startDate.toISOString().split('T')[0],
-          end: endDate.toISOString().split('T')[0]
+          start: formatLocalDate(startDate),
+          end: formatLocalDate(endDate)
         },
         monthlyPrice: partner.monthlyAmount,
         expectedPayment: calculation.amount,
@@ -460,8 +486,8 @@ router.get('/public/summary', async (req, res) => {
     res.json({
       period: period,
       periodDates: {
-        start: startDate.toISOString().split('T')[0],
-        end: endDate.toISOString().split('T')[0]
+        start: formatLocalDate(startDate),
+        end: formatLocalDate(endDate)
       },
       partners: summary,
       totalExpectedPayment: summary.reduce((sum, p) => sum + p.expectedPayment, 0)
@@ -510,14 +536,81 @@ router.post('/payments/recalculate', async (req, res) => {
       message: 'Active days recalculated successfully',
       period: {
         name: period,
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0]
+        startDate: formatLocalDate(startDate),
+        endDate: formatLocalDate(endDate)
       },
       results
     });
   } catch (error) {
     console.error('Error recalculating payments:', error);
     res.status(500).json({ success: false, error: 'Failed to recalculate payments' });
+  }
+});
+
+// POST endpoint to confirm/unconfirm a payment for a partner in a period
+router.post('/payments/confirm', async (req, res) => {
+  try {
+    const db = global.db;
+    const { partnerId, periodKey, confirmed } = req.body;
+    
+    if (!partnerId || !periodKey) {
+      return res.status(400).json({ success: false, error: 'Missing required fields' });
+    }
+    
+    const confirmationCollection = db.collection('partnerPaymentConfirmations');
+    
+    if (confirmed) {
+      // Upsert the confirmation record
+      await confirmationCollection.updateOne(
+        { partnerId: new ObjectId(partnerId), periodKey },
+        { 
+          $set: { 
+            partnerId: new ObjectId(partnerId),
+            periodKey,
+            confirmed: true,
+            confirmedAt: new Date()
+          }
+        },
+        { upsert: true }
+      );
+    } else {
+      // Remove the confirmation record
+      await confirmationCollection.deleteOne({
+        partnerId: new ObjectId(partnerId),
+        periodKey
+      });
+    }
+    
+    res.json({ success: true, confirmed });
+  } catch (error) {
+    console.error('Error confirming payment:', error);
+    res.status(500).json({ success: false, error: 'Failed to confirm payment' });
+  }
+});
+
+// GET endpoint to get payment confirmations for a period
+router.get('/payments/confirmations', async (req, res) => {
+  try {
+    const db = global.db;
+    const { periodKey } = req.query;
+    
+    if (!periodKey) {
+      return res.status(400).json({ success: false, error: 'Missing periodKey' });
+    }
+    
+    const confirmationCollection = db.collection('partnerPaymentConfirmations');
+    const confirmations = await confirmationCollection.find({ periodKey }).toArray();
+    
+    // Return a map of partnerId -> confirmed status
+    const confirmationMap = {};
+    confirmations.forEach(c => {
+      confirmationMap[c.partnerId.toString()] = c.confirmed;
+    });
+    
+    res.json({ success: true, confirmations: confirmationMap });
+  } catch (error) {
+    console.error('Error fetching payment confirmations:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch payment confirmations' });
   }
 });
 
