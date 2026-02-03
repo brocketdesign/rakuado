@@ -77,6 +77,11 @@ router.get('/partner-recruitment', async (req, res) => {
   res.render('partner-recruitment', { user: req.user, sent, error: null });
 });
 
+// Partner recruitment success page
+router.get('/partner-recruitment/success', async (req, res) => {
+  res.render('partner-recruitment', { user: req.user, sent: true, error: null });
+});
+
 // Handle partner recruitment form submission
 router.post('/partner-recruitment', async (req, res) => {
   try {
@@ -161,7 +166,7 @@ router.post('/partner-recruitment', async (req, res) => {
     }
 
     // Redirect to success page
-    res.redirect('/partner-recruitment?sent=true');
+    res.redirect('/partner-recruitment/success');
   } catch (error) {
     console.error('Error processing partner recruitment:', error);
     res.render('partner-recruitment', { 
