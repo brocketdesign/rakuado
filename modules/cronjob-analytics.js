@@ -1,5 +1,11 @@
 const cron = require('node-cron');
 
+// Helper to filter refery array to last 24 hours
+const filterRecentRefery = (refery) => {
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  return (refery || []).filter(r => r.timestamp && r.timestamp >= cutoff);
+};
+
 function initializeAnalyticsCronJobs(db) {
   const POPUPS = db.collection('referalPopups');
   const ANALYTICS_DAILY = db.collection('analyticsDaily');
@@ -51,7 +57,7 @@ async function backupCurrentAnalytics(POPUPS, ANALYTICS_SNAPSHOTS) {
     // refery contains ~24h rolling data which represents today's activity
     const todaySiteData = {};
     for (const popup of popups) {
-      const refery = popup.refery || [];
+      const refery = filterRecentRefery(popup.refery);
       for (const ref of refery) {
         const domain = ref.domain || 'unknown';
         if (!todaySiteData[domain]) {
@@ -129,7 +135,7 @@ async function aggregateDailyAnalytics(POPUPS, ANALYTICS_DAILY, ANALYTICS_WEEKLY
     // For per-site data, refery contains ~24h rolling data (today's activity)
     const todaySiteActivity = {};
     for (const popup of popups) {
-      const refery = popup.refery || [];
+      const refery = filterRecentRefery(popup.refery);
       for (const ref of refery) {
         const domain = ref.domain || 'unknown';
         if (!todaySiteActivity[domain]) {

@@ -2,6 +2,12 @@ const express = require('express');
 const router = express.Router();
 const db = global.db;
 
+// Helper to filter refery array to last 24 hours
+const filterRecentRefery = (refery) => {
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  return (refery || []).filter(r => r.timestamp && r.timestamp >= cutoff);
+};
+
 // Helper function to get custom month period dates (21st to 20th)
 function getCustomMonthPeriod(monthsBack = 0) {
   const now = new Date();
@@ -287,20 +293,20 @@ router.post('/sync-today', async (req, res) => {
     let totalClicks = 0;
     const siteData = {};
 
-    // Process current popup data
+    // Process current popup data (last 24h only)
     for (const popup of popups) {
-      totalViews += popup.views || 0;
-      totalClicks += popup.clicks || 0;
-
-      // Process refery data
-      const refery = popup.refery || [];
+      const refery = filterRecentRefery(popup.refery);
       for (const ref of refery) {
         const domain = ref.domain || 'unknown';
         if (!siteData[domain]) {
           siteData[domain] = { views: 0, clicks: 0 };
         }
-        siteData[domain].views += ref.view || 0;
-        siteData[domain].clicks += ref.click || 0;
+        const views = ref.view || 0;
+        const clicks = ref.click || 0;
+        siteData[domain].views += views;
+        siteData[domain].clicks += clicks;
+        totalViews += views;
+        totalClicks += clicks;
       }
     }
 
