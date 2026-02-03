@@ -37,7 +37,8 @@ router.get('/setting', (req, res) => {
   
   res.render('user/setting', {
     user: req.user,
-    defaultMailSettings: defaultMailSettings
+    defaultMailSettings: defaultMailSettings,
+    isPublic: false
   }); // Render the login template
 });
 

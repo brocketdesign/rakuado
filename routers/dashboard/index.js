@@ -15,7 +15,7 @@ const POPUPS = global.db.collection('referalPopups');
 // Route for handling '/dashboard/'
 router.get('/', ensureAuthenticated, ensureMembership, async (req, res) => {
   try {
-    res.render('dashboard/top',{user:req.user});
+    res.render('dashboard/top',{user:req.user, isPublic: false});
     //res.redirect('/dashboard/app/affiliate/');
   } catch (error) {
     res.status(500).send('Server Error');
@@ -23,7 +23,7 @@ router.get('/', ensureAuthenticated, ensureMembership, async (req, res) => {
 }); 
 // Route to render the A/B test creation page
 router.get('/app/create-ab-test', (req, res) => {
-  res.render('dashboard/app/abtest/create-ab-test',{user:req.user}); // Render the PUG template
+  res.render('dashboard/app/abtest/create-ab-test',{user:req.user, isPublic: false}); // Render the PUG template
 });
 router.get('/app/ab-test-results', async (req, res) => {
   const { affiliateId } = req.query; // Optional query parameter
@@ -39,7 +39,7 @@ router.get('/app/ab-test-results', async (req, res) => {
       const response = await axios.get(apiUrl);
       const results = response.data;
 
-      res.render('dashboard/app/abtest/list', { user:req.user, results, affiliateId });
+      res.render('dashboard/app/abtest/list', { user:req.user, results, affiliateId, isPublic: false });
   } catch (error) {
       console.error('Failed to fetch A/B test results:', error);
       res.status(500).send('Failed to fetch A/B test results');
@@ -48,28 +48,28 @@ router.get('/app/ab-test-results', async (req, res) => {
 
 //Route for handling '/affiliate/'
 router.get('/app/affiliate/', ensureAuthenticated,ensureMembership, async (req, res) => {  
-  res.render('dashboard/app/affiliate/list',{user:req.user,title:"RAKUBUN - Dashboard"});
+  res.render('dashboard/app/affiliate/list',{user:req.user,title:"RAKUBUN - Dashboard", isPublic: false});
 });
 router.get('/app/affiliate/status', ensureAuthenticated,ensureMembership, async (req, res) => {  
-  res.render('dashboard/app/affiliate/status',{user:req.user,title:"RAKUBUN - Dashboard"});
+  res.render('dashboard/app/affiliate/status',{user:req.user,title:"RAKUBUN - Dashboard", isPublic: false});
 });
 router.get('/app/affiliate/graph/:affiliateId', ensureAuthenticated,ensureMembership, async (req, res) => {  
   const affiliateId = req.params.affiliateId
-  res.render('dashboard/app/affiliate/graph',{user:req.user,affiliateId, title:"RAKUBUN - Dashboard"});
+  res.render('dashboard/app/affiliate/graph',{user:req.user,affiliateId, title:"RAKUBUN - Dashboard", isPublic: false});
 });
 // Route for handling '/generator/'
 router.get('/app/generator/:appname', ensureAuthenticated,ensureMembership, async (req, res) => {  
   const appname = req.params.appname
-  res.render('dashboard/app/generator/'+appname,{user:req.user,title:"RAKUBUN - Dashboard"});
+  res.render('dashboard/app/generator/'+appname,{user:req.user,title:"RAKUBUN - Dashboard", isPublic: false});
 });
 // Route for handling '/rss/'
 router.get('/app/rss', ensureAuthenticated,ensureMembership, async (req, res) => {  
-  res.render('dashboard/app/rss/index',{user:req.user,title:"RAKUBUN - Dashboard"});
+  res.render('dashboard/app/rss/index',{user:req.user,title:"RAKUBUN - Dashboard", isPublic: false});
   
 });
 // Route for handling '/feed/'
 router.get('/app/feed', ensureAuthenticated,ensureMembership, async (req, res) => {  
-  res.render('dashboard/app/rss/feed',{user:req.user,title:"RAKUBUN - Dashboard"});
+  res.render('dashboard/app/rss/feed',{user:req.user,title:"RAKUBUN - Dashboard", isPublic: false});
 });
 // Assuming 'ensureAuthenticated' and 'ensureMembership' middleware functions are correctly setting up 'req.user'
 
@@ -102,7 +102,8 @@ router.get('/app/autoblog', ensureAuthenticated, ensureMembership, async (req, r
       postData,
       botId,
       blogId,
-      title: "RAKUBUN - Dashboard"
+      title: "RAKUBUN - Dashboard",
+      isPublic: false
     });
   } catch (error) {
     console.log(error);
@@ -125,7 +126,8 @@ router.get('/app/autoblog/bot/', async (req, res) => {
       user: req.user,
       blogId, 
       botId,
-      title: "RAKUBUN - Dashboard"
+      title: "RAKUBUN - Dashboard",
+      isPublic: false
     });
   } catch (error) {
     console.log(error);
@@ -140,7 +142,8 @@ router.get('/app/autoblog/blog-info/:blogId?', async (req, res) => {
     res.render('dashboard/app/autoblog/blog-info', {
       user: req.user,
       blogId, // Pass the specific blog info or null to the template
-      title: "RAKUBUN - Dashboard"
+      title: "RAKUBUN - Dashboard",
+      isPublic: false
     });
   } catch (error) {
     console.log(error);
@@ -168,7 +171,7 @@ router.get('/app/referal', ensureAuthenticated, ensureMembership, async (req, re
   const popupData = !isNaN(q)
     ? await POPUPS.findOne({ popup: q })
     : { popup: '', imageUrl: '', targetUrl: '' };
-  res.render('dashboard/app/referal/index', { user: req.user, popups, popupData });
+  res.render('dashboard/app/referal/index', { user: req.user, popups, popupData, isPublic: false });
 });
 
 // Analytics route
@@ -176,7 +179,8 @@ router.get('/app/analytics', ensureAuthenticated, ensureMembership, async (req, 
   try {
     res.render('dashboard/app/analytics/index', {
       user: req.user,
-      title: "RAKUBUN - Analytics Dashboard"
+      title: "RAKUBUN - Analytics Dashboard",
+      isPublic: false
     });
   } catch (error) {
     console.error('Error rendering analytics dashboard:', error);
@@ -189,7 +193,8 @@ router.get('/app/partners', ensureAuthenticated, ensureMembership, async (req, r
   try {
     res.render('dashboard/app/partners/index', {
       user: req.user,
-      title: "RAKUBUN - パートナー支払い管理"
+      title: "RAKUBUN - パートナー支払い管理",
+      isPublic: false
     });
   } catch (error) {
     console.error('Error rendering partners dashboard:', error);
@@ -202,7 +207,8 @@ router.get('/app/partner-list', ensureAuthenticated, ensureMembership, async (re
   try {
     res.render('dashboard/app/partner-list/index', {
       user: req.user,
-      title: "RAKUBUN - パートナー一覧"
+      title: "RAKUBUN - パートナー一覧",
+      isPublic: false
     });
   } catch (error) {
     console.error('Error rendering partner list dashboard:', error);
@@ -215,7 +221,8 @@ router.get('/app/partner-recruitment', ensureAuthenticated, ensureMembership, as
   try {
     res.render('dashboard/app/partner-recruitment/index', {
       user: req.user,
-      title: "RAKUBUN - パートナー募集管理"
+      title: "RAKUBUN - パートナー募集管理",
+      isPublic: false
     });
   } catch (error) {
     console.error('Error rendering partner recruitment dashboard:', error);
@@ -228,7 +235,8 @@ router.get('/app/partner-emails', ensureAuthenticated, ensureMembership, async (
   try {
     res.render('dashboard/app/partner-emails/index', {
       user: req.user,
-      title: "RAKUBUN - パートナーメール管理"
+      title: "RAKUBUN - パートナーメール管理",
+      isPublic: false
     });
   } catch (error) {
     console.error('Error rendering partner emails dashboard:', error);

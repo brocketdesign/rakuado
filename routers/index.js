@@ -16,17 +16,17 @@ router.get('/',async(req, res, next) => {
   req.session.mode = '1';
   const faq = require('../services/faq')
 
-  res.render('index',{faq}); // Render the top page template
+  res.render('index',{faq, isPublic: true}); // Render the top page template
 });
 
 // This route renders the contact form
 router.get('/contact', async (req, res, next) => {
-  res.render('contact', { user: req.user, sent: false });
+  res.render('contact', { user: req.user, sent: false, isPublic: true });
 });
 
 // This route renders the contact form with a success message after the emails are sent
 router.get('/contact-success', async (req, res, next) => {
-  res.render('contact', { user: req.user, sent: true });
+  res.render('contact', { user: req.user, sent: true, isPublic: true });
 });
 
 // This route handles the form submission
@@ -68,18 +68,18 @@ router.get('/about-us', (req, res) => {
   console.log('GET request received for /about-us');
   const user = req.user 
   // Render the 'about-us' template
-  res.render('about-us',{user});
+  res.render('about-us',{user, isPublic: true});
 });
 
 // Partner recruitment landing page
 router.get('/partner-recruitment', async (req, res) => {
   const sent = req.query.sent === 'true';
-  res.render('partner-recruitment', { user: req.user, sent, error: null });
+  res.render('partner-recruitment', { user: req.user, sent, error: null, isPublic: true });
 });
 
 // Partner recruitment success page
 router.get('/partner-recruitment/success', async (req, res) => {
-  res.render('partner-recruitment', { user: req.user, sent: true, error: null });
+  res.render('partner-recruitment', { user: req.user, sent: true, error: null, isPublic: true });
 });
 
 // Handle partner recruitment form submission
@@ -92,7 +92,8 @@ router.post('/partner-recruitment', async (req, res) => {
       return res.render('partner-recruitment', { 
         user: req.user, 
         sent: false, 
-        error: 'メールアドレスとブログURLは必須項目です。' 
+        error: 'メールアドレスとブログURLは必須項目です。',
+        isPublic: true
       });
     }
 
@@ -172,7 +173,8 @@ router.post('/partner-recruitment', async (req, res) => {
     res.render('partner-recruitment', { 
       user: req.user, 
       sent: false, 
-      error: '送信に失敗しました。もう一度お試しください。' 
+      error: '送信に失敗しました。もう一度お試しください。',
+      isPublic: true
     });
   }
 });
