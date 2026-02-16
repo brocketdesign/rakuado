@@ -29,23 +29,17 @@ function initializeAnalyticsCronJobs(db) {
 }
 
 // Backup current analytics data every hour to prevent data loss
-// NOTE: popup.refery contains only ~24h rolling data, so we use popup-level 
-// cumulative counters (views, clicks) for totals, and treat refery as today's activity
+// Stores the current cumulative state from popup counters for accurate daily delta calculations
 async function backupCurrentAnalytics(POPUPS, ANALYTICS_SNAPSHOTS) {
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
   
   try {
-    // Get yesterday's cumulative snapshot as the baseline
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
-    const prevSnapshot = await ANALYTICS_SNAPSHOTS.findOne({ date: yesterdayStr }) || { total: { views: 0, clicks: 0 }, sites: {} };
-    
     // Get current popup data
     const popups = await POPUPS.find({}).toArray();
     
-    // Use popup-level cumulative counters for accurate totals
+    // Use popup-level cumulative counters for totals
+    // These counters increment permanently and never reset
     let totalViews = 0;
     let totalClicks = 0;
     for (const popup of popups) {
@@ -53,8 +47,11 @@ async function backupCurrentAnalytics(POPUPS, ANALYTICS_SNAPSHOTS) {
       totalClicks += popup.clicks || 0;
     }
     
-    // For per-site data, we need to build cumulative from previous snapshot + today's refery
-    // refery contains ~24h rolling data which represents today's activity
+    // IMPORTANT: For per-site data, we do NOT accumulate in the hourly backup.
+    // The refery array contains a rolling 24h window of activity.
+    // If we accumulate this every hour, we get massive over-counting.
+    // Instead, we capture the CURRENT 24h activity as "today's snapshot".
+    // The daily aggregation will calculate the delta from this.
     const todaySiteData = {};
     for (const popup of popups) {
       const refery = filterRecentRefery(popup.refery);
@@ -68,10 +65,13 @@ async function backupCurrentAnalytics(POPUPS, ANALYTICS_SNAPSHOTS) {
       }
     }
     
-    // Build cumulative site data: previous cumulative + today's activity
-    // But we need to avoid double-counting if snapshot was already updated today
-    const existingTodaySnapshot = await ANALYTICS_SNAPSHOTS.findOne({ date: todayStr });
+    // Get yesterday's snapshot to calculate proper cumulative per-site data
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const prevSnapshot = await ANALYTICS_SNAPSHOTS.findOne({ date: yesterdayStr }) || { sites: {} };
     
+    // Calculate cumulative per-site: yesterday's cumulative + today's activity
     const cumulativeSites = {};
     const allDomains = new Set([
       ...Object.keys(prevSnapshot.sites || {}),
@@ -163,33 +163,50 @@ async function aggregateDailyAnalytics(POPUPS, ANALYTICS_DAILY, ANALYTICS_WEEKLY
       };
     }
 
-    // Daily delta = today's activity from refery (which is already ~24h data)
-    // This is the correct approach since refery represents today's incremental activity
+    // IMPORTANT: Daily delta should be calculated as the DIFFERENCE between snapshots
+    // The hourly backup creates cumulative snapshots by adding daily activity.
+    // So daily activity = today's cumulative snapshot - yesterday's cumulative snapshot
+    // This is more accurate than using raw refery data which may span 24h across day boundaries
+    
+    // First, get or build today's cumulative snapshot
+    const existingTodaySnapshot = await ANALYTICS_SNAPSHOTS.findOne({ date: todayStr });
+    const todaySnapshot = existingTodaySnapshot || {
+      date: todayStr,
+      total: { views: totalViews, clicks: totalClicks },
+      sites: cumulativeSites
+    };
+    
+    // Calculate daily delta by subtracting yesterday's cumulative from today's cumulative
+    const dailyTotalViews = Math.max(0, (todaySnapshot.total.views || 0) - (prevSnapshot.total.views || 0));
+    const dailyTotalClicks = Math.max(0, (todaySnapshot.total.clicks || 0) - (prevSnapshot.total.clicks || 0));
+    
+    // Calculate per-site daily deltas
     const dailySites = {};
-    for (const domain of Object.keys(todaySiteActivity)) {
-      const activity = todaySiteActivity[domain];
-      if ((activity.views || 0) > 0 || (activity.clicks || 0) > 0) {
-        dailySites[domain] = {
-          views: activity.views || 0,
-          clicks: activity.clicks || 0
-        };
+    const allCumulativeDomains = new Set([
+      ...Object.keys(prevSnapshot.sites || {}),
+      ...Object.keys(todaySnapshot.sites || {})
+    ]);
+    
+    for (const domain of allCumulativeDomains) {
+      const todaySite = (todaySnapshot.sites && todaySnapshot.sites[domain]) || { views: 0, clicks: 0 };
+      const prevSite = (prevSnapshot.sites && prevSnapshot.sites[domain]) || { views: 0, clicks: 0 };
+      
+      const dailyViews = Math.max(0, (todaySite.views || 0) - (prevSite.views || 0));
+      const dailyClicks = Math.max(0, (todaySite.clicks || 0) - (prevSite.clicks || 0));
+      
+      if (dailyViews > 0 || dailyClicks > 0) {
+        dailySites[domain] = { views: dailyViews, clicks: dailyClicks };
       }
     }
 
-    // Calculate daily totals from refery data
-    let dailyTotalViews = 0;
-    let dailyTotalClicks = 0;
-    for (const data of Object.values(todaySiteActivity)) {
-      dailyTotalViews += data.views || 0;
-      dailyTotalClicks += data.clicks || 0;
-    }
-
     // Store daily (delta) aggregation into analyticsDaily
+    // NOTE: We store this under yesterday's date since we're calculating the delta 
+    // that happened DURING yesterday (the period between yesterday's snapshot and today's snapshot)
     await ANALYTICS_DAILY.replaceOne(
-      { date: todayStr },
+      { date: yesterdayStr },
       {
-        date: todayStr,
-        timestamp: today.getTime(),
+        date: yesterdayStr,
+        timestamp: yesterday.getTime(),
         total: { views: dailyTotalViews, clicks: dailyTotalClicks },
         sites: dailySites
       },
@@ -197,14 +214,14 @@ async function aggregateDailyAnalytics(POPUPS, ANALYTICS_DAILY, ANALYTICS_WEEKLY
     );
 
     // Store the cumulative snapshot for today (used for next day's calculations)
-    const todaySnapshot = {
+    const finalSnapshot = {
       date: todayStr,
       timestamp: today.getTime(),
       total: { views: totalViews, clicks: totalClicks },
       sites: cumulativeSites
     };
 
-    await ANALYTICS_SNAPSHOTS.replaceOne({ date: todayStr }, todaySnapshot, { upsert: true });
+    await ANALYTICS_SNAPSHOTS.replaceOne({ date: todayStr }, finalSnapshot, { upsert: true });
 
     // Aggregate weekly data
     const weeklyData = await aggregateWeeklyData(ANALYTICS_DAILY, weekStart);
