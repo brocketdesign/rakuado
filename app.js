@@ -118,6 +118,8 @@ function startServer() {
         ['/api/partners', './routers/api/partners'],
         ['/api/partner-recruitment', './routers/api/partner-recruitment'],
         ['/api/partner-ad', './routers/api/partner-ad'],
+        ['/api/api-keys', './routers/api/api-keys'],
+        ['/api/v1', './routers/api/v1'],
       ];
 
       routers.forEach(([route, path]) => app.use(route, require(path)));

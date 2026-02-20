@@ -230,6 +230,36 @@ router.get('/app/partner-recruitment', ensureAuthenticated, ensureMembership, as
   }
 });
 
+// API Keys management route
+router.get('/app/api-keys', ensureAuthenticated, ensureMembership, async (req, res) => {
+  try {
+    res.render('dashboard/app/api-keys/index', {
+      user: req.user,
+      title: "Rakuado - API Keys",
+      baseUrl: `${req.protocol}://${req.get('host')}`,
+      isPublic: false
+    });
+  } catch (error) {
+    console.error('Error rendering API keys dashboard:', error);
+    res.status(500).send('Internal server error');
+  }
+});
+
+// API Documentation route
+router.get('/app/api-docs', ensureAuthenticated, ensureMembership, async (req, res) => {
+  try {
+    res.render('dashboard/app/api-docs/index', {
+      user: req.user,
+      title: "Rakuado - API Documentation",
+      baseUrl: `${req.protocol}://${req.get('host')}`,
+      isPublic: false
+    });
+  } catch (error) {
+    console.error('Error rendering API documentation:', error);
+    res.status(500).send('Internal server error');
+  }
+});
+
 // Partner emails management route
 router.get('/app/partner-emails', ensureAuthenticated, ensureMembership, async (req, res) => {
   try {

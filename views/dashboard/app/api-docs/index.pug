@@ -1,0 +1,695 @@
+extends ../../base
+
+block mainContent
+  link(rel='stylesheet', href='/css/api-keys.css')
+  .container-fluid.px-4
+    // Header
+    .d-flex.justify-content-between.align-items-center.mb-4
+      div
+        h1.fw-bold
+          i.fas.fa-book.me-2.text-primary
+          | API Documentation
+        p.text-muted.mb-0 Complete reference for the Rakuado API v1
+      div
+        a.btn.btn-outline-secondary.me-2(href="/dashboard/app/api-keys")
+          i.fas.fa-key.me-1
+          | Manage API Keys
+        button.btn.btn-primary#copyAllDocsBtn
+          i.fas.fa-copy.me-1
+          | Copy for AI
+
+    // Copy success toast
+    #copyToast.position-fixed.top-0.end-0.p-3(style="z-index: 1080; display: none")
+      .alert.alert-success.shadow-lg.mb-0
+        i.fas.fa-check.me-2
+        | Documentation copied to clipboard as Markdown!
+
+    // Authentication Section
+    .card.border-0.shadow-sm.mb-4#section-auth
+      .card-header.bg-white.border-0
+        .d-flex.justify-content-between.align-items-center
+          h4.fw-bold.mb-0
+            i.fas.fa-lock.me-2.text-danger
+            | Authentication
+          button.btn.btn-sm.btn-outline-secondary.copy-section-btn(data-section="auth")
+            i.fas.fa-copy.me-1
+            | Copy for AI
+      .card-body
+        p All API requests must include your API key. You can pass it in two ways:
+        .row.g-3.mb-3
+          .col-md-6
+            h6.fw-bold Header (Recommended)
+            .bg-dark.rounded.p-3
+              code.text-success x-api-key: YOUR_API_KEY
+          .col-md-6
+            h6.fw-bold Query Parameter
+            .bg-dark.rounded.p-3
+              code.text-success ?api_key=YOUR_API_KEY
+        .alert.alert-warning.mb-0
+          i.fas.fa-exclamation-triangle.me-2
+          | Use the header method in production. Query parameters may be logged in server access logs.
+
+    // Base URL
+    .card.border-0.shadow-sm.mb-4
+      .card-header.bg-white.border-0
+        h4.fw-bold.mb-0
+          i.fas.fa-globe.me-2.text-info
+          | Base URL
+      .card-body
+        .bg-dark.rounded.p-3
+          code.text-success#baseUrlDisplay
+        p.text-muted.mt-2.mb-0 All endpoints are relative to this base URL.
+
+    // ─── AFFILIATES ──────────────────────────────
+    .card.border-0.shadow-sm.mb-4#section-affiliates
+      .card-header.bg-white.border-0
+        .d-flex.justify-content-between.align-items-center
+          h4.fw-bold.mb-0
+            i.fas.fa-users.me-2.text-primary
+            | Affiliates
+          button.btn.btn-sm.btn-outline-secondary.copy-section-btn(data-section="affiliates")
+            i.fas.fa-copy.me-1
+            | Copy for AI
+      .card-body
+        // List Affiliates
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-success.me-2.fs-6 GET
+            code.fs-6 /api/v1/affiliates
+          p List all affiliates with optional filtering and pagination.
+          h6.fw-bold Parameters
+          table.table.table-sm.table-bordered
+            thead.table-light
+              tr
+                th Name
+                th Type
+                th Description
+            tbody
+              tr
+                td: code limit
+                td Query
+                td Max results (default: 50)
+              tr
+                td: code offset
+                td Query
+                td Skip results (default: 0)
+              tr
+                td: code domain
+                td Query
+                td Filter by domain (partial match)
+              tr
+                td: code isActive
+                td Query
+                td Filter by active status (true/false)
+          h6.fw-bold Example
+          .bg-dark.rounded.p-3
+            code.text-success
+              | curl -H "x-api-key: YOUR_KEY" #{baseUrl}/api/v1/affiliates?limit=10&domain=example
+
+        hr
+
+        // Get Affiliate
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-success.me-2.fs-6 GET
+            code.fs-6 /api/v1/affiliates/:id
+          p Get a single affiliate by ID.
+          h6.fw-bold Example
+          .bg-dark.rounded.p-3
+            code.text-success
+              | curl -H "x-api-key: YOUR_KEY" #{baseUrl}/api/v1/affiliates/507f1f77bcf86cd799439011
+
+        hr
+
+        // Create Affiliate
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-primary.me-2.fs-6 POST
+            code.fs-6 /api/v1/affiliates
+          p Create or update an affiliate. If the domain already exists, it will be updated.
+          h6.fw-bold Body Parameters
+          table.table.table-sm.table-bordered
+            thead.table-light
+              tr
+                th Name
+                th Type
+                th Required
+                th Description
+            tbody
+              tr
+                td: code wordpressUrl
+                td String
+                td Yes
+                td Full WordPress URL (domain is extracted)
+              tr
+                td: code name
+                td String
+                td No
+                td Display name (defaults to domain)
+              tr
+                td: code isActive
+                td Boolean
+                td No
+                td Active status (default: true)
+
+        hr
+
+        // Update Affiliate
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-warning.text-dark.me-2.fs-6 PUT
+            code.fs-6 /api/v1/affiliates/:id
+          p Update affiliate fields. Only provided fields are changed.
+
+        hr
+
+        // Delete Affiliate
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-danger.me-2.fs-6 DELETE
+            code.fs-6 /api/v1/affiliates/:id
+          p Permanently delete an affiliate.
+
+        hr
+
+        // Clicks Today
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-success.me-2.fs-6 GET
+            code.fs-6 /api/v1/affiliates/:id/clicks/today
+          p Get today's click and view counts for an affiliate, plus monthly totals.
+          h6.fw-bold Response
+          .bg-dark.rounded.p-3
+            pre.text-success.mb-0
+              | {
+              |   "success": true,
+              |   "data": {
+              |     "date": "2026-02-21",
+              |     "daily": { "clicks": 42, "views": 1250 },
+              |     "monthly": { "month": "2026-02", "clicks": 580, "views": 18000 }
+              |   }
+              | }
+
+        hr
+
+        // Clicks Range
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-success.me-2.fs-6 GET
+            code.fs-6 /api/v1/affiliates/:id/clicks/range
+          p Get click or view data over a date range (fills missing dates with 0).
+          h6.fw-bold Parameters
+          table.table.table-sm.table-bordered
+            thead.table-light
+              tr
+                th Name
+                th Type
+                th Description
+            tbody
+              tr
+                td: code startDate
+                td Query
+                td Start date (YYYY-MM-DD) — required
+              tr
+                td: code endDate
+                td Query
+                td End date (YYYY-MM-DD) — required
+              tr
+                td: code action
+                td Query
+                td "click" or "view" (default: "click")
+          h6.fw-bold Example
+          .bg-dark.rounded.p-3
+            code.text-success
+              | curl -H "x-api-key: YOUR_KEY" "#{baseUrl}/api/v1/affiliates/ID/clicks/range?startDate=2026-01-01&endDate=2026-01-31&action=click"
+
+        hr
+
+        // Affiliate Stats
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-success.me-2.fs-6 GET
+            code.fs-6 /api/v1/affiliates/:id/stats
+          p Get comprehensive affiliate stats including 6-month monthly breakdown.
+
+    // ─── WEBSITES ──────────────────────────────
+    .card.border-0.shadow-sm.mb-4#section-websites
+      .card-header.bg-white.border-0
+        .d-flex.justify-content-between.align-items-center
+          h4.fw-bold.mb-0
+            i.fas.fa-globe.me-2.text-success
+            | Websites
+          button.btn.btn-sm.btn-outline-secondary.copy-section-btn(data-section="websites")
+            i.fas.fa-copy.me-1
+            | Copy for AI
+      .card-body
+        // List Websites
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-success.me-2.fs-6 GET
+            code.fs-6 /api/v1/websites
+          p List all tracked websites with their latest analytics data and affiliate association.
+
+        hr
+
+        // Website Analytics
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-success.me-2.fs-6 GET
+            code.fs-6 /api/v1/websites/:domain/analytics
+          p Get daily analytics for a specific website domain.
+          h6.fw-bold Parameters
+          table.table.table-sm.table-bordered
+            thead.table-light
+              tr
+                th Name
+                th Type
+                th Description
+            tbody
+              tr
+                td: code period
+                td Query
+                td "current" or "previous" (default: "current")
+          h6.fw-bold Example
+          .bg-dark.rounded.p-3
+            code.text-success
+              | curl -H "x-api-key: YOUR_KEY" "#{baseUrl}/api/v1/websites/example.com/analytics?period=current"
+
+    // ─── ANALYTICS ──────────────────────────────
+    .card.border-0.shadow-sm.mb-4#section-analytics
+      .card-header.bg-white.border-0
+        .d-flex.justify-content-between.align-items-center
+          h4.fw-bold.mb-0
+            i.fas.fa-chart-line.me-2.text-info
+            | Analytics
+          button.btn.btn-sm.btn-outline-secondary.copy-section-btn(data-section="analytics")
+            i.fas.fa-copy.me-1
+            | Copy for AI
+      .card-body
+        // Summary
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-success.me-2.fs-6 GET
+            code.fs-6 /api/v1/analytics/summary
+          p Get overall analytics summary with period-over-period comparison.
+          h6.fw-bold Parameters
+          table.table.table-sm.table-bordered
+            thead.table-light
+              tr
+                th Name
+                th Type
+                th Description
+            tbody
+              tr
+                td: code period
+                td Query
+                td "current" or "previous" (default: "current"). Uses custom 21st-to-20th monthly periods.
+
+        hr
+
+        // Daily
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-success.me-2.fs-6 GET
+            code.fs-6 /api/v1/analytics/daily
+          p Get daily analytics data for a date range, optionally filtered by site.
+          h6.fw-bold Parameters
+          table.table.table-sm.table-bordered
+            thead.table-light
+              tr
+                th Name
+                th Type
+                th Description
+            tbody
+              tr
+                td: code startDate
+                td Query
+                td Start date (YYYY-MM-DD) — required
+              tr
+                td: code endDate
+                td Query
+                td End date (YYYY-MM-DD) — required
+              tr
+                td: code site
+                td Query
+                td Filter by site domain (default: "all")
+
+        hr
+
+        // Sites
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-success.me-2.fs-6 GET
+            code.fs-6 /api/v1/analytics/sites
+          p Get list of all tracked sites from the analytics data.
+
+    // ─── PARTNERS ──────────────────────────────
+    .card.border-0.shadow-sm.mb-4#section-partners
+      .card-header.bg-white.border-0
+        .d-flex.justify-content-between.align-items-center
+          h4.fw-bold.mb-0
+            i.fas.fa-handshake.me-2.text-warning
+            | Partners
+          button.btn.btn-sm.btn-outline-secondary.copy-section-btn(data-section="partners")
+            i.fas.fa-copy.me-1
+            | Copy for AI
+      .card-body
+        // List Partners
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-success.me-2.fs-6 GET
+            code.fs-6 /api/v1/partners
+          p List all partners with optional filtering.
+          h6.fw-bold Parameters
+          table.table.table-sm.table-bordered
+            thead.table-light
+              tr
+                th Name
+                th Type
+                th Description
+            tbody
+              tr
+                td: code status
+                td Query
+                td Filter by status (active, stopped, pending, inactive)
+              tr
+                td: code limit
+                td Query
+                td Max results (default: 50)
+              tr
+                td: code offset
+                td Query
+                td Skip results (default: 0)
+
+        hr
+
+        // Get Partner
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-success.me-2.fs-6 GET
+            code.fs-6 /api/v1/partners/:id
+          p Get a single partner by ID.
+
+        hr
+
+        // Create Partner
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-primary.me-2.fs-6 POST
+            code.fs-6 /api/v1/partners
+          p Create a new partner.
+          h6.fw-bold Body Parameters
+          table.table.table-sm.table-bordered
+            thead.table-light
+              tr
+                th Name
+                th Type
+                th Required
+                th Description
+            tbody
+              tr
+                td: code domain
+                td String
+                td Yes
+                td Partner website domain
+              tr
+                td: code name
+                td String
+                td Yes
+                td Partner name
+              tr
+                td: code monthlyAmount
+                td Number
+                td Yes
+                td Monthly payment amount (JPY)
+              tr
+                td: code startDate
+                td String
+                td Yes
+                td Start date (YYYY-MM-DD)
+              tr
+                td: code paymentCycle
+                td String
+                td No
+                td Payment cycle (default: "当月")
+              tr
+                td: code email
+                td String
+                td No
+                td Contact email
+              tr
+                td: code bankName
+                td String
+                td No
+                td Bank name for payments
+              tr
+                td: code bankBranch
+                td String
+                td No
+                td Bank branch name
+              tr
+                td: code accountType
+                td String
+                td No
+                td Account type (default: "普通")
+              tr
+                td: code accountNumber
+                td String
+                td No
+                td Account number
+              tr
+                td: code accountHolder
+                td String
+                td No
+                td Account holder name
+
+        hr
+
+        // Update Partner
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-warning.text-dark.me-2.fs-6 PUT
+            code.fs-6 /api/v1/partners/:id
+          p Update a partner. Only provided fields are changed.
+
+        hr
+
+        // Delete Partner
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-danger.me-2.fs-6 DELETE
+            code.fs-6 /api/v1/partners/:id
+          p Permanently delete a partner.
+
+        hr
+
+        // Calculate Payments
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-success.me-2.fs-6 GET
+            code.fs-6 /api/v1/partners/payments/calculate
+          p Calculate payment amounts for all partners in a period. Uses the custom 21st-to-20th period with pro-rated payments based on analytics active days.
+          h6.fw-bold Parameters
+          table.table.table-sm.table-bordered
+            thead.table-light
+              tr
+                th Name
+                th Type
+                th Description
+            tbody
+              tr
+                td: code period
+                td Query
+                td "current" or "previous" (default: "current")
+          h6.fw-bold Response
+          .bg-dark.rounded.p-3
+            pre.text-success.mb-0
+              | {
+              |   "success": true,
+              |   "data": {
+              |     "period": { "name": "current", "startDate": "2026-01-21", "endDate": "2026-02-20" },
+              |     "payments": [{
+              |       "partnerId": "...",
+              |       "domain": "example.com",
+              |       "name": "Example Partner",
+              |       "monthlyAmount": 50000,
+              |       "amount": 45000,
+              |       "daysActive": 27,
+              |       "totalDays": 31,
+              |       "status": "partial"
+              |     }],
+              |     "totalPayment": 45000
+              |   }
+              | }
+
+    // ─── PARTNER RECRUITMENT ──────────────────
+    .card.border-0.shadow-sm.mb-4#section-recruitment
+      .card-header.bg-white.border-0
+        .d-flex.justify-content-between.align-items-center
+          h4.fw-bold.mb-0
+            i.fas.fa-user-plus.me-2.text-purple
+            | Partner Recruitment
+          button.btn.btn-sm.btn-outline-secondary.copy-section-btn(data-section="recruitment")
+            i.fas.fa-copy.me-1
+            | Copy for AI
+      .card-body
+        // List Requests
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-success.me-2.fs-6 GET
+            code.fs-6 /api/v1/partner-requests
+          p List all partner recruitment requests.
+          h6.fw-bold Parameters
+          table.table.table-sm.table-bordered
+            thead.table-light
+              tr
+                th Name
+                th Type
+                th Description
+            tbody
+              tr
+                td: code status
+                td Query
+                td Filter by status (submitted, analytics_requested, reviewing, approved, snippet_sent, snippet_verified, rejected)
+              tr
+                td: code limit
+                td Query
+                td Max results (default: 50)
+              tr
+                td: code offset
+                td Query
+                td Skip results (default: 0)
+
+        hr
+
+        // Get Request
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-success.me-2.fs-6 GET
+            code.fs-6 /api/v1/partner-requests/:id
+          p Get a single partner recruitment request.
+
+        hr
+
+        // Update Request
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-warning.text-dark.me-2.fs-6 PUT
+            code.fs-6 /api/v1/partner-requests/:id
+          p Update a partner recruitment request.
+          h6.fw-bold Body Parameters
+          table.table.table-sm.table-bordered
+            thead.table-light
+              tr
+                th Name
+                th Type
+                th Description
+            tbody
+              tr
+                td: code currentStep
+                td String
+                td Current workflow step
+              tr
+                td: code status
+                td String
+                td Request status
+              tr
+                td: code googleAnalyticsUrl
+                td String
+                td Google Analytics URL
+              tr
+                td: code estimatedMonthlyAmount
+                td Number
+                td Estimated monthly payment
+              tr
+                td: code notes
+                td String
+                td Internal notes
+
+        hr
+
+        // Approve
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-primary.me-2.fs-6 POST
+            code.fs-6 /api/v1/partner-requests/:id/approve
+          p Approve a partner recruitment request.
+
+        hr
+
+        // Reject
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-primary.me-2.fs-6 POST
+            code.fs-6 /api/v1/partner-requests/:id/reject
+          p Reject a partner recruitment request.
+          h6.fw-bold Body Parameters
+          table.table.table-sm.table-bordered
+            thead.table-light
+              tr
+                th Name
+                th Type
+                th Description
+            tbody
+              tr
+                td: code reason
+                td String
+                td Optional rejection reason
+
+    // ─── POPUPS ──────────────────────────────
+    .card.border-0.shadow-sm.mb-4#section-popups
+      .card-header.bg-white.border-0
+        .d-flex.justify-content-between.align-items-center
+          h4.fw-bold.mb-0
+            i.fas.fa-bullhorn.me-2.text-danger
+            | Referral Popups
+          button.btn.btn-sm.btn-outline-secondary.copy-section-btn(data-section="popups")
+            i.fas.fa-copy.me-1
+            | Copy for AI
+      .card-body
+        .endpoint-block.mb-4
+          .d-flex.align-items-center.mb-2
+            span.badge.bg-success.me-2.fs-6 GET
+            code.fs-6 /api/v1/popups
+          p List all referral popups with their 24-hour views and clicks.
+
+    // ─── ERROR CODES ──────────────────────────
+    .card.border-0.shadow-sm.mb-4#section-errors
+      .card-header.bg-white.border-0
+        h4.fw-bold.mb-0
+          i.fas.fa-exclamation-circle.me-2.text-danger
+          | Error Codes
+      .card-body
+        table.table.table-bordered
+          thead.table-light
+            tr
+              th Status Code
+              th Meaning
+              th Description
+          tbody
+            tr
+              td: code 200
+              td OK
+              td Request successful
+            tr
+              td: code 201
+              td Created
+              td Resource created successfully
+            tr
+              td: code 400
+              td Bad Request
+              td Missing or invalid parameters
+            tr
+              td: code 401
+              td Unauthorized
+              td Missing or invalid API key
+            tr
+              td: code 404
+              td Not Found
+              td Resource not found
+            tr
+              td: code 500
+              td Server Error
+              td Internal server error
+
+  script(src='/js/api-docs.js')

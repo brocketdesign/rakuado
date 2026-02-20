@@ -97,7 +97,7 @@
         extraDays: 3,
         headline: 'Yahoo!ショッピングで50%オフクーポンをゲット！',
         accentHex: '#ef4444',
-        logoUrl: 'https://hatoltd.com/affiliate-partner/yahoo-logo.svg'
+        logoUrl: 'https://hatoltd.com/affiliate-partner/yahoo-logo.png'
       };
 
       const state = {

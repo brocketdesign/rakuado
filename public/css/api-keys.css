@@ -1,0 +1,155 @@
+/* API Keys & API Docs Dashboard Styles */
+
+/* Endpoint blocks */
+.endpoint-block {
+  padding: 1rem 0;
+}
+
+.endpoint-block code {
+  font-size: 0.95rem;
+}
+
+.endpoint-block .badge {
+  min-width: 55px;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Endpoint group in overview */
+.endpoint-group {
+  padding: 1rem;
+  border-radius: 8px;
+  background: #f8f9fa;
+  height: 100%;
+}
+
+.endpoint-group h6 {
+  margin-bottom: 0.75rem;
+}
+
+.endpoint-group li {
+  padding: 3px 0;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+.endpoint-group .badge {
+  min-width: 40px;
+  text-align: center;
+  font-size: 0.65rem;
+}
+
+/* Dark code blocks */
+.bg-dark code,
+.bg-dark pre {
+  color: #8be9fd;
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+
+.bg-dark pre {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* Table styles inside docs */
+.endpoint-block .table {
+  font-size: 0.875rem;
+}
+
+.endpoint-block .table code {
+  font-size: 0.8rem;
+  color: #e83e8c;
+  background: #f8f9fa;
+  padding: 2px 5px;
+  border-radius: 3px;
+}
+
+/* API Keys table */
+#keysTable {
+  font-size: 0.9rem;
+}
+
+#keysTable code {
+  font-size: 0.8rem;
+  background: #f1f3f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+#keysTable .btn-sm {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+/* Copy section button */
+.copy-section-btn {
+  font-size: 0.8rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  transition: all 0.2s;
+}
+
+.copy-section-btn:hover {
+  background: #0d6efd;
+  color: white;
+  border-color: #0d6efd;
+}
+
+/* Card improvements */
+.card-header {
+  padding: 1.25rem 1.5rem 0.75rem;
+}
+
+.card-body {
+  padding: 1rem 1.5rem 1.5rem;
+}
+
+/* Info banner */
+.alert-info {
+  border: none;
+  background: #e7f3ff;
+  border-radius: 8px;
+}
+
+/* Toast animation */
+#copyToast .alert {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Font monospace for key displays */
+.font-monospace {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.85rem;
+}
+
+/* Purple color for recruitment icon */
+.text-purple {
+  color: #6f42c1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .endpoint-block .table {
+    font-size: 0.8rem;
+  }
+  
+  .endpoint-group {
+    margin-bottom: 0.5rem;
+  }
+  
+  .bg-dark code {
+    font-size: 0.75rem;
+  }
+}

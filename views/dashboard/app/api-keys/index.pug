@@ -1,0 +1,379 @@
+extends ../../base
+
+block mainContent
+  link(rel='stylesheet', href='/css/api-keys.css')
+  .container-fluid.px-4
+    // Header
+    .d-flex.justify-content-between.align-items-center.mb-4
+      div
+        h1.fw-bold
+          i.fas.fa-key.me-2.text-primary
+          | API Keys
+        p.text-muted.mb-0 Manage your API keys to access the Rakuado API programmatically.
+      div
+        a.btn.btn-outline-secondary.me-2(href="/dashboard/app/api-docs")
+          i.fas.fa-book.me-1
+          | API Documentation
+        button.btn.btn-primary#createKeyBtn
+          i.fas.fa-plus.me-1
+          | Create New Key
+
+    // Info banner
+    .alert.alert-info.d-flex.align-items-start.mb-4
+      i.fas.fa-info-circle.me-3.mt-1.fs-5
+      div
+        strong Important:
+        |  API keys grant full access to your account data via the API. Keep them secret and never expose them in client-side code.
+        | Your API key is only shown once when created — copy and store it securely.
+
+    // API Keys Table
+    .card.border-0.shadow-sm.mb-4
+      .card-header.bg-white.border-0
+        h5.fw-bold.mb-0
+          i.fas.fa-list.me-2.text-secondary
+          | Your API Keys
+      .card-body.p-0
+        #keysLoading.text-center.py-5
+          .spinner-border.text-primary(role='status')
+          p.text-muted.mt-2 Loading API keys...
+        #keysEmpty.text-center.py-5(style="display:none")
+          i.fas.fa-key.text-muted.display-4.mb-3
+          p.text-muted.mb-2 No API keys yet
+          p.text-muted.small Create your first API key to start using the API.
+        .table-responsive
+          table#keysTable.table.table-hover.mb-0(style="display:none")
+            thead.table-light
+              tr
+                th Name
+                th Key
+                th Created
+                th Last Used
+                th Usage
+                th Status
+                th.text-end Actions
+            tbody#keysBody
+
+    // Quick Start Section
+    .card.border-0.shadow-sm.mb-4
+      .card-header.bg-white.border-0
+        h5.fw-bold.mb-0
+          i.fas.fa-rocket.me-2.text-primary
+          | Quick Start
+      .card-body
+        p.text-muted Make API requests using your key with the #[code x-api-key] header:
+        .bg-dark.rounded.p-3.mb-3
+          code.text-success
+            | curl -H "x-api-key: YOUR_API_KEY" #{baseUrl}/api/v1/affiliates
+        p.text-muted.mb-2 Or as a query parameter:
+        .bg-dark.rounded.p-3
+          code.text-success
+            | curl "#{baseUrl}/api/v1/affiliates?api_key=YOUR_API_KEY"
+
+    // Available Endpoints Overview
+    .card.border-0.shadow-sm.mb-4
+      .card-header.bg-white.border-0
+        .d-flex.justify-content-between.align-items-center
+          h5.fw-bold.mb-0
+            i.fas.fa-plug.me-2.text-warning
+            | Available Endpoints
+          a.btn.btn-sm.btn-outline-primary(href="/dashboard/app/api-docs")
+            | View Full Documentation
+      .card-body
+        .row.g-3
+          .col-md-4
+            .endpoint-group
+              h6.fw-bold.text-primary
+                i.fas.fa-users.me-1
+                | Affiliates
+              ul.list-unstyled.small.text-muted
+                li
+                  span.badge.bg-success.me-1 GET
+                  | /api/v1/affiliates
+                li
+                  span.badge.bg-success.me-1 GET
+                  | /api/v1/affiliates/:id
+                li
+                  span.badge.bg-primary.me-1 POST
+                  | /api/v1/affiliates
+                li
+                  span.badge.bg-warning.text-dark.me-1 PUT
+                  | /api/v1/affiliates/:id
+                li
+                  span.badge.bg-danger.me-1 DELETE
+                  | /api/v1/affiliates/:id
+                li
+                  span.badge.bg-success.me-1 GET
+                  | /api/v1/affiliates/:id/clicks/today
+                li
+                  span.badge.bg-success.me-1 GET
+                  | /api/v1/affiliates/:id/clicks/range
+                li
+                  span.badge.bg-success.me-1 GET
+                  | /api/v1/affiliates/:id/stats
+          .col-md-4
+            .endpoint-group
+              h6.fw-bold.text-success
+                i.fas.fa-chart-line.me-1
+                | Analytics & Websites
+              ul.list-unstyled.small.text-muted
+                li
+                  span.badge.bg-success.me-1 GET
+                  | /api/v1/analytics/summary
+                li
+                  span.badge.bg-success.me-1 GET
+                  | /api/v1/analytics/daily
+                li
+                  span.badge.bg-success.me-1 GET
+                  | /api/v1/analytics/sites
+                li
+                  span.badge.bg-success.me-1 GET
+                  | /api/v1/websites
+                li
+                  span.badge.bg-success.me-1 GET
+                  | /api/v1/websites/:domain/analytics
+          .col-md-4
+            .endpoint-group
+              h6.fw-bold.text-warning
+                i.fas.fa-handshake.me-1
+                | Partners & Recruitment
+              ul.list-unstyled.small.text-muted
+                li
+                  span.badge.bg-success.me-1 GET
+                  | /api/v1/partners
+                li
+                  span.badge.bg-success.me-1 GET
+                  | /api/v1/partners/:id
+                li
+                  span.badge.bg-primary.me-1 POST
+                  | /api/v1/partners
+                li
+                  span.badge.bg-warning.text-dark.me-1 PUT
+                  | /api/v1/partners/:id
+                li
+                  span.badge.bg-danger.me-1 DELETE
+                  | /api/v1/partners/:id
+                li
+                  span.badge.bg-success.me-1 GET
+                  | /api/v1/partners/payments/calculate
+                li
+                  span.badge.bg-success.me-1 GET
+                  | /api/v1/partner-requests
+                li
+                  span.badge.bg-warning.text-dark.me-1 PUT
+                  | /api/v1/partner-requests/:id
+                li
+                  span.badge.bg-primary.me-1 POST
+                  | /api/v1/partner-requests/:id/approve
+                li
+                  span.badge.bg-primary.me-1 POST
+                  | /api/v1/partner-requests/:id/reject
+                li
+                  span.badge.bg-success.me-1 GET
+                  | /api/v1/popups
+
+  // Create Key Modal
+  .modal.fade#createKeyModal(tabindex='-1')
+    .modal-dialog
+      .modal-content
+        .modal-header.border-0
+          h5.modal-title.fw-bold
+            i.fas.fa-key.me-2
+            | Create New API Key
+          button.btn-close(type='button' data-bs-dismiss='modal')
+        .modal-body
+          .mb-3
+            label.form-label.fw-bold(for='keyName') Key Name
+            input.form-control#keyName(type='text' placeholder='e.g. Production Server, My App, Testing')
+            .form-text Give your key a descriptive name to identify its purpose.
+        .modal-footer.border-0
+          button.btn.btn-secondary(type='button' data-bs-dismiss='modal') Cancel
+          button.btn.btn-primary#confirmCreateKey
+            i.fas.fa-plus.me-1
+            | Create Key
+
+  // Show Key Modal (shown only once after creation)
+  .modal.fade#showKeyModal(tabindex='-1' data-bs-backdrop='static')
+    .modal-dialog
+      .modal-content
+        .modal-header.border-0.bg-warning.bg-opacity-10
+          h5.modal-title.fw-bold
+            i.fas.fa-exclamation-triangle.me-2.text-warning
+            | Save Your API Key
+          button.btn-close(type='button' data-bs-dismiss='modal')
+        .modal-body
+          .alert.alert-warning.mb-3
+            i.fas.fa-exclamation-triangle.me-2
+            strong This is the only time your full API key will be shown. Copy it now!
+          .mb-3
+            label.form-label.fw-bold API Key
+            .input-group
+              input.form-control.font-monospace#fullApiKey(type='text' readonly)
+              button.btn.btn-outline-primary#copyKeyBtn(type='button')
+                i.fas.fa-copy.me-1
+                | Copy
+          #copySuccess.alert.alert-success.d-none.mb-0
+            i.fas.fa-check.me-2
+            | API key copied to clipboard!
+        .modal-footer.border-0
+          button.btn.btn-primary(type='button' data-bs-dismiss='modal')
+            i.fas.fa-check.me-1
+            | I've Saved My Key
+
+  script.
+    const baseUrl = window.location.origin;
+    let createKeyModal, showKeyModal;
+
+    document.addEventListener('DOMContentLoaded', function() {
+      createKeyModal = new bootstrap.Modal(document.getElementById('createKeyModal'));
+      showKeyModal = new bootstrap.Modal(document.getElementById('showKeyModal'));
+      loadApiKeys();
+    });
+
+    document.getElementById('createKeyBtn').addEventListener('click', () => {
+      document.getElementById('keyName').value = '';
+      createKeyModal.show();
+    });
+
+    document.getElementById('confirmCreateKey').addEventListener('click', async () => {
+      const name = document.getElementById('keyName').value.trim();
+      if (!name) {
+        Swal.fire('Error', 'Please enter a name for your API key.', 'error');
+        return;
+      }
+      try {
+        const res = await fetch('/api/api-keys', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name })
+        });
+        const data = await res.json();
+        if (data.success) {
+          createKeyModal.hide();
+          document.getElementById('fullApiKey').value = data.apiKey.key;
+          document.getElementById('copySuccess').classList.add('d-none');
+          showKeyModal.show();
+          loadApiKeys();
+        } else {
+          Swal.fire('Error', data.error || 'Failed to create API key.', 'error');
+        }
+      } catch (error) {
+        Swal.fire('Error', 'Failed to create API key.', 'error');
+      }
+    });
+
+    document.getElementById('copyKeyBtn').addEventListener('click', () => {
+      const key = document.getElementById('fullApiKey').value;
+      navigator.clipboard.writeText(key).then(() => {
+        document.getElementById('copySuccess').classList.remove('d-none');
+      });
+    });
+
+    async function loadApiKeys() {
+      try {
+        const res = await fetch('/api/api-keys');
+        const data = await res.json();
+        const loading = document.getElementById('keysLoading');
+        const empty = document.getElementById('keysEmpty');
+        const table = document.getElementById('keysTable');
+        const body = document.getElementById('keysBody');
+
+        loading.style.display = 'none';
+
+        if (!data.success || !data.apiKeys.length) {
+          empty.style.display = 'block';
+          table.style.display = 'none';
+          return;
+        }
+
+        empty.style.display = 'none';
+        table.style.display = 'table';
+        body.innerHTML = '';
+
+        data.apiKeys.forEach(key => {
+          const row = document.createElement('tr');
+          const createdDate = new Date(key.createdAt).toLocaleDateString('ja-JP');
+          const lastUsed = key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleDateString('ja-JP') : 'Never';
+          const statusBadge = key.isActive
+            ? '<span class="badge bg-success">Active</span>'
+            : '<span class="badge bg-secondary">Inactive</span>';
+
+          row.innerHTML = `
+            <td class="fw-bold">${escapeHtml(key.name)}</td>
+            <td><code>${escapeHtml(key.keyPreview)}</code></td>
+            <td class="text-muted small">${createdDate}</td>
+            <td class="text-muted small">${lastUsed}</td>
+            <td><span class="badge bg-light text-dark">${key.usageCount}</span></td>
+            <td>${statusBadge}</td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-${key.isActive ? 'warning' : 'success'} me-1" onclick="toggleKey('${key._id}')">
+                <i class="fas fa-${key.isActive ? 'pause' : 'play'}"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-secondary me-1" onclick="renameKey('${key._id}', '${escapeHtml(key.name)}')">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteKey('${key._id}')">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
+          `;
+          body.appendChild(row);
+        });
+      } catch (error) {
+        console.error('Failed to load API keys:', error);
+      }
+    }
+
+    async function toggleKey(id) {
+      try {
+        await fetch(`/api/api-keys/${id}/toggle`, { method: 'PUT' });
+        loadApiKeys();
+      } catch (error) {
+        Swal.fire('Error', 'Failed to toggle API key.', 'error');
+      }
+    }
+
+    async function renameKey(id, currentName) {
+      const { value: name } = await Swal.fire({
+        title: 'Rename API Key',
+        input: 'text',
+        inputValue: currentName,
+        showCancelButton: true,
+        inputValidator: (value) => { if (!value) return 'Name is required'; }
+      });
+      if (!name) return;
+      try {
+        await fetch(`/api/api-keys/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name })
+        });
+        loadApiKeys();
+      } catch (error) {
+        Swal.fire('Error', 'Failed to rename API key.', 'error');
+      }
+    }
+
+    async function deleteKey(id) {
+      const result = await Swal.fire({
+        title: 'Delete API Key?',
+        text: 'This action cannot be undone. Any applications using this key will lose access.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Delete'
+      });
+      if (!result.isConfirmed) return;
+      try {
+        await fetch(`/api/api-keys/${id}`, { method: 'DELETE' });
+        loadApiKeys();
+        Swal.fire('Deleted', 'API key has been deleted.', 'success');
+      } catch (error) {
+        Swal.fire('Error', 'Failed to delete API key.', 'error');
+      }
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
