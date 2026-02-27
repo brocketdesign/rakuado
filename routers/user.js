@@ -386,7 +386,7 @@ router.get('/credits', async (req, res) => {
 router.get('/is-admin', async (req, res) => {
   if (!req.user || !req.user.email) return res.status(401).json({ error: 'Unauthorized' });
   try {
-      const adminEmails = ["rakuadojapan@gmail.com","japanclassicstore@gmail.com"]; // List of administrator emails
+      const adminEmails = ["support@rakuado.net","japanclassicstore@gmail.com"]; // List of administrator emails
       const userEmail = req.user.email;
 
       if (adminEmails.includes(userEmail)) {

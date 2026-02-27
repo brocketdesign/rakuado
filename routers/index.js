@@ -128,9 +128,9 @@ router.post('/partner-recruitment', async (req, res) => {
 
     // Use user's configured mail settings if available (for admin users submitting from dashboard)
     // Otherwise use system email
-    // Send to both contact@hatoltd.com and rakuadojapan@gmail.com
+    // Send to both contact@hatoltd.com and support@rakuado.net
     try {
-      const adminEmails = ['contact@hatoltd.com', 'rakuadojapan@gmail.com'];
+      const adminEmails = ['contact@hatoltd.com', 'support@rakuado.net'];
       const emailPromises = [];
       
       if (req.user && req.user._id) {
