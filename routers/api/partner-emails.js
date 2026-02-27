@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { ObjectId } = require('mongodb');
-const { sendEmail } = require('../../services/email');
+const { sendEmail, sendEmailBatch } = require('../../services/email');
 const { 
   getCustomMonthPeriod, 
   countActiveDaysFromAnalytics, 
@@ -363,7 +363,7 @@ router.post('/send/:draftId', async (req, res) => {
   }
 });
 
-// POST send multiple emails in batch
+// POST send multiple emails in batch (with rate limiting)
 router.post('/send-batch', async (req, res) => {
   try {
     const db = global.db;
@@ -376,18 +376,19 @@ router.post('/send-batch', async (req, res) => {
       });
     }
     
-    const results = {
-      sent: [],
-      failed: [],
-      skipped: []
+    const preCheckResults = {
+      valid: [],
+      skipped: [],
+      failed: []
     };
     
+    // Pre-check all drafts before sending
     for (const draftIdStr of draftIds) {
       const draftId = new ObjectId(draftIdStr);
       const draft = await db.collection('partnerEmailDrafts').findOne({ _id: draftId });
       
       if (!draft) {
-        results.failed.push({ 
+        preCheckResults.failed.push({ 
           draftId: draftIdStr, 
           error: 'Draft not found' 
         });
@@ -396,7 +397,7 @@ router.post('/send-batch', async (req, res) => {
       
       // Skip if already sent
       if (draft.status === 'sent') {
-        results.skipped.push({ 
+        preCheckResults.skipped.push({ 
           draftId: draftIdStr, 
           partnerName: draft.partnerName,
           reason: 'Already sent' 
@@ -406,7 +407,7 @@ router.post('/send-batch', async (req, res) => {
       
       // Skip if no data
       if (!draft.hasData) {
-        results.skipped.push({ 
+        preCheckResults.skipped.push({ 
           draftId: draftIdStr, 
           partnerName: draft.partnerName,
           reason: 'No data available' 
@@ -426,7 +427,7 @@ router.post('/send-batch', async (req, res) => {
             }
           }
         );
-        results.failed.push({ 
+        preCheckResults.failed.push({ 
           draftId: draftIdStr, 
           partnerName: draft.partnerName,
           error: 'Partner email not configured' 
@@ -434,27 +435,51 @@ router.post('/send-batch', async (req, res) => {
         continue;
       }
       
-      try {
-        // Send email
-        await sendEmail(draft.partnerEmail, 'partner payment notification', {
-          partnerName: draft.partnerName,
-          domain: draft.domain,
-          periodStart: draft.periodStart,
-          periodEnd: draft.periodEnd,
-          periodMonth: draft.periodMonth,
-          paymentCycle: draft.paymentCycle,
-          monthlyAmount: draft.monthlyAmount.toLocaleString('ja-JP'),
-          totalDays: draft.totalDays,
-          activeDays: draft.activeDays,
-          inactiveDays: draft.inactiveDays,
-          paymentAmount: draft.paymentAmount.toLocaleString('ja-JP'),
-          bankInfo: draft.bankInfo,
-          notes: draft.notes
-        });
-        
-        // Mark as sent
+      // Add to valid emails list
+      preCheckResults.valid.push({
+        draftId: draftIdStr,
+        draft,
+        emailData: {
+          toEmail: draft.partnerEmail,
+          template: 'partner payment notification',
+          locals: {
+            partnerName: draft.partnerName,
+            domain: draft.domain,
+            periodStart: draft.periodStart,
+            periodEnd: draft.periodEnd,
+            periodMonth: draft.periodMonth,
+            paymentCycle: draft.paymentCycle,
+            monthlyAmount: draft.monthlyAmount.toLocaleString('ja-JP'),
+            totalDays: draft.totalDays,
+            activeDays: draft.activeDays,
+            inactiveDays: draft.inactiveDays,
+            paymentAmount: draft.paymentAmount.toLocaleString('ja-JP'),
+            bankInfo: draft.bankInfo,
+            notes: draft.notes
+          }
+        }
+      });
+    }
+    
+    // Send emails with rate limiting (2 per second)
+    const emailsToSend = preCheckResults.valid.map(v => v.emailData);
+    const batchResults = await sendEmailBatch(emailsToSend, (progress) => {
+      console.log(`[Batch Progress] ${progress.current}/${progress.total} - ${progress.status} to ${progress.toEmail}`);
+    });
+    
+    // Update database based on results
+    const finalResults = {
+      sent: [],
+      failed: [...preCheckResults.failed],
+      skipped: [...preCheckResults.skipped]
+    };
+    
+    // Process successful sends
+    for (const sentItem of batchResults.sent) {
+      const validItem = preCheckResults.valid.find(v => v.emailData.toEmail === sentItem.toEmail);
+      if (validItem) {
         await db.collection('partnerEmailDrafts').updateOne(
-          { _id: draftId },
+          { _id: new ObjectId(validItem.draftId) },
           { 
             $set: { 
               status: 'sent',
@@ -464,36 +489,39 @@ router.post('/send-batch', async (req, res) => {
             }
           }
         );
-        
-        results.sent.push({ 
-          draftId: draftIdStr, 
-          partnerName: draft.partnerName 
+        finalResults.sent.push({
+          draftId: validItem.draftId,
+          partnerName: validItem.draft.partnerName
         });
-      } catch (emailError) {
-        // Mark as error
+      }
+    }
+    
+    // Process failed sends
+    for (const failedItem of batchResults.failed) {
+      const validItem = preCheckResults.valid.find(v => v.emailData.toEmail === failedItem.toEmail);
+      if (validItem) {
         await db.collection('partnerEmailDrafts').updateOne(
-          { _id: draftId },
+          { _id: new ObjectId(validItem.draftId) },
           { 
             $set: { 
               status: 'error',
-              errorMessage: emailError.message,
+              errorMessage: failedItem.error,
               updatedAt: new Date()
             }
           }
         );
-        
-        results.failed.push({ 
-          draftId: draftIdStr, 
-          partnerName: draft.partnerName,
-          error: emailError.message 
+        finalResults.failed.push({
+          draftId: validItem.draftId,
+          partnerName: validItem.draft.partnerName,
+          error: failedItem.error
         });
       }
     }
     
     res.json({
       success: true,
-      message: 'Batch email sending completed',
-      results
+      message: `Batch email sending completed. Sent: ${finalResults.sent.length}, Failed: ${finalResults.failed.length}, Skipped: ${finalResults.skipped.length}`,
+      results: finalResults
     });
   } catch (error) {
     console.error('Error sending batch emails:', error);

@@ -507,6 +507,44 @@ block mainContent
             }
         }
         
+        // Check if string contains Katakana
+        function containsKatakana(str) {
+            return /[\u30A0-\u30FF]/.test(str);
+        }
+        
+        // Check if string contains Hiragana
+        function containsHiragana(str) {
+            return /[\u3040-\u309F]/.test(str);
+        }
+        
+        // Check if string contains Kanji
+        function containsKanji(str) {
+            return /[\u4E00-\u9FAF]/.test(str);
+        }
+        
+        // Flexible Japanese search - matches partial strings
+        function flexibleJapaneseMatch(text, query) {
+            if (!text || !query) return false;
+            
+            const normalizedText = normalizeForSearch(text);
+            const normalizedQuery = normalizeForSearch(query);
+            
+            // Direct substring match
+            if (normalizedText.includes(normalizedQuery)) return true;
+            
+            // Convert both to Hiragana and compare
+            const textHiragana = katakanaToHiragana(normalizedText);
+            const queryHiragana = katakanaToHiragana(normalizedQuery);
+            if (textHiragana.includes(queryHiragana)) return true;
+            
+            // Convert both to Katakana and compare
+            const textKatakana = hiraganaToKatakana(normalizedText);
+            const queryKatakana = hiraganaToKatakana(normalizedQuery);
+            if (textKatakana.includes(queryKatakana)) return true;
+            
+            return false;
+        }
+        
         // Search partners with Katakana/Kanji support
         function searchPartners(query) {
             if (!window.allPaymentsData) return;
@@ -531,25 +569,46 @@ block mainContent
                 return;
             }
             
-            // Create search variants (original, hiragana, katakana)
-            const hiraganaQuery = katakanaToHiragana(normalizedQuery);
-            const katakanaQuery = hiraganaToKatakana(normalizedQuery);
+            // Detect query type
+            const queryHasKatakana = containsKatakana(normalizedQuery);
+            const queryHasHiragana = containsHiragana(normalizedQuery);
+            const queryHasKanji = containsKanji(normalizedQuery);
             
             const filtered = window.allPaymentsData.filter(p => {
-                const name = normalizeForSearch(p.name || '');
-                const nameKatakana = normalizeForSearch(p.nameKatakana || '');
-                const domain = normalizeForSearch(p.domain || '');
+                const name = p.name || '';
+                const nameKatakana = p.nameKatakana || '';
+                const domain = p.domain || '';
                 
-                // Check against all variants
-                const searchTerms = [normalizedQuery, hiraganaQuery, katakanaQuery];
+                // 1. Direct match on name (Kanji or any)
+                if (flexibleJapaneseMatch(name, query)) return true;
                 
-                return searchTerms.some(term => 
-                    name.includes(term) || 
-                    nameKatakana.includes(term) || 
-                    domain.includes(term) ||
-                    // Also check if the query in katakana matches the name (for Kanji->Katakana search)
-                    (nameKatakana && katakanaToHiragana(nameKatakana).includes(hiraganaQuery))
-                );
+                // 2. Direct match on nameKatakana field
+                if (flexibleJapaneseMatch(nameKatakana, query)) return true;
+                
+                // 3. If query is Katakana, also check if nameKatakana CONTAINS the query
+                // This handles cases like "マスカタ" matching "マスカタレン"
+                if (queryHasKatakana && nameKatakana) {
+                    const normalizedNameKatakana = normalizeForSearch(nameKatakana);
+                    const normalizedQueryKatakana = normalizeForSearch(query);
+                    if (normalizedNameKatakana.includes(normalizedQueryKatakana)) return true;
+                    
+                    // Also try converting nameKatakana to Hiragana and compare
+                    const nameKatakanaHiragana = katakanaToHiragana(normalizedNameKatakana);
+                    const queryHiragana = katakanaToHiragana(normalizedQueryKatakana);
+                    if (nameKatakanaHiragana.includes(queryHiragana)) return true;
+                }
+                
+                // 4. If query is Hiragana, check against nameKatakana converted to Hiragana
+                if (queryHasHiragana && nameKatakana) {
+                    const nameKatakanaHiragana = katakanaToHiragana(normalizeForSearch(nameKatakana));
+                    const queryNormalized = katakanaToHiragana(normalizeForSearch(query));
+                    if (nameKatakanaHiragana.includes(queryNormalized)) return true;
+                }
+                
+                // 5. Domain match (case insensitive)
+                if (domain.toLowerCase().includes(normalizedQuery.toLowerCase())) return true;
+                
+                return false;
             });
             
             renderPaymentsTable(filtered, window.currentPeriodKey);
