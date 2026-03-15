@@ -260,6 +260,20 @@ router.get('/app/api-docs', ensureAuthenticated, ensureMembership, async (req, r
   }
 });
 
+// Mailing lists management route
+router.get('/app/mailing-lists', ensureAuthenticated, ensureMembership, async (req, res) => {
+  try {
+    res.render('dashboard/app/mailing-lists/index', {
+      user: req.user,
+      title: "Rakuado - Mailing Lists",
+      isPublic: false
+    });
+  } catch (error) {
+    console.error('Error rendering mailing lists dashboard:', error);
+    res.status(500).send('Internal server error');
+  }
+});
+
 // Partner emails management route
 router.get('/app/partner-emails', ensureAuthenticated, ensureMembership, async (req, res) => {
   try {

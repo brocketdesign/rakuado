@@ -1,0 +1,109 @@
+extends ../../base
+
+block mainContent
+  .container-fluid.px-4
+    // Header
+    .d-flex.justify-content-between.align-items-center.mb-4
+      div
+        h1.fw-bold
+          i.fas.fa-envelope.me-2.text-primary
+          | Mailing Lists
+        p.text-muted.mb-0 Create mailing lists and collect emails from your forms.
+      div
+        button.btn.btn-primary#createListBtn
+          i.fas.fa-plus.me-1
+          | New Mailing List
+
+    // Mailing Lists Grid
+    #listsLoading.text-center.py-5
+      .spinner-border.text-primary(role='status')
+      p.text-muted.mt-2 Loading mailing lists...
+
+    #listsEmpty.text-center.py-5(style="display:none")
+      i.fas.fa-envelope-open-text.text-muted.display-4.mb-3
+      p.text-muted.mb-2 No mailing lists yet
+      p.text-muted.small Create your first mailing list to start collecting emails.
+
+    #listsContainer.row.g-3(style="display:none")
+
+    // Subscriber Detail Panel (hidden by default)
+    #subscriberPanel(style="display:none")
+      .d-flex.justify-content-between.align-items-center.mb-4
+        div
+          h2.fw-bold#panelListName
+          p.text-muted.mb-0#panelListDesc
+        div
+          button.btn.btn-outline-secondary.me-2#backToListsBtn
+            i.fas.fa-arrow-left.me-1
+            | Back
+          button.btn.btn-outline-primary.me-2#copyUrlBtn
+            i.fas.fa-link.me-1
+            | Copy Form URL
+          button.btn.btn-outline-success#exportCsvBtn
+            i.fas.fa-download.me-1
+            | Export CSV
+
+      // Form URL Card
+      .card.border-0.shadow-sm.mb-4#formUrlCard
+        .card-header.bg-white.border-0
+          h5.fw-bold.mb-0
+            i.fas.fa-code.me-2.text-success
+            | Form Integration
+        .card-body
+          p.text-muted Use this URL as your form action to collect emails:
+          .bg-dark.rounded.p-3.mb-3
+            code.text-success#formUrlDisplay
+          p.text-muted.mb-2 Example HTML form:
+          .bg-dark.rounded.p-3
+            pre.text-success.mb-0#formExampleCode
+
+      // Tag Filter
+      .d-flex.align-items-center.mb-3
+        label.me-2.fw-bold Filter by tag:
+        select.form-select.form-select-sm#tagFilter(style="max-width:200px")
+          option(value="") All tags
+      
+      // Subscribers Table
+      .card.border-0.shadow-sm.mb-4
+        .card-header.bg-white.border-0.d-flex.justify-content-between.align-items-center
+          h5.fw-bold.mb-0
+            i.fas.fa-users.me-2.text-secondary
+            | Subscribers
+            span.badge.bg-primary.ms-2#subscriberCount 0
+        .card-body.p-0
+          #subscribersLoading.text-center.py-5
+            .spinner-border.text-primary(role='status')
+          #subscribersEmpty.text-center.py-4(style="display:none")
+            p.text-muted No subscribers yet. Share your form URL to start collecting emails.
+          .table-responsive
+            table#subscribersTable.table.table-hover.mb-0(style="display:none")
+              thead.table-light
+                tr
+                  th Email
+                  th Tags
+                  th Subscribed
+                  th.text-end Actions
+              tbody#subscribersBody
+
+    // Create / Edit Modal
+    .modal.fade#listModal(tabindex="-1")
+      .modal-dialog
+        .modal-content
+          .modal-header
+            h5.modal-title#listModalTitle Create Mailing List
+            button.btn-close(type="button" data-bs-dismiss="modal")
+          .modal-body
+            form#listForm
+              .mb-3
+                label.form-label.fw-bold(for="listName") Name *
+                input.form-control#listName(type="text" placeholder="e.g. Newsletter, Beta Users..." required)
+              .mb-3
+                label.form-label.fw-bold(for="listDescription") Description
+                textarea.form-control#listDescription(rows="2" placeholder="Optional description...")
+          .modal-footer
+            button.btn.btn-secondary(type="button" data-bs-dismiss="modal") Cancel
+            button.btn.btn-primary#saveListBtn
+              i.fas.fa-save.me-1
+              | Save
+
+  script(src="/js/mailing-lists.js")

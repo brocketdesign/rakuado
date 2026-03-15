@@ -119,6 +119,7 @@ function startServer() {
         ['/api/partner-recruitment', './routers/api/partner-recruitment'],
         ['/api/partner-ad', './routers/api/partner-ad'],
         ['/api/api-keys', './routers/api/api-keys'],
+        ['/api/mailing-lists', './routers/api/mailing-lists'],
         ['/api/v1', './routers/api/v1'],
       ];
 
