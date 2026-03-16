@@ -126,10 +126,10 @@ $(document).ready(function () {
         const pct = allSubscribers.length ? Math.round(entry[1] / allSubscribers.length * 100) : 0;
         summaryBody.append(
           '<div class="col-6 col-md-4 col-lg-3">' +
-            '<div class="border rounded p-2 text-center domain-badge" data-domain="' + escapeAttr(entry[0]) + '" style="cursor:pointer">' +
-              '<div class="fw-bold">' + escapeHtml(entry[0]) + '</div>' +
-              '<span class="badge bg-primary">' + entry[1] + '</span> ' +
-              '<span class="text-muted small">' + pct + '%</span>' +
+            '<div class="border rounded p-3 text-center domain-badge" data-domain="' + escapeAttr(entry[0]) + '" style="cursor:pointer; transition: all 0.2s">' +
+              '<div class="fw-bold text-truncate" title="' + escapeAttr(entry[0]) + '">' + escapeHtml(entry[0]) + '</div>' +
+              '<div class="mt-1"><span class="badge bg-primary fs-6">' + entry[1] + '</span></div>' +
+              '<div class="text-muted small mt-1">' + pct + '% of total</div>' +
             '</div>' +
           '</div>'
         );
@@ -152,7 +152,21 @@ $(document).ready(function () {
     if (tagVal) filtered = filtered.filter(function (s) { return (s.tags || []).includes(tagVal); });
 
     const domainVal = $('#domainFilter').val();
-    if (domainVal) filtered = filtered.filter(function (s) { return s.domain === domainVal; });
+    if (domainVal) {
+      filtered = filtered.filter(function (s) { return s.domain === domainVal; });
+      // Show active filter indicator
+      $('#domainFilterText').text('Showing ' + filtered.length + ' emails from ' + domainVal);
+      $('#domainFilterAlert').show();
+      $('#clearDomainFilter').show();
+      // Highlight active domain badge
+      $('.domain-badge').removeClass('bg-primary text-white').css('border-color', '');
+      $('.domain-badge[data-domain="' + domainVal + '"]').addClass('bg-primary text-white').find('.fw-bold, .small').addClass('text-white');
+    } else {
+      $('#domainFilterAlert').hide();
+      $('#clearDomainFilter').hide();
+      $('.domain-badge').removeClass('bg-primary text-white').css('border-color', '');
+      $('.domain-badge .fw-bold, .domain-badge .small').removeClass('text-white');
+    }
 
     const sort = $('#sortBy').val() || 'date-desc';
     filtered.sort(function (a, b) {
@@ -341,6 +355,11 @@ $(document).ready(function () {
   $(document).on('click', '.domain-badge', function () {
     const d = $(this).data('domain');
     $('#domainFilter').val(d).trigger('change');
+  });
+
+  // Clear domain filter (both buttons)
+  $('#clearDomainFilter, #clearDomainFilterAlert').on('click', function () {
+    $('#domainFilter').val('').trigger('change');
   });
 
   // Click domain column header to toggle sort
