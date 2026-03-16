@@ -57,11 +57,34 @@ block mainContent
           .bg-dark.rounded.p-3
             pre.text-success.mb-0#formExampleCode
 
-      // Tag Filter
-      .d-flex.align-items-center.mb-3
-        label.me-2.fw-bold Filter by tag:
-        select.form-select.form-select-sm#tagFilter(style="max-width:200px")
-          option(value="") All tags
+      // Domain Summary
+      .card.border-0.shadow-sm.mb-4#domainSummaryCard(style="display:none")
+        .card-header.bg-white.border-0
+          h5.fw-bold.mb-0
+            i.fas.fa-globe.me-2.text-info
+            | Domains Summary
+        .card-body
+          .row.g-2#domainSummaryBody
+
+      // Filters
+      .d-flex.align-items-center.flex-wrap.gap-3.mb-3
+        div
+          label.me-2.fw-bold Filter by tag:
+          select.form-select.form-select-sm.d-inline-block#tagFilter(style="max-width:200px")
+            option(value="") All tags
+        div
+          label.me-2.fw-bold Filter by domain:
+          select.form-select.form-select-sm.d-inline-block#domainFilter(style="max-width:200px")
+            option(value="") All domains
+        div
+          label.me-2.fw-bold Sort by:
+          select.form-select.form-select-sm.d-inline-block#sortBy(style="max-width:200px")
+            option(value="date-desc") Newest first
+            option(value="date-asc") Oldest first
+            option(value="email-asc") Email A→Z
+            option(value="email-desc") Email Z→A
+            option(value="domain-asc") Domain A→Z
+            option(value="domain-desc") Domain Z→A
       
       // Subscribers Table
       .card.border-0.shadow-sm.mb-4
@@ -80,6 +103,9 @@ block mainContent
               thead.table-light
                 tr
                   th Email
+                  th(style="cursor:pointer")#sortDomainHeader
+                    | Domain
+                    i.fas.fa-sort.ms-1.text-muted
                   th Tags
                   th Subscribed
                   th.text-end Actions

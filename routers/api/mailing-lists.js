@@ -171,7 +171,7 @@ router.post('/subscribe/:listId', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid mailing list ID' });
     }
 
-    const { email, tag } = req.body;
+    const { email, tag, domain } = req.body;
 
     if (!email || !email.trim()) {
       return res.status(400).json({ success: false, error: 'Email is required' });
@@ -208,9 +208,12 @@ router.post('/subscribe/:listId', async (req, res) => {
       return res.json({ success: true, message: 'Already subscribed' });
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+
     const subscriber = {
       listId,
-      email: email.trim().toLowerCase(),
+      email: cleanEmail,
+      domain: (domain || '').trim(),
       tags: tag && tag.trim() ? [tag.trim()] : [],
       subscribedAt: new Date(),
       ip: req.ip
@@ -239,7 +242,7 @@ router.get('/subscribe/:listId', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid mailing list ID' });
     }
 
-    const { email, tag } = req.query;
+    const { email, tag, domain } = req.query;
 
     if (!email || !email.trim()) {
       return res.status(400).json({ success: false, error: 'Email is required' });
@@ -272,9 +275,12 @@ router.get('/subscribe/:listId', async (req, res) => {
       return res.json({ success: true, message: 'Already subscribed' });
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+
     const subscriber = {
       listId,
-      email: email.trim().toLowerCase(),
+      email: cleanEmail,
+      domain: (domain || '').trim(),
       tags: tag && tag.trim() ? [tag.trim()] : [],
       subscribedAt: new Date(),
       ip: req.ip

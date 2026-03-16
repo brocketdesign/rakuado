@@ -87,9 +87,16 @@ $(document).ready(function () {
         '<form action="' + formUrl + '" method="POST">\n' +
         '  <input type="email" name="email" placeholder="Your email" required />\n' +
         '  <input type="hidden" name="tag" value="my-form" />\n' +
+        '  <input type="hidden" name="domain" id="domainField" />\n' +
         '  <button type="submit">Subscribe</button>\n' +
-        '</form>'
+        '</form>\n' +
+        '<script>document.getElementById("domainField").value = window.location.hostname;</script>'
       );
+
+      // Ensure every subscriber has a domain field (handles older records)
+      allSubscribers.forEach(function (s) {
+        if (!s.domain) s.domain = '';
+      });
 
       // Build tag filter
       const allTags = new Set();
@@ -101,12 +108,66 @@ $(document).ready(function () {
         select.append('<option value="' + escapeAttr(t) + '">' + escapeHtml(t) + '</option>');
       });
 
-      renderSubscribers(allSubscribers);
+      // Build domain filter & summary
+      const domainCounts = {};
+      allSubscribers.forEach(function (s) {
+        const d = s.domain || '(unknown)';
+        domainCounts[d] = (domainCounts[d] || 0) + 1;
+      });
+      const domainSelect = $('#domainFilter').empty().append('<option value="">All domains</option>');
+      Object.keys(domainCounts).sort().forEach(function (d) {
+        domainSelect.append('<option value="' + escapeAttr(d) + '">' + escapeHtml(d) + ' (' + domainCounts[d] + ')</option>');
+      });
+
+      // Render domain summary cards
+      const summaryBody = $('#domainSummaryBody').empty();
+      const sortedDomains = Object.entries(domainCounts).sort(function (a, b) { return b[1] - a[1]; });
+      sortedDomains.forEach(function (entry) {
+        const pct = allSubscribers.length ? Math.round(entry[1] / allSubscribers.length * 100) : 0;
+        summaryBody.append(
+          '<div class="col-6 col-md-4 col-lg-3">' +
+            '<div class="border rounded p-2 text-center domain-badge" data-domain="' + escapeAttr(entry[0]) + '" style="cursor:pointer">' +
+              '<div class="fw-bold">' + escapeHtml(entry[0]) + '</div>' +
+              '<span class="badge bg-primary">' + entry[1] + '</span> ' +
+              '<span class="text-muted small">' + pct + '%</span>' +
+            '</div>' +
+          '</div>'
+        );
+      });
+      if (sortedDomains.length) $('#domainSummaryCard').show(); else $('#domainSummaryCard').hide();
+
+      applyFiltersAndSort();
     }).fail(function () {
       $('#subscribersLoading').hide();
       alert('Failed to load subscribers');
       backToLists();
     });
+  }
+
+  // ── Filtering & sorting ────────────────────────────────────────
+  function applyFiltersAndSort() {
+    let filtered = allSubscribers.slice();
+
+    const tagVal = $('#tagFilter').val();
+    if (tagVal) filtered = filtered.filter(function (s) { return (s.tags || []).includes(tagVal); });
+
+    const domainVal = $('#domainFilter').val();
+    if (domainVal) filtered = filtered.filter(function (s) { return s.domain === domainVal; });
+
+    const sort = $('#sortBy').val() || 'date-desc';
+    filtered.sort(function (a, b) {
+      switch (sort) {
+        case 'date-asc':   return new Date(a.subscribedAt) - new Date(b.subscribedAt);
+        case 'date-desc':  return new Date(b.subscribedAt) - new Date(a.subscribedAt);
+        case 'email-asc':  return a.email.localeCompare(b.email);
+        case 'email-desc': return b.email.localeCompare(a.email);
+        case 'domain-asc': return (a.domain || '').localeCompare(b.domain || '');
+        case 'domain-desc':return (b.domain || '').localeCompare(a.domain || '');
+        default: return 0;
+      }
+    });
+
+    renderSubscribers(filtered);
   }
 
   function renderSubscribers(subscribers) {
@@ -127,6 +188,7 @@ $(document).ready(function () {
       body.append(`
         <tr>
           <td>${escapeHtml(sub.email)}</td>
+          <td><span class="badge bg-info bg-opacity-75">${escapeHtml(sub.domain || '—')}</span></td>
           <td>${tags || '<span class="text-muted">—</span>'}</td>
           <td>${new Date(sub.subscribedAt).toLocaleDateString()}</td>
           <td class="text-end">
@@ -259,9 +321,9 @@ $(document).ready(function () {
   // Export CSV
   $('#exportCsvBtn').on('click', function () {
     if (!allSubscribers.length) return;
-    let csv = 'Email,Tags,Subscribed Date\n';
+    let csv = 'Email,Domain,Tags,Subscribed Date\n';
     allSubscribers.forEach(function (s) {
-      csv += '"' + s.email + '","' + (s.tags || []).join('; ') + '","' + new Date(s.subscribedAt).toISOString() + '"\n';
+      csv += '"' + s.email + '","' + (s.domain || '') + '","' + (s.tags || []).join('; ') + '","' + new Date(s.subscribedAt).toISOString() + '"\n';
     });
     const blob = new Blob([csv], { type: 'text/csv' });
     const a = document.createElement('a');
@@ -270,16 +332,21 @@ $(document).ready(function () {
     a.click();
   });
 
-  // Tag filter
-  $('#tagFilter').on('change', function () {
-    const tag = $(this).val();
-    if (!tag) {
-      renderSubscribers(allSubscribers);
-    } else {
-      renderSubscribers(allSubscribers.filter(function (s) {
-        return (s.tags || []).includes(tag);
-      }));
-    }
+  // Filters & sort
+  $('#tagFilter, #domainFilter, #sortBy').on('change', function () {
+    applyFiltersAndSort();
+  });
+
+  // Click domain badge to filter
+  $(document).on('click', '.domain-badge', function () {
+    const d = $(this).data('domain');
+    $('#domainFilter').val(d).trigger('change');
+  });
+
+  // Click domain column header to toggle sort
+  $(document).on('click', '#sortDomainHeader', function () {
+    const cur = $('#sortBy').val();
+    $('#sortBy').val(cur === 'domain-asc' ? 'domain-desc' : 'domain-asc').trigger('change');
   });
 
   // ── Helpers ───────────────────────────────────────────────────
