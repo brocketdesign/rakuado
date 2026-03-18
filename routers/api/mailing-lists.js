@@ -3,6 +3,7 @@ const router = express.Router();
 const { ObjectId } = require('mongodb');
 const ensureAuthenticated = require('../../middleware/authMiddleware');
 const ensureMembership = require('../../middleware/ensureMembership');
+const { sendEmail } = require('../../services/email');
 
 // ── Admin routes (require auth) ──────────────────────────────────
 
@@ -222,10 +223,29 @@ router.post('/subscribe/:listId', async (req, res) => {
     await global.db.collection('mailingListSubscribers').insertOne(subscriber);
 
     // Increment subscriber count
-    await global.db.collection('mailingLists').updateOne(
+    const updatedList = await global.db.collection('mailingLists').findOneAndUpdate(
       { _id: listId },
-      { $inc: { subscriberCount: 1 } }
+      { $inc: { subscriberCount: 1 } },
+      { returnDocument: 'after' }
     );
+
+    // Send admin notification email
+    try {
+      const adminEmail = process.env.ADMIN_EMAIL;
+      if (adminEmail) {
+        await sendEmail(adminEmail, 'new subscriber admin', {
+          email: cleanEmail,
+          listName: list.name || 'Unnamed List',
+          subscriberCount: updatedList.subscriberCount || (list.subscriberCount + 1),
+          tags: subscriber.tags.length ? subscriber.tags.join(', ') : '',
+          domain: subscriber.domain || '',
+          subscribedAt: new Date().toLocaleString('en-US'),
+          category: 'Admin Notification'
+        });
+      }
+    } catch (emailError) {
+      console.error('Error sending admin subscriber notification:', emailError);
+    }
 
     res.json({ success: true, message: 'Subscribed successfully' });
   } catch (error) {
@@ -288,10 +308,29 @@ router.get('/subscribe/:listId', async (req, res) => {
 
     await global.db.collection('mailingListSubscribers').insertOne(subscriber);
 
-    await global.db.collection('mailingLists').updateOne(
+    const updatedList = await global.db.collection('mailingLists').findOneAndUpdate(
       { _id: listId },
-      { $inc: { subscriberCount: 1 } }
+      { $inc: { subscriberCount: 1 } },
+      { returnDocument: 'after' }
     );
+
+    // Send admin notification email
+    try {
+      const adminEmail = process.env.ADMIN_EMAIL;
+      if (adminEmail) {
+        await sendEmail(adminEmail, 'new subscriber admin', {
+          email: cleanEmail,
+          listName: list.name || 'Unnamed List',
+          subscriberCount: updatedList.subscriberCount || (list.subscriberCount + 1),
+          tags: subscriber.tags.length ? subscriber.tags.join(', ') : '',
+          domain: subscriber.domain || '',
+          subscribedAt: new Date().toLocaleString('en-US'),
+          category: 'Admin Notification'
+        });
+      }
+    } catch (emailError) {
+      console.error('Error sending admin subscriber notification:', emailError);
+    }
 
     res.json({ success: true, message: 'Subscribed successfully' });
   } catch (error) {

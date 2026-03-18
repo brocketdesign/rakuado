@@ -161,6 +161,19 @@ router.post('/partner-recruitment', async (req, res) => {
       
       // Send all emails in parallel
       await Promise.all(emailPromises);
+
+      // Send admin notification using the new affiliate template
+      const adminEmail = process.env.ADMIN_EMAIL;
+      if (adminEmail) {
+        await sendEmail(adminEmail, 'new affiliate admin', {
+          email,
+          blogUrl,
+          message: message || 'No message provided',
+          requestId: result.insertedId.toString(),
+          createdAt: new Date().toLocaleString('en-US'),
+          category: 'Admin Notification'
+        });
+      }
     } catch (emailError) {
       console.error('Error sending admin notification email:', emailError);
       // Continue even if email fails - don't block the form submission
