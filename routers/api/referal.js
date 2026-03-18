@@ -154,19 +154,28 @@ router.get('/info', async (req, res) => {
   }
 });
 
-// GET all enabled popups (for frontend) - Only Yahoo popups
+// GET enabled popup in rotation (for frontend) - returns one popup at a time
 router.get('/enabled', async (req, res) => {
   const popups = await POPUPS.find({ 
-    enabled: { $ne: false },
-    slug: { $regex: /yahoo/, $options: 'i' }
+    enabled: { $ne: false }
   }).sort({ order: 1 }).toArray();
-  res.json(popups.map(p => ({
-    _id: p._id,
-    imageUrl: p.imageUrl,
-    targetUrl: p.targetUrl,
-    order: p.order,
-    slug: p.slug || ''
-  })));
+
+  if (popups.length === 0) {
+    return res.json([]);
+  }
+
+  // Rotate based on total views across all enabled popups
+  const totalViews = popups.reduce((sum, p) => sum + (p.views || 0), 0);
+  const selectedIndex = totalViews % popups.length;
+  const selected = popups[selectedIndex];
+
+  res.json([{
+    _id: selected._id,
+    imageUrl: selected.imageUrl,
+    targetUrl: selected.targetUrl,
+    order: selected.order,
+    slug: selected.slug || ''
+  }]);
 });
 
 // GET register a view (by _id)

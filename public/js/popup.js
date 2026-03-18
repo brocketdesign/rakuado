@@ -152,18 +152,7 @@
               return;
             }
 
-            // Only use Yahoo popups
-            const yahooPopups = popups.filter(p => {
-              const slug = normalizeSlug(p.slug);
-              return slug && slug.includes('yahoo');
-            });
-
-            if (yahooPopups.length === 0) {
-              log('No Yahoo popups available');
-              return;
-            }
-
-            const enriched = yahooPopups
+            const enriched = popups
               .filter(Boolean)
               .map(p => {
                 const resolvedSlug = resolveSlug(p);
@@ -185,7 +174,7 @@
             });
 
             if (filtered.length === 0) {
-              log('All Yahoo popups already opened');
+              log('All popups already opened');
               return;
             }
 
