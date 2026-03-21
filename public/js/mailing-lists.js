@@ -49,7 +49,7 @@ $(document).ready(function () {
                     <p class="text-muted small mb-2">${escapeHtml(list.description || '')}</p>
                   </div>
                   <div class="d-flex align-items-center">
-                    <button class="btn btn-sm btn-light me-1 toggle-active" data-id="${list._id}" title="${toggleTitle}" onclick="event.stopPropagation()">
+                    <button class="btn btn-sm btn-light me-1 toggle-active" data-id="${list._id}" title="${toggleTitle}">
                       <i class="fas ${toggleIcon} fa-lg"></i>
                     </button>
                     <div class="dropdown">
