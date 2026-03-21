@@ -3,14 +3,24 @@ $(document).ready(function () {
   let currentListId = null;
   let allSubscribers = [];
   let editingListId = null;
+  let currentWelcomeEmail = null;
+  let activeListId = null;
 
   // ── Load all mailing lists ────────────────────────────────────
   function loadLists() {
     $('#listsLoading').show();
     $('#listsEmpty, #listsContainer, #subscriberPanel').hide();
 
-    $.getJSON(API, function (data) {
+    // Fetch lists and active state in parallel
+    $.when(
+      $.getJSON(API),
+      $.getJSON(API + '/active')
+    ).done(function (listsRes, activeRes) {
       $('#listsLoading').hide();
+
+      const data = listsRes[0];
+      const activeData = activeRes[0];
+      activeListId = (activeData.success && activeData.mailingList) ? activeData.mailingList._id : null;
 
       if (!data.success || !data.mailingLists.length) {
         $('#listsEmpty').show();
@@ -19,24 +29,37 @@ $(document).ready(function () {
 
       const container = $('#listsContainer').empty();
       data.mailingLists.forEach(function (list) {
+        const isActive = activeListId === list._id;
+        const activeBorder = isActive ? 'border-success border-2' : 'border-0';
+        const activeBadge = isActive
+          ? '<span class="badge bg-success ms-2"><i class="fas fa-check-circle me-1"></i>Active</span>'
+          : '';
+        const toggleIcon = isActive ? 'fa-toggle-on text-success' : 'fa-toggle-off text-muted';
+        const toggleTitle = isActive ? 'Deactivate' : 'Activate';
+
         const card = `
           <div class="col-md-6 col-lg-4">
-            <div class="card border-0 shadow-sm h-100 list-card" data-id="${list._id}" style="cursor:pointer">
+            <div class="card ${activeBorder} shadow-sm h-100 list-card" data-id="${list._id}" style="cursor:pointer">
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start">
                   <div>
-                    <h5 class="fw-bold mb-1">${escapeHtml(list.name)}</h5>
+                    <h5 class="fw-bold mb-1">${escapeHtml(list.name)}${activeBadge}</h5>
                     <p class="text-muted small mb-2">${escapeHtml(list.description || '')}</p>
                   </div>
-                  <div class="dropdown">
-                    <button class="btn btn-sm btn-light" data-bs-toggle="dropdown" onclick="event.stopPropagation()">
-                      <i class="fas fa-ellipsis-v"></i>
+                  <div class="d-flex align-items-center">
+                    <button class="btn btn-sm btn-light me-1 toggle-active" data-id="${list._id}" title="${toggleTitle}" onclick="event.stopPropagation()">
+                      <i class="fas ${toggleIcon} fa-lg"></i>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                      <li><a class="dropdown-item edit-list" href="#" data-id="${list._id}" data-name="${escapeAttr(list.name)}" data-desc="${escapeAttr(list.description || '')}"><i class="fas fa-edit me-2"></i>Edit</a></li>
-                      <li><hr class="dropdown-divider"></li>
-                      <li><a class="dropdown-item text-danger delete-list" href="#" data-id="${list._id}"><i class="fas fa-trash me-2"></i>Delete</a></li>
-                    </ul>
+                    <div class="dropdown">
+                      <button class="btn btn-sm btn-light" data-bs-toggle="dropdown" onclick="event.stopPropagation()">
+                        <i class="fas fa-ellipsis-v"></i>
+                      </button>
+                      <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item edit-list" href="#" data-id="${list._id}" data-name="${escapeAttr(list.name)}" data-desc="${escapeAttr(list.description || '')}"><i class="fas fa-edit me-2"></i>Edit</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger delete-list" href="#" data-id="${list._id}"><i class="fas fa-trash me-2"></i>Delete</a></li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
                 <div class="d-flex align-items-center mt-2">
@@ -136,6 +159,9 @@ $(document).ready(function () {
       });
       if (sortedDomains.length) $('#domainSummaryCard').show(); else $('#domainSummaryCard').hide();
 
+      // Load welcome email status
+      loadWelcomeEmailStatus(listId);
+
       applyFiltersAndSort();
     }).fail(function () {
       $('#subscribersLoading').hide();
@@ -228,6 +254,32 @@ $(document).ready(function () {
   // Click on a list card
   $(document).on('click', '.list-card', function () {
     loadSubscribers($(this).data('id'));
+  });
+
+  // Activate / Deactivate toggle
+  $(document).on('click', '.toggle-active', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const id = $(this).data('id');
+    const isCurrentlyActive = activeListId === id;
+
+    if (isCurrentlyActive) {
+      // Deactivate
+      $.ajax({
+        url: API + '/deactivate',
+        method: 'POST',
+        success: function () { loadLists(); },
+        error: function () { alert('Failed to deactivate mailing list'); }
+      });
+    } else {
+      // Activate this one (only one at a time)
+      $.ajax({
+        url: API + '/activate/' + id,
+        method: 'POST',
+        success: function () { loadLists(); },
+        error: function () { alert('Failed to activate mailing list'); }
+      });
+    }
   });
 
   // Back button
@@ -366,6 +418,168 @@ $(document).ready(function () {
   $(document).on('click', '#sortDomainHeader', function () {
     const cur = $('#sortBy').val();
     $('#sortBy').val(cur === 'domain-asc' ? 'domain-desc' : 'domain-asc').trigger('change');
+  });
+
+  // ── Welcome Email ─────────────────────────────────────────────
+
+  function loadWelcomeEmailStatus(listId) {
+    $.getJSON(API + '/' + listId + '/welcome-email', function (data) {
+      currentWelcomeEmail = data.welcomeEmail;
+      if (data.success && data.welcomeEmail && data.welcomeEmail.subject) {
+        const we = data.welcomeEmail;
+        const statusParts = [];
+        statusParts.push('<strong>' + escapeHtml(we.subject) + '</strong>');
+        if (we.attachment && we.attachment.filename) {
+          statusParts.push(' &middot; <i class="fas fa-paperclip"></i> ' + escapeHtml(we.attachment.filename));
+        }
+        statusParts.push(' &middot; ' + (we.enabled ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Disabled</span>'));
+        $('#welcomeEmailStatusText').html(statusParts.join(''));
+        $('#welcomeEmailStatus').show();
+        $('#welcomeEmailBtn').html('<i class="fas fa-paper-plane me-1"></i>Welcome Email <span class="badge bg-success ms-1">On</span>');
+      } else {
+        currentWelcomeEmail = null;
+        $('#welcomeEmailStatus').hide();
+        $('#welcomeEmailBtn').html('<i class="fas fa-paper-plane me-1"></i>Welcome Email');
+      }
+    }).fail(function () {
+      currentWelcomeEmail = null;
+      $('#welcomeEmailStatus').hide();
+    });
+  }
+
+  function openWelcomeEmailModal() {
+    if (!currentListId) return;
+    // Populate form
+    if (currentWelcomeEmail) {
+      $('#welcomeSubject').val(currentWelcomeEmail.subject || '');
+      $('#welcomeBody').val(currentWelcomeEmail.htmlBody || '');
+      $('#welcomeEnabled').prop('checked', currentWelcomeEmail.enabled !== false);
+      if (currentWelcomeEmail.attachment && currentWelcomeEmail.attachment.filename) {
+        $('#currentAttachmentName').text(currentWelcomeEmail.attachment.filename);
+        const sizeKB = currentWelcomeEmail.attachment.size ? Math.round(currentWelcomeEmail.attachment.size / 1024) + ' KB' : '';
+        $('#currentAttachmentSize').text(sizeKB);
+        $('#currentAttachment').show();
+      } else {
+        $('#currentAttachment').hide();
+      }
+    } else {
+      $('#welcomeSubject').val('');
+      $('#welcomeBody').val('');
+      $('#welcomeEnabled').prop('checked', true);
+      $('#currentAttachment').hide();
+    }
+    $('#welcomeAttachment').val('');
+    updateWelcomePreview();
+    new bootstrap.Modal($('#welcomeEmailModal')[0]).show();
+  }
+
+  function updateWelcomePreview() {
+    const html = $('#welcomeBody').val();
+    if (html && html.trim()) {
+      // Create a safe preview using an iframe-like sandbox via srcdoc
+      $('#welcomePreview').html('<iframe srcdoc="' + escapeAttr(html) + '" style="width:100%;min-height:200px;border:none;" sandbox=""></iframe>');
+    } else {
+      $('#welcomePreview').html('<span class="text-muted small">No preview yet</span>');
+    }
+  }
+
+  // Open welcome email modal
+  $('#welcomeEmailBtn, #editWelcomeEmailBtn').on('click', function () {
+    openWelcomeEmailModal();
+  });
+
+  // Live preview
+  $('#welcomeBody').on('input', function () {
+    updateWelcomePreview();
+  });
+
+  // Save welcome email
+  $('#saveWelcomeEmailBtn').on('click', function () {
+    const subject = $('#welcomeSubject').val().trim();
+    const htmlBody = $('#welcomeBody').val().trim();
+    const enabled = $('#welcomeEnabled').is(':checked');
+
+    if (!subject) { alert('Subject is required'); return; }
+    if (!htmlBody) { alert('Email body is required'); return; }
+
+    const btn = $(this).prop('disabled', true);
+    const file = $('#welcomeAttachment')[0].files[0];
+
+    // Step 1: Save subject + body
+    $.ajax({
+      url: API + '/' + currentListId + '/welcome-email',
+      method: 'PUT',
+      contentType: 'application/json',
+      data: JSON.stringify({ subject, htmlBody, enabled }),
+      success: function () {
+        // Step 2: Upload attachment if a new file was selected
+        if (file) {
+          var formData = new FormData();
+          formData.append('attachment', file);
+          $.ajax({
+            url: API + '/' + currentListId + '/welcome-email/attachment',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function () {
+              btn.prop('disabled', false);
+              bootstrap.Modal.getInstance($('#welcomeEmailModal')[0]).hide();
+              loadWelcomeEmailStatus(currentListId);
+            },
+            error: function (xhr) {
+              btn.prop('disabled', false);
+              var msg = xhr.responseJSON ? xhr.responseJSON.error : 'Failed to upload attachment';
+              alert('Email saved but attachment upload failed: ' + msg);
+              bootstrap.Modal.getInstance($('#welcomeEmailModal')[0]).hide();
+              loadWelcomeEmailStatus(currentListId);
+            }
+          });
+        } else {
+          btn.prop('disabled', false);
+          bootstrap.Modal.getInstance($('#welcomeEmailModal')[0]).hide();
+          loadWelcomeEmailStatus(currentListId);
+        }
+      },
+      error: function (xhr) {
+        btn.prop('disabled', false);
+        var msg = xhr.responseJSON ? xhr.responseJSON.error : 'Failed to save welcome email';
+        alert(msg);
+      }
+    });
+  });
+
+  // Remove attachment
+  $('#removeAttachmentBtn').on('click', function () {
+    if (!currentListId) return;
+    if (!confirm('Remove the attachment from the welcome email?')) return;
+
+    $.ajax({
+      url: API + '/' + currentListId + '/welcome-email/attachment',
+      method: 'DELETE',
+      success: function () {
+        $('#currentAttachment').hide();
+        if (currentWelcomeEmail) currentWelcomeEmail.attachment = null;
+      },
+      error: function () { alert('Failed to remove attachment'); }
+    });
+  });
+
+  // Delete entire welcome email
+  $('#deleteWelcomeEmailBtn').on('click', function () {
+    if (!currentListId) return;
+    if (!confirm('Remove the welcome email configuration? New subscribers will no longer receive a welcome email.')) return;
+
+    $.ajax({
+      url: API + '/' + currentListId + '/welcome-email',
+      method: 'DELETE',
+      success: function () {
+        currentWelcomeEmail = null;
+        $('#welcomeEmailStatus').hide();
+        $('#welcomeEmailBtn').html('<i class="fas fa-paper-plane me-1"></i>Welcome Email');
+      },
+      error: function () { alert('Failed to remove welcome email'); }
+    });
   });
 
   // ── Helpers ───────────────────────────────────────────────────

@@ -392,6 +392,61 @@ exports.sendEmailWithUserSettings = async (userMailSettings, toEmail, template, 
   });
 };
 
+// Send a raw HTML email (not template-based) with optional attachments
+// attachments: [{ filename, content (Buffer), contentType }] or [{ filename, path (URL) }]
+exports.sendRawEmail = async (toEmail, subject, htmlBody, attachments = []) => {
+  const fromEmail = process.env.RESEND_FROM_EMAIL || process.env.MAILTRAP_FROM_EMAIL || 'no-reply@rakuado.net';
+  const fromName = process.env.RESEND_FROM_NAME || company_name || 'Rakuado';
+  const from = fromName ? `${fromName} <${fromEmail}>` : fromEmail;
+
+  // Try Resend first
+  if (resendClient) {
+    try {
+      const payload = {
+        from,
+        to: [toEmail],
+        subject,
+        html: htmlBody
+      };
+      if (attachments.length) {
+        payload.attachments = attachments.map(a => ({
+          filename: a.filename,
+          content: a.content // Buffer or base64
+        }));
+      }
+      const result = await resendClient.emails.send(payload);
+      if (result.error) throw new Error(result.error.message);
+      console.log(`Raw email sent via Resend to ${toEmail}`);
+      return result;
+    } catch (err) {
+      console.error('Resend raw email failed:', err.message);
+      if (!mailtrapClient) throw err;
+    }
+  }
+
+  // Fallback to Mailtrap
+  if (mailtrapClient) {
+    const payload = {
+      from: { name: fromName, email: fromEmail },
+      to: [{ email: toEmail }],
+      subject,
+      html: htmlBody
+    };
+    if (attachments.length) {
+      payload.attachments = attachments.map(a => ({
+        filename: a.filename,
+        content: a.content,
+        type: a.contentType || 'application/octet-stream'
+      }));
+    }
+    await mailtrapClient.send(payload);
+    console.log(`Raw email sent via Mailtrap to ${toEmail}`);
+    return { provider: 'mailtrap' };
+  }
+
+  throw new Error('No email service configured');
+};
+
 // Export individual providers for direct use if needed
 exports.sendEmailViaResend = sendEmailViaResend;
 exports.sendEmailViaMailtrap = sendEmailViaMailtrap;

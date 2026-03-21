@@ -36,12 +36,29 @@ block mainContent
           button.btn.btn-outline-secondary.me-2#backToListsBtn
             i.fas.fa-arrow-left.me-1
             | Back
+          button.btn.btn-outline-info.me-2#welcomeEmailBtn
+            i.fas.fa-paper-plane.me-1
+            | Welcome Email
           button.btn.btn-outline-primary.me-2#copyUrlBtn
             i.fas.fa-link.me-1
             | Copy Form URL
           button.btn.btn-outline-success#exportCsvBtn
             i.fas.fa-download.me-1
             | Export CSV
+
+      // Welcome Email Status Card
+      #welcomeEmailStatus.card.border-0.shadow-sm.mb-4(style="display:none")
+        .card-body.d-flex.align-items-center.justify-content-between
+          div
+            i.fas.fa-envelope-open-text.me-2.text-info
+            span#welcomeEmailStatusText
+          div
+            button.btn.btn-sm.btn-outline-info.me-2#editWelcomeEmailBtn
+              i.fas.fa-edit.me-1
+              | Edit
+            button.btn.btn-sm.btn-outline-danger#deleteWelcomeEmailBtn
+              i.fas.fa-trash.me-1
+              | Remove
 
       // Form URL Card
       .card.border-0.shadow-sm.mb-4#formUrlCard
@@ -143,5 +160,48 @@ block mainContent
             button.btn.btn-primary#saveListBtn
               i.fas.fa-save.me-1
               | Save
+
+    // Welcome Email Modal
+    .modal.fade#welcomeEmailModal(tabindex="-1")
+      .modal-dialog.modal-lg
+        .modal-content
+          .modal-header
+            h5.modal-title
+              i.fas.fa-paper-plane.me-2.text-info
+              | Welcome Email
+            button.btn-close(type="button" data-bs-dismiss="modal")
+          .modal-body
+            p.text-muted.mb-3 This email will be automatically sent to new subscribers when they join the mailing list.
+            form#welcomeEmailForm
+              .mb-3
+                label.form-label.fw-bold(for="welcomeSubject") Subject *
+                input.form-control#welcomeSubject(type="text" placeholder="e.g. Welcome to our newsletter!" required)
+              .mb-3
+                label.form-label.fw-bold(for="welcomeBody") Email Body (HTML) *
+                textarea.form-control#welcomeBody(rows="10" placeholder="Write your welcome email content here... HTML is supported." required style="font-family: monospace; font-size: 0.85rem")
+              .mb-3
+                label.form-label.fw-bold Preview
+                .border.rounded.p-3.bg-light#welcomePreview(style="min-height: 100px; max-height: 300px; overflow-y: auto")
+                  .text-muted.small No preview yet
+              .mb-3
+                label.form-label.fw-bold Attachment (optional)
+                #currentAttachment(style="display:none")
+                  .alert.alert-success.d-flex.align-items-center.justify-content-between.py-2.mb-2
+                    div
+                      i.fas.fa-paperclip.me-2
+                      span#currentAttachmentName
+                      span.text-muted.small.ms-2#currentAttachmentSize
+                    button.btn.btn-sm.btn-outline-danger#removeAttachmentBtn(type="button")
+                      i.fas.fa-times
+                input.form-control#welcomeAttachment(type="file" accept=".pdf,.txt,.doc,.docx,.png,.jpg,.jpeg,.gif")
+                .form-text Accepted: PDF, TXT, DOC, DOCX, PNG, JPG, GIF. Max 10 MB.
+              .mb-3.form-check
+                input.form-check-input#welcomeEnabled(type="checkbox" checked)
+                label.form-check-label(for="welcomeEnabled") Enable this welcome email
+          .modal-footer
+            button.btn.btn-secondary(type="button" data-bs-dismiss="modal") Cancel
+            button.btn.btn-info.text-white#saveWelcomeEmailBtn
+              i.fas.fa-save.me-1
+              | Save Welcome Email
 
   script(src="/js/mailing-lists.js")
