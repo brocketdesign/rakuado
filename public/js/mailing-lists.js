@@ -5,6 +5,7 @@ $(document).ready(function () {
   let editingListId = null;
   let currentWelcomeEmail = null;
   let activeListId = null;
+  let allLists = [];
 
   // ── Load all mailing lists ────────────────────────────────────
   function loadLists() {
@@ -21,6 +22,7 @@ $(document).ready(function () {
       const data = listsRes[0];
       const activeData = activeRes[0];
       activeListId = (activeData.success && activeData.mailingList) ? activeData.mailingList._id : null;
+      allLists = (data.success && data.mailingLists) ? data.mailingLists : [];
 
       if (!data.success || !data.mailingLists.length) {
         $('#listsEmpty').show();
@@ -285,12 +287,53 @@ $(document).ready(function () {
   // Back button
   $('#backToListsBtn').on('click', backToLists);
 
+  // Clear all service config fields in modal
+  function clearModalFields() {
+    $('#listName, #listDescription, #serviceName, #headline, #subtext, #logoUrl, #accentHex').val('');
+    $('#extraDays').val('');
+    $('#accentHexColor').val('#6366f1');
+  }
+
+  // Populate service config fields from a list object
+  function populateModalFields(list) {
+    const cfg = list.serviceConfig || {};
+    $('#listName').val(list.name || '');
+    $('#listDescription').val(list.description || '');
+    $('#serviceName').val(cfg.serviceName || '');
+    $('#headline').val(cfg.headline || '');
+    $('#subtext').val(cfg.subtext || '');
+    $('#extraDays').val(cfg.extraDays != null ? cfg.extraDays : '');
+    $('#accentHex').val(cfg.accentHex || '');
+    $('#accentHexColor').val(cfg.accentHex || '#6366f1');
+    $('#logoUrl').val(cfg.logoUrl || '');
+  }
+
+  // Collect service config fields from modal
+  function collectServiceConfig() {
+    return {
+      serviceName: $('#serviceName').val().trim(),
+      headline: $('#headline').val().trim(),
+      subtext: $('#subtext').val().trim(),
+      extraDays: $('#extraDays').val() ? parseInt($('#extraDays').val(), 10) : 0,
+      accentHex: $('#accentHex').val().trim(),
+      logoUrl: $('#logoUrl').val().trim()
+    };
+  }
+
+  // Sync color picker ↔ text input
+  $(document).on('input', '#accentHexColor', function () {
+    $('#accentHex').val($(this).val());
+  });
+  $(document).on('input', '#accentHex', function () {
+    const v = $(this).val().trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) $('#accentHexColor').val(v);
+  });
+
   // Create new list
   $('#createListBtn').on('click', function () {
     editingListId = null;
     $('#listModalTitle').text('Create Mailing List');
-    $('#listName').val('');
-    $('#listDescription').val('');
+    clearModalFields();
     new bootstrap.Modal($('#listModal')[0]).show();
   });
 
@@ -300,8 +343,15 @@ $(document).ready(function () {
     e.stopPropagation();
     editingListId = $(this).data('id');
     $('#listModalTitle').text('Edit Mailing List');
-    $('#listName').val($(this).data('name'));
-    $('#listDescription').val($(this).data('desc'));
+    // Find the full list object to populate all fields
+    const list = allLists.find(function (l) { return l._id === editingListId; });
+    if (list) {
+      populateModalFields(list);
+    } else {
+      clearModalFields();
+      $('#listName').val($(this).data('name'));
+      $('#listDescription').val($(this).data('desc'));
+    }
     new bootstrap.Modal($('#listModal')[0]).show();
   });
 
@@ -309,6 +359,7 @@ $(document).ready(function () {
   $('#saveListBtn').on('click', function () {
     const name = $('#listName').val().trim();
     const description = $('#listDescription').val().trim();
+    const serviceConfig = collectServiceConfig();
     if (!name) { alert('Name is required'); return; }
 
     const btn = $(this).prop('disabled', true);
@@ -318,7 +369,7 @@ $(document).ready(function () {
         url: API + '/' + editingListId,
         method: 'PUT',
         contentType: 'application/json',
-        data: JSON.stringify({ name, description }),
+        data: JSON.stringify({ name, description, serviceConfig }),
         success: function () {
           bootstrap.Modal.getInstance($('#listModal')[0]).hide();
           btn.prop('disabled', false);
@@ -335,7 +386,7 @@ $(document).ready(function () {
         url: API,
         method: 'POST',
         contentType: 'application/json',
-        data: JSON.stringify({ name, description }),
+        data: JSON.stringify({ name, description, serviceConfig }),
         success: function () {
           bootstrap.Modal.getInstance($('#listModal')[0]).hide();
           btn.prop('disabled', false);

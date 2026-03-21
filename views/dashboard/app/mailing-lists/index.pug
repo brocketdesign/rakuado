@@ -142,7 +142,7 @@ block mainContent
 
     // Create / Edit Modal
     .modal.fade#listModal(tabindex="-1")
-      .modal-dialog
+      .modal-dialog.modal-lg
         .modal-content
           .modal-header
             h5.modal-title#listModalTitle Create Mailing List
@@ -155,6 +155,37 @@ block mainContent
               .mb-3
                 label.form-label.fw-bold(for="listDescription") Description
                 textarea.form-control#listDescription(rows="2" placeholder="Optional description...")
+
+              hr
+              h6.fw-bold.mb-3
+                i.fas.fa-cog.me-2.text-muted
+                | Service Configuration
+              p.text-muted.small.mb-3 These fields are returned by the API and can be used to customize how this mailing list is displayed.
+
+              .row
+                .col-md-6.mb-3
+                  label.form-label.fw-bold(for="serviceName") Service Name
+                  input.form-control#serviceName(type="text" placeholder="e.g. RakuAdo — AIクーポンファインダー")
+                .col-md-6.mb-3
+                  label.form-label.fw-bold(for="headline") Headline
+                  input.form-control#headline(type="text" placeholder="e.g. AIが人気サイトのお得情報を自動発見！")
+              .row
+                .col-md-6.mb-3
+                  label.form-label.fw-bold(for="subtext") Subtext
+                  input.form-control#subtext(type="text" placeholder="e.g. Yahoo・TikTok・Temu など主要サイトを毎日チェック")
+                .col-md-6.mb-3
+                  label.form-label.fw-bold(for="extraDays") Extra Days
+                  input.form-control#extraDays(type="number" placeholder="e.g. 3" min="0")
+              .row
+                .col-md-6.mb-3
+                  label.form-label.fw-bold(for="accentHex") Accent Color
+                  .input-group
+                    input.form-control.form-control-color#accentHexColor(type="color" value="#6366f1" style="max-width:50px")
+                    input.form-control#accentHex(type="text" placeholder="#6366f1")
+                .col-md-6.mb-3
+                  label.form-label.fw-bold(for="logoUrl") Logo URL
+                  textarea.form-control#logoUrl(rows="2" placeholder="URL or data:image/svg+xml,...")
+
           .modal-footer
             button.btn.btn-secondary(type="button" data-bs-dismiss="modal") Cancel
             button.btn.btn-primary#saveListBtn

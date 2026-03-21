@@ -31,6 +31,19 @@ const welcomeUpload = multer({
   }
 });
 
+// ── Helpers ──────────────────────────────────────────────────────
+function sanitizeServiceConfig(cfg) {
+  if (!cfg || typeof cfg !== 'object') return {};
+  return {
+    serviceName: String(cfg.serviceName || '').trim().slice(0, 200),
+    headline:    String(cfg.headline    || '').trim().slice(0, 300),
+    subtext:     String(cfg.subtext     || '').trim().slice(0, 300),
+    extraDays:   Math.max(0, parseInt(cfg.extraDays, 10) || 0),
+    accentHex:   String(cfg.accentHex   || '').trim().slice(0, 20),
+    logoUrl:     String(cfg.logoUrl     || '').trim().slice(0, 5000)
+  };
+}
+
 // ── Admin routes (require auth) ──────────────────────────────────
 
 // GET the currently activated mailing list (full info + subscribers)
@@ -159,7 +172,7 @@ router.get('/:id', ensureAuthenticated, ensureMembership, async (req, res) => {
 // POST create a new mailing list
 router.post('/', ensureAuthenticated, ensureMembership, async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, serviceConfig } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, error: 'Mailing list name is required' });
@@ -169,6 +182,7 @@ router.post('/', ensureAuthenticated, ensureMembership, async (req, res) => {
       userId: new ObjectId(req.user._id),
       name: name.trim(),
       description: (description || '').trim(),
+      serviceConfig: sanitizeServiceConfig(serviceConfig),
       subscriberCount: 0,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -190,7 +204,7 @@ router.put('/:id', ensureAuthenticated, ensureMembership, async (req, res) => {
     if (!ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ success: false, error: 'Invalid mailing list ID' });
     }
-    const { name, description } = req.body;
+    const { name, description, serviceConfig } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, error: 'Mailing list name is required' });
@@ -198,7 +212,7 @@ router.put('/:id', ensureAuthenticated, ensureMembership, async (req, res) => {
 
     const result = await global.db.collection('mailingLists').updateOne(
       { _id: new ObjectId(req.params.id), userId: new ObjectId(req.user._id) },
-      { $set: { name: name.trim(), description: (description || '').trim(), updatedAt: new Date() } }
+      { $set: { name: name.trim(), description: (description || '').trim(), serviceConfig: sanitizeServiceConfig(serviceConfig), updatedAt: new Date() } }
     );
 
     if (result.matchedCount === 0) {
