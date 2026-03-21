@@ -44,9 +44,53 @@ function sanitizeServiceConfig(cfg) {
   };
 }
 
+// ── Public endpoint — fetch activated mailing list for external apps ──
+// GET /api/mailing-lists/active/:userId
+// No auth required. Returns only list ID + serviceConfig for popup generation.
+router.get('/active/:userId', async (req, res) => {
+  try {
+    if (!ObjectId.isValid(req.params.userId)) {
+      return res.status(400).json({ success: false, error: 'Invalid user ID' });
+    }
+
+    const userId = new ObjectId(req.params.userId);
+    const settings = await global.db.collection('userSettings').findOne({ userId });
+
+    if (!settings || !settings.activeMailingListId) {
+      return res.json({ success: true, mailingList: null });
+    }
+
+    const list = await global.db.collection('mailingLists').findOne({
+      _id: new ObjectId(settings.activeMailingListId),
+      userId
+    });
+
+    if (!list) {
+      await global.db.collection('userSettings').updateOne(
+        { userId },
+        { $unset: { activeMailingListId: '' } }
+      );
+      return res.json({ success: true, mailingList: null });
+    }
+
+    res.json({
+      success: true,
+      mailingList: {
+        _id: list._id,
+        name: list.name,
+        description: list.description,
+        serviceConfig: list.serviceConfig || {}
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching active mailing list:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch active mailing list' });
+  }
+});
+
 // ── Admin routes (require auth) ──────────────────────────────────
 
-// GET the currently activated mailing list (full info + subscribers)
+// GET active mailing list for dashboard (authenticated)
 router.get('/active', ensureAuthenticated, ensureMembership, async (req, res) => {
   try {
     const userId = new ObjectId(req.user._id);
@@ -62,7 +106,6 @@ router.get('/active', ensureAuthenticated, ensureMembership, async (req, res) =>
     });
 
     if (!list) {
-      // The referenced list no longer exists; clear the stale reference
       await global.db.collection('userSettings').updateOne(
         { userId },
         { $unset: { activeMailingListId: '' } }
@@ -70,12 +113,7 @@ router.get('/active', ensureAuthenticated, ensureMembership, async (req, res) =>
       return res.json({ success: true, mailingList: null });
     }
 
-    const subscribers = await global.db.collection('mailingListSubscribers')
-      .find({ listId: list._id })
-      .sort({ subscribedAt: -1 })
-      .toArray();
-
-    res.json({ success: true, mailingList: list, subscribers });
+    res.json({ success: true, mailingList: list });
   } catch (error) {
     console.error('Error fetching active mailing list:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch active mailing list' });
