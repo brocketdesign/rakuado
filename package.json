@@ -7,7 +7,7 @@
     "test": "npm test",
     "dev": "nodemon app.js",
     "start": "node app.js",
-    "heroku-postbuild": "cd client && npm install && npm run build",
+    "heroku-postbuild": "cd client && npm install --include=dev && npm run build",
     "init-analytics": "node scripts/init-analytics.js",
     "init-partners": "node scripts/init-partners.js"
   },
