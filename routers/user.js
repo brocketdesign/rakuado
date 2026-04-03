@@ -365,6 +365,29 @@ router.post('/reset', async (req, res) => {
 
 });
 
+// Endpoint to get current authenticated user info (used by React dashboard)
+router.get('/me', async (req, res) => {
+  if (!req.user || !req.user._id) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const userId = req.user._id;
+    const user = await global.db.collection('users').findOne(
+      { _id: userId },
+      { projection: { email: 1, credits: 1, profileImage: 1, name: 1 } }
+    );
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({
+      _id: user._id,
+      email: user.email,
+      credits: user.credits || 0,
+      profileImage: user.profileImage || null,
+      name: user.name || user.email,
+    });
+  } catch (error) {
+    console.error('Failed to get user info:', error);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
 // Endpoint to get the current user's credits
 router.get('/credits', async (req, res) => {
   if (!req.user || !req.user._id) return res.status(401).json({ error: 'Unauthorized' });

@@ -10,6 +10,24 @@ const {retrieveLatestArticle} = require('../../modules/init-blog')
 
 var wordpress = require("wordpress");
 
+// GET /  -- list all blogs for the authenticated user
+router.get('/', async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) return res.status(401).json({ error: 'Unauthorized' });
+    const userId = new ObjectId(req.user._id);
+    const blogs = await global.db.collection('blogInfos').find({ userId }).sort({ _id: 1 }).toArray();
+    // For each blog, attach its bots
+    const blogsWithBots = await Promise.all(blogs.map(async (blog) => {
+      const bots = await global.db.collection('botInfos').find({ blogId: blog._id.toString() }).toArray();
+      return { ...blog, bots };
+    }));
+    res.json(blogsWithBots);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 router.get('/info/category/:blogId', async (req, res) => {
   const { blogId } = req.params;
 

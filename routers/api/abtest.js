@@ -510,6 +510,31 @@ router.get('/register-view', async (req, res) => {
 });
 
 // Endpoint to get A/B test results for the current user
+// GET /tests -- list all A/B tests for the authenticated user (session-based)
+router.get('/tests', async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) return res.status(401).json({ error: 'Unauthorized' });
+    const userId = new ObjectId(req.user._id);
+    const tests = await global.db.collection('abTests').find({ userId }).sort({ uploadDate: -1 }).toArray();
+    const result = tests.map((t) => {
+      const imgA = t.images?.find((i) => i.variant === 'A') || {};
+      const imgB = t.images?.find((i) => i.variant === 'B') || {};
+      return {
+        _id: t._id,
+        testId: t.testId,
+        isActive: t.active || false,
+        createdAt: t.uploadDate,
+        variantA: { name: imgA.imageName, imageUrl: imgA.imageUrl, targetUrl: imgA.targetUrl, views: imgA.viewCount || 0, clicks: imgA.clickCount || 0 },
+        variantB: { name: imgB.imageName, imageUrl: imgB.imageUrl, targetUrl: imgB.targetUrl, views: imgB.viewCount || 0, clicks: imgB.clickCount || 0 },
+      };
+    });
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.get('/get-ab-test-results', async (req, res) => {
     try {
         const userId = new ObjectId(req.query.userId)

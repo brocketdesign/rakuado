@@ -8,6 +8,18 @@ const filterRecentRefery = (refery) => {
   return (refery || []).filter(r => r.timestamp && r.timestamp >= cutoff);
 };
 
+// Detect if a sorted array of daily records is cumulative (monotonically non-decreasing)
+function detectCumulative(data) {
+  if (data.length < 3) return false;
+  let nonDecreasingCount = 0;
+  for (let i = 1; i < data.length; i++) {
+    const prevViews = data[i-1].total ? data[i-1].total.views : 0;
+    const currViews = data[i].total ? data[i].total.views : 0;
+    if (currViews >= prevViews) nonDecreasingCount++;
+  }
+  return nonDecreasingCount / (data.length - 1) >= 0.9;
+}
+
 // Helper function to get custom month period dates (21st to 20th)
 function getCustomMonthPeriod(monthsBack = 0) {
   const now = new Date();
@@ -62,15 +74,43 @@ router.get('/data', async (req, res) => {
         return res.status(400).json({ error: 'Invalid period' });
     }
 
+    // Fetch one day before the period start so we can compute the delta for the first day
+    const dayBeforeStart = new Date(startDate);
+    dayBeforeStart.setDate(dayBeforeStart.getDate() - 1);
+
     const data = await db.collection('analyticsDaily')
       .find({
         date: {
-          $gte: startDate.toISOString().split('T')[0],
+          $gte: dayBeforeStart.toISOString().split('T')[0],
           $lte: endDate.toISOString().split('T')[0]
         }
       })
       .sort({ date: 1 })
       .toArray();
+
+    // Detect if data is cumulative (values consistently non-decreasing across days)
+    // by checking whether the total views are monotonically non-decreasing
+    let isCumulative = false;
+    if (data.length >= 3) {
+      let nonDecreasingCount = 0;
+      for (let i = 1; i < data.length; i++) {
+        const prevViews = (site === 'all')
+          ? (data[i-1].total ? data[i-1].total.views : 0)
+          : (data[i-1].sites && data[i-1].sites[site] ? data[i-1].sites[site].views : 0);
+        const currViews = (site === 'all')
+          ? (data[i].total ? data[i].total.views : 0)
+          : (data[i].sites && data[i].sites[site] ? data[i].sites[site].views : 0);
+        if (currViews >= prevViews) nonDecreasingCount++;
+      }
+      // If 90%+ of consecutive days are non-decreasing, it's cumulative
+      isCumulative = nonDecreasingCount / (data.length - 1) >= 0.9;
+    }
+
+    // Build a lookup map by date
+    const dataByDate = {};
+    for (const item of data) {
+      dataByDate[item.date] = item;
+    }
 
     // Create a complete date range with all days from start to end
     const response = [];
@@ -79,7 +119,7 @@ router.get('/data', async (req, res) => {
     
     while (currentDate <= endDateTime) {
       const dateStr = currentDate.toISOString().split('T')[0];
-      const existingData = data.find(item => item.date === dateStr);
+      const existingData = dataByDate[dateStr];
       
       const result = {
         date: dateStr,
@@ -88,12 +128,41 @@ router.get('/data', async (req, res) => {
       };
 
       if (existingData) {
+        let currViews, currClicks;
         if (site === 'all') {
-          result.views = existingData.total ? existingData.total.views : 0;
-          result.clicks = existingData.total ? existingData.total.clicks : 0;
+          currViews = existingData.total ? existingData.total.views : 0;
+          currClicks = existingData.total ? existingData.total.clicks : 0;
         } else if (existingData.sites && existingData.sites[site]) {
-          result.views = existingData.sites[site].views;
-          result.clicks = existingData.sites[site].clicks;
+          currViews = existingData.sites[site].views;
+          currClicks = existingData.sites[site].clicks;
+        } else {
+          currViews = 0;
+          currClicks = 0;
+        }
+
+        if (isCumulative) {
+          // Find previous day's data to compute delta
+          const prevDate = new Date(currentDate);
+          prevDate.setDate(prevDate.getDate() - 1);
+          const prevDateStr = prevDate.toISOString().split('T')[0];
+          const prevData = dataByDate[prevDateStr];
+
+          let prevViews = 0, prevClicks = 0;
+          if (prevData) {
+            if (site === 'all') {
+              prevViews = prevData.total ? prevData.total.views : 0;
+              prevClicks = prevData.total ? prevData.total.clicks : 0;
+            } else if (prevData.sites && prevData.sites[site]) {
+              prevViews = prevData.sites[site].views;
+              prevClicks = prevData.sites[site].clicks;
+            }
+          }
+
+          result.views = Math.max(0, currViews - prevViews);
+          result.clicks = Math.max(0, currClicks - prevClicks);
+        } else {
+          result.views = currViews;
+          result.clicks = currClicks;
         }
       }
 
@@ -154,45 +223,101 @@ router.get('/summary', async (req, res) => {
         return res.status(400).json({ error: 'Invalid period' });
     }
 
+    // Fetch one day before so we can compute the delta for the first day
+    const dayBeforePeriod = new Date(startDate);
+    dayBeforePeriod.setDate(dayBeforePeriod.getDate() - 1);
+
     const data = await db.collection('analyticsDaily')
       .find({
         date: {
-          $gte: startDate.toISOString().split('T')[0],
+          $gte: dayBeforePeriod.toISOString().split('T')[0],
           $lte: endDate.toISOString().split('T')[0]
         }
       })
       .sort({ date: 1 })
       .toArray();
 
-    // Calculate totals for the requested period
-    const totals = data.reduce((acc, item) => {
-      acc.views += item.total ? item.total.views : 0;
-      acc.clicks += item.total ? item.total.clicks : 0;
-      return acc;
-    }, { views: 0, clicks: 0 });
+    const isCumulative = detectCumulative(data);
 
-    // Get today's and yesterday's data (for daily comparison)
-    const today = data[data.length - 1] || { total: { views: 0, clicks: 0 } };
-    const yesterday = data[data.length - 2] || { total: { views: 0, clicks: 0 } };
+    // If cumulative, period total = last value - first value (which is the day before start)
+    // If already deltas, sum them up (excluding the extra day before)
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const periodData = data.filter(d => d.date >= startDateStr);
+
+    let totals;
+    if (isCumulative && data.length >= 2) {
+      const firstRecord = data[0]; // day before period or first day
+      const lastRecord = data[data.length - 1];
+      totals = {
+        views: Math.max(0, (lastRecord.total ? lastRecord.total.views : 0) - (firstRecord.total ? firstRecord.total.views : 0)),
+        clicks: Math.max(0, (lastRecord.total ? lastRecord.total.clicks : 0) - (firstRecord.total ? firstRecord.total.clicks : 0))
+      };
+    } else {
+      totals = periodData.reduce((acc, item) => {
+        acc.views += item.total ? item.total.views : 0;
+        acc.clicks += item.total ? item.total.clicks : 0;
+        return acc;
+      }, { views: 0, clicks: 0 });
+    }
+
+    // Get today's and yesterday's daily delta (for daily comparison)
+    let todayDelta, yesterdayDelta;
+    if (isCumulative && periodData.length >= 2) {
+      const last = periodData[periodData.length - 1];
+      const secondLast = periodData[periodData.length - 2];
+      todayDelta = {
+        views: Math.max(0, (last.total ? last.total.views : 0) - (secondLast.total ? secondLast.total.views : 0)),
+        clicks: Math.max(0, (last.total ? last.total.clicks : 0) - (secondLast.total ? secondLast.total.clicks : 0))
+      };
+      if (periodData.length >= 3) {
+        const thirdLast = periodData[periodData.length - 3];
+        yesterdayDelta = {
+          views: Math.max(0, (secondLast.total ? secondLast.total.views : 0) - (thirdLast.total ? thirdLast.total.views : 0)),
+          clicks: Math.max(0, (secondLast.total ? secondLast.total.clicks : 0) - (thirdLast.total ? thirdLast.total.clicks : 0))
+        };
+      } else {
+        yesterdayDelta = { views: 0, clicks: 0 };
+      }
+    } else {
+      const today = periodData[periodData.length - 1] || { total: { views: 0, clicks: 0 } };
+      const yesterday = periodData[periodData.length - 2] || { total: { views: 0, clicks: 0 } };
+      todayDelta = today.total || { views: 0, clicks: 0 };
+      yesterdayDelta = yesterday.total || { views: 0, clicks: 0 };
+    }
 
     // Determine previous period (one period before the requested period)
     const monthsBackForThisPeriod = period === 'current' ? 1 : 2;
     const { startDate: prevStart, endDate: prevEnd } = getCustomMonthPeriod(monthsBackForThisPeriod);
+    const dayBeforePrevStart = new Date(prevStart);
+    dayBeforePrevStart.setDate(dayBeforePrevStart.getDate() - 1);
 
     const prevData = await db.collection('analyticsDaily')
       .find({
         date: {
-          $gte: prevStart.toISOString().split('T')[0],
+          $gte: dayBeforePrevStart.toISOString().split('T')[0],
           $lte: prevEnd.toISOString().split('T')[0]
         }
       })
+      .sort({ date: 1 })
       .toArray();
 
-    const prevTotals = prevData.reduce((acc, item) => {
-      acc.views += item.total ? item.total.views : 0;
-      acc.clicks += item.total ? item.total.clicks : 0;
-      return acc;
-    }, { views: 0, clicks: 0 });
+    let prevTotals;
+    const isPrevCumulative = detectCumulative(prevData);
+    if (isPrevCumulative && prevData.length >= 2) {
+      const firstPrev = prevData[0];
+      const lastPrev = prevData[prevData.length - 1];
+      prevTotals = {
+        views: Math.max(0, (lastPrev.total ? lastPrev.total.views : 0) - (firstPrev.total ? firstPrev.total.views : 0)),
+        clicks: Math.max(0, (lastPrev.total ? lastPrev.total.clicks : 0) - (firstPrev.total ? firstPrev.total.clicks : 0))
+      };
+    } else {
+      const prevStartStr = prevStart.toISOString().split('T')[0];
+      prevTotals = prevData.filter(d => d.date >= prevStartStr).reduce((acc, item) => {
+        acc.views += item.total ? item.total.views : 0;
+        acc.clicks += item.total ? item.total.clicks : 0;
+        return acc;
+      }, { views: 0, clicks: 0 });
+    }
 
     const periodCtr = totals.views > 0 ? (totals.clicks / totals.views) * 100 : 0;
     const prevCtr = prevTotals.views > 0 ? (prevTotals.clicks / prevTotals.views) * 100 : 0;
@@ -203,8 +328,8 @@ router.get('/summary', async (req, res) => {
     const changePeriodCtr = prevCtr > 0 ? ((periodCtr - prevCtr) / prevCtr * 100) : 0;
 
     // Compute today vs yesterday changes (daily)
-    const changeTodayViews = yesterday.total && yesterday.total.views > 0 ? ((today.total.views - yesterday.total.views) / yesterday.total.views * 100) : 0;
-    const changeTodayClicks = yesterday.total && yesterday.total.clicks > 0 ? ((today.total.clicks - yesterday.total.clicks) / yesterday.total.clicks * 100) : 0;
+    const changeTodayViews = yesterdayDelta.views > 0 ? ((todayDelta.views - yesterdayDelta.views) / yesterdayDelta.views * 100) : 0;
+    const changeTodayClicks = yesterdayDelta.clicks > 0 ? ((todayDelta.clicks - yesterdayDelta.clicks) / yesterdayDelta.clicks * 100) : 0;
 
     const summary = {
       period: {
@@ -214,8 +339,8 @@ router.get('/summary', async (req, res) => {
         startDate: startDate.toISOString().split('T')[0],
         endDate: endDate.toISOString().split('T')[0]
       },
-      today: today.total || { views: 0, clicks: 0 },
-      yesterday: yesterday.total || { views: 0, clicks: 0 },
+      today: todayDelta,
+      yesterday: yesterdayDelta,
       // Backwards-compatible `change` contains period comparisons (used by summary cards)
       change: {
         views: Number(changePeriodViews.toFixed(1)),

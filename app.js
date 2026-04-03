@@ -108,7 +108,6 @@ function startServer() {
         ['/user', './routers/user'],
         ['/auth', './routers/auth'],
         ['/payment', './routers/payment'],
-        ['/dashboard', './routers/dashboard/index'],
         ['/api/generator', './routers/api/generator'],
         ['/api/autoblog', './routers/api/autoblog'],
         ['/api/affiliate', './routers/api/affiliate'],
@@ -121,12 +120,27 @@ function startServer() {
         ['/api/api-keys', './routers/api/api-keys'],
         ['/api/mailing-lists', './routers/api/mailing-lists'],
         ['/api/v1', './routers/api/v1'],
+        ['/api/rss', './routers/api/rss'],
       ];
 
       routers.forEach(([route, path]) => app.use(route, require(path)));
       
       // Add partner emails API router
       app.use('/api/partners/emails', require('./routers/api/partner-emails'));
+
+      // Serve React client build for dashboard and login
+      const clientDistPath = path.join(__dirname, 'client', 'dist');
+      app.use('/assets', express.static(path.join(clientDistPath, 'assets')));
+      app.use('/favicon.svg', express.static(path.join(clientDistPath, 'favicon.svg')));
+      app.use('/icons.svg', express.static(path.join(clientDistPath, 'icons.svg')));
+
+      // SPA fallback: serve React index.html for /dashboard/* and /login routes
+      const serveReactApp = (req, res) => {
+        res.sendFile(path.join(clientDistPath, 'index.html'));
+      };
+      app.get('/dashboard', serveReactApp);
+      app.get('/dashboard/*', serveReactApp);
+      app.get('/login', serveReactApp);
 
 
       server.listen(port, '0.0.0.0', () => 

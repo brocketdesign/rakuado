@@ -126,6 +126,30 @@ router.post('/reset', async (req, res) => {
   return res.sendStatus(200);
 });
 
+// GET /list -- list all popups for the admin dashboard
+router.get('/list', async (req, res) => {
+  try {
+    const popups = await POPUPS.find({}).sort({ order: 1 }).toArray();
+    const result = popups.map((p) => {
+      const refery = Array.isArray(p.refery) ? p.refery : [];
+      return {
+        _id: p._id,
+        name: p.name || '',
+        imageUrl: p.imageUrl || '',
+        targetUrl: p.targetUrl || '',
+        slug: p.slug || '',
+        enabled: p.enabled !== false,
+        order: p.order,
+        views: p.views || 0,
+        clicks: p.clicks || 0,
+      };
+    });
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // GET referral info (by _id)
 router.get('/info', async (req, res) => {
   let id = req.query.popup;
