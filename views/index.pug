@@ -6,20 +6,16 @@ block content
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
-                        entry.target.classList.remove('hidden'); // Remove the hidden class
-                        entry.target.classList.add('animate__animated');
-                        entry.target.classList.add(entry.target.dataset.animate); // Apply the animation class
-                        entry.target.classList.add(entry.target.dataset.delay); // Apply delay if present
-                        observer.unobserve(entry.target); // Stop observing after animation
+                        entry.target.classList.remove('rk-hidden');
+                        entry.target.classList.add('rk-visible');
+                        observer.unobserve(entry.target);
                     }
                 });
-            }, {
-                threshold: 0.1 // Adjust the threshold as needed
-            });
+            }, { threshold: 0.08 });
 
-            document.querySelectorAll('[data-animate]').forEach(element => {
-                element.classList.add('hidden'); // Add the hidden class initially
-                observer.observe(element);
+            document.querySelectorAll('[data-rk-animate]').forEach(el => {
+                el.classList.add('rk-hidden');
+                observer.observe(el);
             });
 
             const chartCanvas = document.getElementById('earningsChart');

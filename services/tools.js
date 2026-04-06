@@ -151,7 +151,16 @@ async function updateFavicon() {
   }
 }
 async function checkIfAdmin(user){
-  return ['support@rakuado.net','maho@gmail.com'].includes(user.email)
+  if (!user || !user._id) return false;
+  try {
+    const doc = await global.db.collection('users').findOne(
+      { _id: user._id },
+      { projection: { isAdmin: 1 } }
+    );
+    return !!(doc && doc.isAdmin);
+  } catch {
+    return false;
+  }
 }
 
 module.exports = {

@@ -22,6 +22,7 @@ import ApiKeys from './pages/ApiKeys'
 import ApiDocs from './pages/ApiDocs'
 import MailingLists from './pages/MailingLists'
 import Settings from './pages/Settings'
+import PartnerPortal from './pages/PartnerPortal'
 import Loading from './components/Loading'
 
 function ProtectedRoute({ children }) {
@@ -63,6 +64,7 @@ export default function App() {
         <Route path="api-docs" element={<ApiDocs />} />
         <Route path="mailing-lists" element={<MailingLists />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="partner-portal" element={<PartnerPortal />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
