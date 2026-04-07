@@ -127,13 +127,13 @@ async function resetViewClickData() {
 }
   
 // POST endpoint to reset all view/click data
-router.post('/reset', async (req, res) => {
+router.post('/reset', ensureAuthenticated, requireAdmin, async (req, res) => {
   await resetViewClickData();
   return res.sendStatus(200);
 });
 
 // GET /list -- list all popups for the admin dashboard
-router.get('/list', async (req, res) => {
+router.get('/list', ensureAuthenticated, requireAdmin, async (req, res) => {
   try {
     const popups = await POPUPS.find({}).sort({ order: 1 }).toArray();
     const result = popups.map((p) => {
@@ -157,7 +157,7 @@ router.get('/list', async (req, res) => {
 });
 
 // GET referral info (by _id)
-router.get('/info', async (req, res) => {
+router.get('/info', ensureAuthenticated, requireAdmin, async (req, res) => {
   let id = req.query.popup;
   if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
   try {
@@ -271,7 +271,7 @@ router.get('/register-click', async (req, res) => {
 });
 
 // POST update popup order (by _id)
-router.post('/order', async (req, res) => {
+router.post('/order', ensureAuthenticated, requireAdmin, async (req, res) => {
   let orders = req.body.order || [];
   let popups = req.body.popup || [];
   if (!Array.isArray(orders)) orders = [orders];
@@ -291,7 +291,7 @@ router.post('/order', async (req, res) => {
 });
 
 // POST save (add or update by _id)
-router.post('/save', upload.single('image'), async (req, res) => {
+router.post('/save', upload.single('image'), ensureAuthenticated, requireAdmin, async (req, res) => {
   let { popup, targetUrl, enabled, slug } = req.body;
   let imageUrl = req.body.imageUrl;
   const normalizedSlug = normalizeSlug(slug);
@@ -343,7 +343,7 @@ router.post('/save', upload.single('image'), async (req, res) => {
 });
 
 // POST enable/disable popup
-router.post('/toggle', async (req, res) => {
+router.post('/toggle', ensureAuthenticated, requireAdmin, async (req, res) => {
   const { id, enabled } = req.body;
   if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
   await POPUPS.updateOne({ _id: new ObjectId(id) }, { $set: { enabled: enabled === 'true' } });
@@ -351,7 +351,7 @@ router.post('/toggle', async (req, res) => {
 });
 
 // DELETE popup (by _id)
-router.delete('/:popup', async (req, res) => {
+router.delete('/:popup', ensureAuthenticated, requireAdmin, async (req, res) => {
   const id = req.params.popup;
   if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
   const result = await POPUPS.deleteOne({ _id: new ObjectId(id) });
