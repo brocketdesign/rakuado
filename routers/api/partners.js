@@ -190,7 +190,8 @@ router.post('/', async (req, res) => {
       accountType,
       accountNumber,
       accountHolder,
-      notes
+      notes,
+      gaPropertyId,
     } = req.body;
     
     // Validation
@@ -229,6 +230,7 @@ router.post('/', async (req, res) => {
         accountHolder: accountHolder || ''
       },
       notes: notes || '',
+      gaPropertyId: gaPropertyId || '',
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -261,7 +263,7 @@ router.put('/:id', async (req, res) => {
     const updateFields = {};
     const allowedFields = [
       'domain', 'name', 'nameKatakana', 'monthlyAmount', 'paymentCycle',
-      'startDate', 'stopDate', 'status', 'email', 'phone', 'address', 'notes', 'order'
+      'startDate', 'stopDate', 'status', 'email', 'phone', 'address', 'notes', 'order', 'gaPropertyId'
     ];
     const bankFields = ['bankName', 'bankBranch', 'accountType', 'accountNumber', 'accountHolder'];
     

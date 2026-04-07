@@ -4,7 +4,7 @@ import {
   LayoutDashboard, BarChart3, Users, UserPlus, Mail, Bot,
   Wand2, Globe, TestTubes, Rss, Megaphone, Key, FileText,
   MailPlus, Settings, LogOut, X, CreditCard, ChevronDown, ChevronRight,
-  Briefcase, TrendingUp,
+  Briefcase, TrendingUp, LineChart,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -15,6 +15,7 @@ const userMenuGroups = [
     items: [
       { to: '/dashboard', icon: LayoutDashboard, label: 'ホーム', end: true },
       { to: '/dashboard/analytics', icon: BarChart3, label: 'アナリティクス' },
+      { to: '/dashboard/google-analytics', icon: LineChart, label: 'Google Analytics' },
       { to: '/dashboard/partner-portal', icon: Briefcase, label: 'パートナーポータル' },
       { to: '/dashboard/referral', icon: TrendingUp, label: 'リファラル' },
     ],

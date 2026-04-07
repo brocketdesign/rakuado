@@ -122,6 +122,7 @@ function startServer() {
         ['/api/mailing-lists', './routers/api/mailing-lists'],
         ['/api/v1', './routers/api/v1'],
         ['/api/rss', './routers/api/rss'],
+        ['/api/ga', './routers/api/ga'],
       ];
 
       routers.forEach(([route, path]) => app.use(route, require(path)));

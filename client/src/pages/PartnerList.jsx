@@ -20,6 +20,7 @@ const emptyPartner = {
   email: '', phone: '', address: '',
   bankName: '', bankBranch: '', accountType: '', accountNumber: '', accountHolder: '',
   notes: '',
+  gaPropertyId: '',
 }
 
 export default function PartnerList() {
@@ -132,6 +133,12 @@ export default function PartnerList() {
                   <span className="text-slate-400">支払いサイクル</span>
                   <span className="text-slate-300">{p.paymentCycle || 'monthly'}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">GA連携</span>
+                  {p.gaPropertyId
+                    ? <Badge variant="success">連携済み</Badge>
+                    : <Badge variant="default">未設定</Badge>}
+                </div>
               </div>
             </Card>
           ))}
@@ -210,6 +217,15 @@ export default function PartnerList() {
               <Input label="口座番号" value={form.accountNumber} onChange={(e) => updateField('accountNumber', e.target.value)} />
               <Input label="口座名義" value={form.accountHolder} onChange={(e) => updateField('accountHolder', e.target.value)} />
             </div>
+          </div>
+          <div>
+            <h3 className="mb-3 text-sm font-semibold text-slate-300">Google Analytics</h3>
+            <Input
+              label="GA4 プロパティ ID (例: properties/123456789)"
+              value={form.gaPropertyId || ''}
+              onChange={(e) => updateField('gaPropertyId', e.target.value)}
+              placeholder="properties/XXXXXXXXX"
+            />
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-300">メモ</label>

@@ -23,6 +23,7 @@ import ApiDocs from './pages/ApiDocs'
 import MailingLists from './pages/MailingLists'
 import Settings from './pages/Settings'
 import PartnerPortal from './pages/PartnerPortal'
+import GoogleAnalytics from './pages/GoogleAnalytics'
 import Loading from './components/Loading'
 
 function ProtectedRoute({ children }) {
@@ -46,6 +47,7 @@ export default function App() {
       >
         <Route index element={<Dashboard />} />
         <Route path="analytics" element={<Analytics />} />
+        <Route path="google-analytics" element={<GoogleAnalytics />} />
         <Route path="partners" element={<Partners />} />
         <Route path="partner-list" element={<PartnerList />} />
         <Route path="partner-recruitment" element={<PartnerRecruitment />} />
