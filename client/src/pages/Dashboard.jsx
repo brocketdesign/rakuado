@@ -6,10 +6,43 @@ import { PageHeader, StatCard, Card } from '../components/UI'
 import {
   BarChart3, CreditCard, Mail, Users, UserPlus, TestTubes,
   Globe, Megaphone, Bot, Wand2, Key, MailPlus, Rss, FileText, Eye,
+  Briefcase, TrendingUp, Settings,
 } from 'lucide-react'
 
-const quickLinks = [
-  { label: 'アナリティクス', to: '/dashboard/analytics', icon: BarChart3, color: 'from-blue-500 to-cyan-500' },
+// User-facing quick links (shown to everyone)
+const userLinks = [
+  {
+    label: 'パートナー申請',
+    to: '/dashboard/partner-portal',
+    icon: Briefcase,
+    color: 'from-violet-500 to-purple-500',
+    desc: 'パートナーとして申請・状況確認',
+  },
+  {
+    label: 'アナリティクス',
+    to: '/dashboard/analytics',
+    icon: BarChart3,
+    color: 'from-blue-500 to-cyan-500',
+    desc: 'サイトのアクセス状況を確認',
+  },
+  {
+    label: 'リファラル',
+    to: '/dashboard/referral',
+    icon: TrendingUp,
+    color: 'from-emerald-500 to-green-500',
+    desc: '紹介プログラムの管理',
+  },
+  {
+    label: '設定',
+    to: '/dashboard/settings',
+    icon: Settings,
+    color: 'from-slate-500 to-slate-600',
+    desc: 'アカウント設定の変更',
+  },
+]
+
+// Admin-only quick links
+const adminLinks = [
   { label: 'パートナー支払い', to: '/dashboard/partners', icon: CreditCard, color: 'from-violet-500 to-purple-500' },
   { label: 'パートナーメール', to: '/dashboard/partner-emails', icon: Mail, color: 'from-emerald-500 to-green-500' },
   { label: 'パートナー一覧', to: '/dashboard/partner-list', icon: Users, color: 'from-amber-500 to-orange-500' },
@@ -29,7 +62,7 @@ const toolLinks = [
 ]
 
 export default function Dashboard() {
-  const { isAdmin } = useAuth()
+  const { user, isAdmin } = useAuth()
 
   const { data: analyticsData } = useQuery({
     queryKey: ['analytics-summary'],
@@ -42,6 +75,47 @@ export default function Dashboard() {
 
   const todayViews = analyticsData?.totalViews ?? '—'
 
+  // ── Regular user view ──────────────────────────────────────────────────────
+  if (!isAdmin) {
+    return (
+      <div className="space-y-8">
+        {/* Welcome */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600/20 to-purple-600/20 border border-violet-500/20 p-8">
+          <div className="relative z-10">
+            <h1 className="text-3xl font-bold text-white md:text-4xl">
+              ようこそ、<span className="gradient-text">{user?.name || user?.email || 'ユーザー'}</span>
+            </h1>
+            <p className="mt-2 text-slate-300">Rakuadoダッシュボードへようこそ。下記からご利用いただけます。</p>
+          </div>
+          <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-violet-500/10 to-transparent" />
+        </div>
+
+        {/* User quick links */}
+        <div>
+          <h2 className="mb-4 text-lg font-semibold text-white">メニュー</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {userLinks.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                className="group glass-card flex items-start gap-4 p-5 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-violet-500/10"
+              >
+                <div className={`rounded-xl bg-gradient-to-br ${link.color} p-3 text-white shrink-0`}>
+                  <link.icon size={22} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-200 group-hover:text-white">{link.label}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{link.desc}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Admin view ─────────────────────────────────────────────────────────────
   return (
     <div className="space-y-8">
       {/* Hero */}
@@ -67,7 +141,7 @@ export default function Dashboard() {
       <div>
         <h2 className="mb-4 text-lg font-semibold text-white">パートナー管理</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {quickLinks.map((link) => (
+          {adminLinks.map((link) => (
             <Link
               key={link.to}
               to={link.to}
@@ -85,23 +159,21 @@ export default function Dashboard() {
       </div>
 
       {/* Tools */}
-      {isAdmin && (
-        <div>
-          <h2 className="mb-4 text-lg font-semibold text-white">広告管理 & ツール</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {toolLinks.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                className="glass-card flex flex-col items-center gap-3 p-5 text-center transition-all hover:bg-slate-700/30"
-              >
-                <link.icon size={24} className="text-slate-400" />
-                <span className="text-xs font-medium text-slate-300">{link.label}</span>
-              </Link>
-            ))}
-          </div>
+      <div>
+        <h2 className="mb-4 text-lg font-semibold text-white">広告管理 & ツール</h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {toolLinks.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              className="glass-card flex flex-col items-center gap-3 p-5 text-center transition-all hover:bg-slate-700/30"
+            >
+              <link.icon size={24} className="text-slate-400" />
+              <span className="text-xs font-medium text-slate-300">{link.label}</span>
+            </Link>
+          ))}
         </div>
-      )}
+      </div>
     </div>
   )
 }

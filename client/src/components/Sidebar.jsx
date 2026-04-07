@@ -4,19 +4,25 @@ import {
   LayoutDashboard, BarChart3, Users, UserPlus, Mail, Bot,
   Wand2, Globe, TestTubes, Rss, Megaphone, Key, FileText,
   MailPlus, Settings, LogOut, X, CreditCard, ChevronDown, ChevronRight,
-  Briefcase,
+  Briefcase, TrendingUp,
 } from 'lucide-react'
 import { useState } from 'react'
 
-const menuGroups = [
+// Groups shown to all logged-in users
+const userMenuGroups = [
   {
-    label: 'Overview',
+    label: 'マイページ',
     items: [
-      { to: '/dashboard', icon: LayoutDashboard, label: 'ダッシュボード', end: true },
+      { to: '/dashboard', icon: LayoutDashboard, label: 'ホーム', end: true },
       { to: '/dashboard/analytics', icon: BarChart3, label: 'アナリティクス' },
       { to: '/dashboard/partner-portal', icon: Briefcase, label: 'パートナーポータル' },
+      { to: '/dashboard/referral', icon: TrendingUp, label: 'リファラル' },
     ],
   },
+]
+
+// Additional groups shown only to admins
+const adminMenuGroups = [
   {
     label: 'パートナー管理',
     items: [
@@ -52,14 +58,54 @@ const menuGroups = [
   },
 ]
 
+function NavGroup({ group, collapsed, onToggle, onClose }) {
+  return (
+    <div className="mb-2">
+      <button
+        onClick={() => onToggle(group.label)}
+        className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-300"
+      >
+        {group.label}
+        {collapsed[group.label] ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+      </button>
+      {!collapsed[group.label] && (
+        <div className="space-y-0.5">
+          {group.items.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              onClick={onClose}
+              className={({ isActive }) =>
+                `sidebar-link flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                  isActive
+                    ? 'active text-white'
+                    : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
+                }`
+              }
+            >
+              <item.icon size={18} />
+              {item.label}
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Sidebar({ onClose }) {
-  const { logout } = useAuth()
+  const { logout, isAdmin } = useAuth()
   const location = useLocation()
   const [collapsed, setCollapsed] = useState({})
 
   const toggleGroup = (label) => {
     setCollapsed((prev) => ({ ...prev, [label]: !prev[label] }))
   }
+
+  const visibleGroups = isAdmin
+    ? [...userMenuGroups, ...adminMenuGroups]
+    : userMenuGroups
 
   return (
     <div className="flex h-full flex-col bg-[#0f172a] border-r border-[#1e293b]">
@@ -73,38 +119,14 @@ export default function Sidebar({ onClose }) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-        {menuGroups.map((group) => (
-          <div key={group.label} className="mb-2">
-            <button
-              onClick={() => toggleGroup(group.label)}
-              className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-300"
-            >
-              {group.label}
-              {collapsed[group.label] ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
-            </button>
-            {!collapsed[group.label] && (
-              <div className="space-y-0.5">
-                {group.items.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.end}
-                    onClick={onClose}
-                    className={({ isActive }) =>
-                      `sidebar-link flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
-                        isActive
-                          ? 'active text-white'
-                          : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
-                      }`
-                    }
-                  >
-                    <item.icon size={18} />
-                    {item.label}
-                  </NavLink>
-                ))}
-              </div>
-            )}
-          </div>
+        {visibleGroups.map((group) => (
+          <NavGroup
+            key={group.label}
+            group={group}
+            collapsed={collapsed}
+            onToggle={toggleGroup}
+            onClose={onClose}
+          />
         ))}
       </nav>
 
