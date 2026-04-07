@@ -33,6 +33,14 @@ function ProtectedRoute({ children }) {
   return children
 }
 
+function AdminRoute({ children }) {
+  const { user, isAdmin, isLoading } = useAuth()
+  if (isLoading) return <Loading />
+  if (!user) return <Navigate to="/login" replace />
+  if (!isAdmin) return <Navigate to="/dashboard" replace />
+  return children
+}
+
 export default function App() {
   return (
     <Routes>
@@ -46,8 +54,8 @@ export default function App() {
         }
       >
         <Route index element={<Dashboard />} />
-        <Route path="analytics" element={<Analytics />} />
-        <Route path="google-analytics" element={<GoogleAnalytics />} />
+        <Route path="analytics" element={<AdminRoute><Analytics /></AdminRoute>} />
+        <Route path="google-analytics" element={<AdminRoute><GoogleAnalytics /></AdminRoute>} />
         <Route path="partners" element={<Partners />} />
         <Route path="partner-list" element={<PartnerList />} />
         <Route path="partner-recruitment" element={<PartnerRecruitment />} />
@@ -61,7 +69,7 @@ export default function App() {
         <Route path="ab-tests" element={<ABTests />} />
         <Route path="create-ab-test" element={<CreateABTest />} />
         <Route path="rss" element={<RSSFeeds />} />
-        <Route path="referral" element={<Referral />} />
+        <Route path="referral" element={<AdminRoute><Referral /></AdminRoute>} />
         <Route path="api-keys" element={<ApiKeys />} />
         <Route path="api-docs" element={<ApiDocs />} />
         <Route path="mailing-lists" element={<MailingLists />} />

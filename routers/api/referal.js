@@ -8,6 +8,12 @@ const path = require('path');
 const mime = require('mime-types');
 const { createHash } = require('crypto');
 const { ObjectId } = require('mongodb');
+const ensureAuthenticated = require('../../middleware/authMiddleware');
+
+const requireAdmin = (req, res, next) => {
+  if (!req.user || !req.user.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+  next();
+};
 
 // AWS S3 Configuration
 const s3 = new aws.S3({

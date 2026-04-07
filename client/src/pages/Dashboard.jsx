@@ -9,28 +9,14 @@ import {
   Briefcase, TrendingUp, Settings,
 } from 'lucide-react'
 
-// User-facing quick links (shown to everyone)
+// User-facing quick links (shown to non-admins only)
 const userLinks = [
   {
-    label: 'パートナー申請',
+    label: 'パートナーポータル',
     to: '/dashboard/partner-portal',
     icon: Briefcase,
     color: 'from-violet-500 to-purple-500',
-    desc: 'パートナーとして申請・状況確認',
-  },
-  {
-    label: 'アナリティクス',
-    to: '/dashboard/analytics',
-    icon: BarChart3,
-    color: 'from-blue-500 to-cyan-500',
-    desc: 'サイトのアクセス状況を確認',
-  },
-  {
-    label: 'リファラル',
-    to: '/dashboard/referral',
-    icon: TrendingUp,
-    color: 'from-emerald-500 to-green-500',
-    desc: '紹介プログラムの管理',
+    desc: 'サイト登録・申請状況・収益確認',
   },
   {
     label: '設定',

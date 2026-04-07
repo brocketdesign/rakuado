@@ -6,6 +6,7 @@ import { PageHeader, StatCard, Card, Button, Input, Tabs } from '../components/U
 import {
   FileText, BarChart3, DollarSign, CheckCircle, Clock, XCircle,
   AlertCircle, Send, Eye, MousePointerClick, TrendingUp, Code, ExternalLink,
+  Plus, Globe, ChevronLeft,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import {
@@ -23,7 +24,42 @@ const STEPS = [
 ]
 const STEP_ORDER = STEPS.map((s) => s.key)
 
-// ─── Step progress bar ───────────────────────────────────────────────────────
+const STATUS_LABELS = {
+  pending: { label: '審査待ち', color: 'amber' },
+  analytics_requested: { label: 'GA確認中', color: 'blue' },
+  reviewing: { label: '審査中', color: 'blue' },
+  approved: { label: '承認済み', color: 'green' },
+  snippet_sent: { label: 'スニペット送付済み', color: 'violet' },
+  snippet_verified: { label: '稼働中', color: 'green' },
+  rejected: { label: '却下', color: 'red' },
+}
+
+function cleanDomain(url) {
+  if (!url) return ''
+  let domain = url.trim().toLowerCase()
+  domain = domain.replace(/^https?:\/\//, '')
+  domain = domain.replace(/^www\./, '')
+  domain = domain.replace(/\/$/, '')
+  return domain.split('/')[0]
+}
+
+function StatusBadge({ status }) {
+  const info = STATUS_LABELS[status] || { label: status, color: 'slate' }
+  const colorMap = {
+    amber: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    blue: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+    green: 'bg-green-500/20 text-green-300 border-green-500/30',
+    violet: 'bg-violet-500/20 text-violet-300 border-violet-500/30',
+    red: 'bg-red-500/20 text-red-300 border-red-500/30',
+    slate: 'bg-slate-700 text-slate-300 border-slate-600',
+  }
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${colorMap[info.color]}`}>
+      {info.label}
+    </span>
+  )
+}
+
 function StepIndicator({ currentStep, status }) {
   const currentIdx = STEP_ORDER.indexOf(currentStep)
   const isRejected = status === 'rejected'
@@ -194,40 +230,10 @@ function SnippetCard({ snippetCode }) {
   )
 }
 
-// ─── Main component ──────────────────────────────────────────────────────────
-export default function PartnerPortal() {
+// ─── Site card (in the grid list) ────────────────────────────────────────────
+function SiteDetail({ site, onBack, queryClient }) {
   const [tab, setTab] = useState('application')
   const [analyticsPeriod, setAnalyticsPeriod] = useState('current')
-  const queryClient = useQueryClient()
-
-  // ── Data fetching ──
-  const { data: portalData, isLoading: portalLoading } = useQuery({
-    queryKey: ['partner-portal'],
-    queryFn: () => api.get('/api/partner-portal').then((r) => r.data),
-  })
-
-  const { data: analyticsData, isLoading: analyticsLoading } = useQuery({
-    queryKey: ['partner-portal-analytics', analyticsPeriod],
-    queryFn: () =>
-      api.get('/api/partner-portal/analytics', { params: { period: analyticsPeriod } }).then((r) => r.data),
-    enabled: tab === 'analytics' && !!portalData?.request,
-  })
-
-  const { data: earningsData, isLoading: earningsLoading } = useQuery({
-    queryKey: ['partner-portal-earnings'],
-    queryFn: () => api.get('/api/partner-portal/earnings').then((r) => r.data),
-    enabled: tab === 'earnings' && !!portalData?.request,
-  })
-
-  // ── Mutations ──
-  const applyMutation = useMutation({
-    mutationFn: (data) => api.post('/api/partner-portal/apply', data).then((r) => r.data),
-    onSuccess: () => {
-      toast.success('申請を送信しました')
-      queryClient.invalidateQueries({ queryKey: ['partner-portal'] })
-    },
-    onError: (err) => toast.error(err.response?.data?.error || '申請に失敗しました'),
-  })
 
   const analyticsUrlMutation = useMutation({
     mutationFn: (data) => api.put('/api/partner-portal/analytics-url', data).then((r) => r.data),
@@ -238,74 +244,56 @@ export default function PartnerPortal() {
     onError: (err) => toast.error(err.response?.data?.error || '送信に失敗しました'),
   })
 
-  // ── Handlers ──
-  const handleApply = (e) => {
-    e.preventDefault()
-    const fd = new FormData(e.target)
-    applyMutation.mutate({ blogUrl: fd.get('blogUrl'), message: fd.get('message') })
-  }
+  const { data: analyticsData, isLoading: analyticsLoading } = useQuery({
+    queryKey: ['partner-portal-analytics', site._id, analyticsPeriod],
+    queryFn: () =>
+      api
+        .get('/api/partner-portal/analytics', { params: { period: analyticsPeriod, requestId: site._id } })
+        .then((r) => r.data),
+    enabled: tab === 'analytics',
+  })
+
+  const { data: earningsData, isLoading: earningsLoading } = useQuery({
+    queryKey: ['partner-portal-earnings', site._id],
+    queryFn: () =>
+      api.get('/api/partner-portal/earnings', { params: { requestId: site._id } }).then((r) => r.data),
+    enabled: tab === 'earnings',
+  })
 
   const handleGASubmit = (e) => {
     e.preventDefault()
     const fd = new FormData(e.target)
-    analyticsUrlMutation.mutate({ googleAnalyticsUrl: fd.get('googleAnalyticsUrl') })
+    analyticsUrlMutation.mutate({ googleAnalyticsUrl: fd.get('googleAnalyticsUrl'), requestId: site._id })
   }
 
-  // ── Derived state ──
-  const request = portalData?.request
-
-  const statusLabels = {
-    pending: { label: '審査待ち', color: 'amber' },
-    analytics_requested: { label: 'アナリティクス確認中', color: 'blue' },
-    reviewing: { label: '審査中', color: 'blue' },
-    approved: { label: '承認済み', color: 'green' },
-    snippet_sent: { label: 'スニペット送付済み', color: 'violet' },
-    snippet_verified: { label: '設置確認済み', color: 'green' },
-    rejected: { label: '却下', color: 'red' },
-  }
-  const statusInfo = statusLabels[request?.status] || statusLabels.pending
-
+  const statusInfo = STATUS_LABELS[site.status] || STATUS_LABELS.pending
   const chartData = analyticsData?.data || []
   const totalViews = analyticsData?.totalViews || 0
   const totalClicks = analyticsData?.totalClicks || 0
 
-  if (portalLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 rounded-full border-4 border-slate-700 border-t-violet-500 animate-spin" />
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="パートナーポータル"
-        subtitle="パートナー申請の管理・アナリティクス・収益の確認"
-      />
+      <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200">
+        <ChevronLeft size={16} />
+        サイト一覧へ戻る
+      </button>
 
-      {/* Current status banner */}
-      {request && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-700 bg-slate-800/50 px-5 py-4">
-          <div className="flex-1 min-w-0">
-            <span className="text-sm text-slate-400">ステータス: </span>
-            <span className={`ml-1 text-sm font-semibold text-${statusInfo.color}-400`}>
-              {statusInfo.label}
-            </span>
-          </div>
-          <a
-            href={request.blogUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1 truncate text-sm text-slate-500 hover:text-violet-400"
-          >
-            {request.blogUrl}
-            <ExternalLink size={12} />
-          </a>
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-700 bg-slate-800/50 px-5 py-4">
+        <div className="flex-1 min-w-0">
+          <span className="text-sm text-slate-400">ステータス: </span>
+          <span className={`ml-1 text-sm font-semibold text-${statusInfo.color}-400`}>{statusInfo.label}</span>
         </div>
-      )}
+        <a
+          href={site.blogUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-1 truncate text-sm text-slate-500 hover:text-violet-400"
+        >
+          {cleanDomain(site.blogUrl)}
+          <ExternalLink size={12} />
+        </a>
+      </div>
 
-      {/* Main tabs */}
       <Tabs
         tabs={[
           { value: 'application', label: '申請状況' },
@@ -316,120 +304,91 @@ export default function PartnerPortal() {
         onChange={setTab}
       />
 
-      {/* ─── APPLICATION TAB ───────────────── */}
       {tab === 'application' && (
         <div className="space-y-6">
-          {!request ? (
-            <ApplicationForm onSubmit={handleApply} isLoading={applyMutation.isPending} />
-          ) : (
-            <>
-              {/* Progress stepper */}
-              {request.status !== 'rejected' && (
-                <Card>
-                  <h3 className="mb-6 text-sm font-semibold text-slate-300">申請の進捗</h3>
-                  <StepIndicator currentStep={request.currentStep} status={request.status} />
-                </Card>
-              )}
+          {site.status !== 'rejected' && (
+            <Card>
+              <h3 className="mb-6 text-sm font-semibold text-slate-300">申請の進捗</h3>
+              <StepIndicator currentStep={site.currentStep} status={site.status} />
+            </Card>
+          )}
 
-              {/* Rejected state */}
-              {request.status === 'rejected' && (
-                <Card className="border border-red-500/30 bg-red-500/5">
-                  <div className="flex items-start gap-3">
-                    <XCircle size={20} className="shrink-0 mt-0.5 text-red-400" />
-                    <div>
-                      <h4 className="text-sm font-semibold text-red-300">申請が却下されました</h4>
-                      {request.notes && (
-                        <p className="mt-1 text-sm text-slate-400">{request.notes}</p>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              )}
+          {site.status === 'rejected' && (
+            <Card className="border border-red-500/30 bg-red-500/5">
+              <div className="flex items-start gap-3">
+                <XCircle size={20} className="shrink-0 mt-0.5 text-red-400" />
+                <div>
+                  <h4 className="text-sm font-semibold text-red-300">申請が却下されました</h4>
+                  {site.notes && <p className="mt-1 text-sm text-slate-400">{site.notes}</p>}
+                </div>
+              </div>
+            </Card>
+          )}
 
-              {/* GA URL form when requested */}
-              {(request.currentStep === 'analytics_requested' ||
-                request.status === 'analytics_requested') && (
-                <GAForm
-                  onSubmit={handleGASubmit}
-                  isLoading={analyticsUrlMutation.isPending}
-                  alreadySubmitted={request.googleAnalyticsSubmitted}
-                />
-              )}
+          {(site.currentStep === 'analytics_requested' || site.status === 'analytics_requested') && (
+            <GAForm
+              onSubmit={handleGASubmit}
+              isLoading={analyticsUrlMutation.isPending}
+              alreadySubmitted={site.googleAnalyticsSubmitted}
+            />
+          )}
 
-              {/* Snippet code when sent */}
-              {request.snippetCode && <SnippetCard snippetCode={request.snippetCode} />}
+          {site.snippetCode && <SnippetCard snippetCode={site.snippetCode} />}
 
-              {/* Snippet verification pending notice */}
-              {request.snippetSent && !request.snippetVerified && (
-                <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
-                  <div className="flex items-start gap-3">
-                    <Clock size={18} className="shrink-0 mt-0.5 text-amber-400" />
-                    <p className="text-sm text-amber-300">
-                      スニペットの設置確認中です。ブログに設置後、担当者が確認いたします。
-                    </p>
-                  </div>
+          {site.snippetSent && !site.snippetVerified && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+              <div className="flex items-start gap-3">
+                <Clock size={18} className="shrink-0 mt-0.5 text-amber-400" />
+                <p className="text-sm text-amber-300">
+                  スニペットの設置確認中です。ブログに設置後、担当者が確認いたします。
+                </p>
+              </div>
+            </div>
+          )}
+
+          <Card>
+            <h3 className="mb-4 text-sm font-semibold text-slate-300">申請詳細</h3>
+            <dl className="space-y-3 text-sm">
+              <div className="flex flex-wrap justify-between gap-2">
+                <dt className="text-slate-400">ブログURL</dt>
+                <dd>
+                  <a href={site.blogUrl} target="_blank" rel="noreferrer"
+                    className="flex items-center gap-1 text-violet-400 hover:underline">
+                    {site.blogUrl}
+                    <ExternalLink size={12} />
+                  </a>
+                </dd>
+              </div>
+              {site.googleAnalyticsUrl && (
+                <div className="flex flex-wrap justify-between gap-2">
+                  <dt className="text-slate-400">GoogleアナリティクスURL</dt>
+                  <dd>
+                    <a href={site.googleAnalyticsUrl} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-1 text-violet-400 hover:underline">
+                      リンクを確認
+                      <ExternalLink size={12} />
+                    </a>
+                  </dd>
                 </div>
               )}
-
-              {/* Application detail card */}
-              <Card>
-                <h3 className="mb-4 text-sm font-semibold text-slate-300">申請詳細</h3>
-                <dl className="space-y-3 text-sm">
-                  <div className="flex flex-wrap justify-between gap-2">
-                    <dt className="text-slate-400">ブログURL</dt>
-                    <dd>
-                      <a
-                        href={request.blogUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-1 text-violet-400 hover:underline"
-                      >
-                        {request.blogUrl}
-                        <ExternalLink size={12} />
-                      </a>
-                    </dd>
-                  </div>
-                  {request.googleAnalyticsUrl && (
-                    <div className="flex flex-wrap justify-between gap-2">
-                      <dt className="text-slate-400">GoogleアナリティクスURL</dt>
-                      <dd>
-                        <a
-                          href={request.googleAnalyticsUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center gap-1 text-violet-400 hover:underline"
-                        >
-                          リンクを確認
-                          <ExternalLink size={12} />
-                        </a>
-                      </dd>
-                    </div>
-                  )}
-                  {request.estimatedMonthlyAmount != null && (
-                    <div className="flex flex-wrap justify-between gap-2">
-                      <dt className="text-slate-400">月額報酬（予定）</dt>
-                      <dd className="font-semibold text-white">
-                        {formatCurrency(request.estimatedMonthlyAmount)}
-                      </dd>
-                    </div>
-                  )}
-                  <div className="flex flex-wrap justify-between gap-2">
-                    <dt className="text-slate-400">申請日</dt>
-                    <dd className="text-slate-300">
-                      {new Date(request.createdAt).toLocaleDateString('ja-JP')}
-                    </dd>
-                  </div>
-                </dl>
-              </Card>
-            </>
-          )}
+              {site.estimatedMonthlyAmount != null && (
+                <div className="flex flex-wrap justify-between gap-2">
+                  <dt className="text-slate-400">月額報酬（予定）</dt>
+                  <dd className="font-semibold text-white">{formatCurrency(site.estimatedMonthlyAmount)}</dd>
+                </div>
+              )}
+              <div className="flex flex-wrap justify-between gap-2">
+                <dt className="text-slate-400">申請日</dt>
+                <dd className="text-slate-300">{new Date(site.createdAt).toLocaleDateString('ja-JP')}</dd>
+              </div>
+            </dl>
+          </Card>
         </div>
       )}
 
-      {/* ─── ANALYTICS TAB ──────────────────── */}
       {tab === 'analytics' && (
         <div className="space-y-6">
-          {!request || (!request.snippetSent && !request.snippetVerified) ? (
+          {!site.snippetSent && !site.snippetVerified ? (
             <Card>
               <div className="flex flex-col items-center justify-center py-14 text-center">
                 <div className="mb-4 rounded-2xl bg-slate-800 p-4">
@@ -443,39 +402,20 @@ export default function PartnerPortal() {
           ) : (
             <>
               <Tabs
-                tabs={[
-                  { value: 'current', label: '今月' },
-                  { value: 'previous', label: '先月' },
-                ]}
+                tabs={[{ value: 'current', label: '今月' }, { value: 'previous', label: '先月' }]}
                 active={analyticsPeriod}
                 onChange={setAnalyticsPeriod}
               />
-
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <StatCard
-                  title="合計閲覧数"
-                  value={formatNumber(totalViews)}
-                  icon={Eye}
-                  color="blue"
-                />
-                <StatCard
-                  title="合計クリック数"
-                  value={formatNumber(totalClicks)}
-                  icon={MousePointerClick}
-                  color="violet"
-                />
+                <StatCard title="合計閲覧数" value={formatNumber(totalViews)} icon={Eye} color="blue" />
+                <StatCard title="合計クリック数" value={formatNumber(totalClicks)} icon={MousePointerClick} color="violet" />
                 <StatCard
                   title="CTR"
-                  value={
-                    totalViews > 0
-                      ? `${((totalClicks / totalViews) * 100).toFixed(1)}%`
-                      : '0.0%'
-                  }
+                  value={totalViews > 0 ? `${((totalClicks / totalViews) * 100).toFixed(1)}%` : '0.0%'}
                   icon={TrendingUp}
                   color="green"
                 />
               </div>
-
               <Card>
                 {analyticsLoading ? (
                   <div className="flex h-64 items-center justify-center">
@@ -496,24 +436,8 @@ export default function PartnerPortal() {
                         }}
                       />
                       <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="views"
-                        name="閲覧数"
-                        stroke="#667eea"
-                        strokeWidth={2}
-                        dot={false}
-                        activeDot={{ r: 6 }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="clicks"
-                        name="クリック数"
-                        stroke="#10b981"
-                        strokeWidth={2}
-                        dot={false}
-                        activeDot={{ r: 6 }}
-                      />
+                      <Line type="monotone" dataKey="views" name="閲覧数" stroke="#667eea" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                      <Line type="monotone" dataKey="clicks" name="クリック数" stroke="#10b981" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 ) : (
@@ -522,42 +446,26 @@ export default function PartnerPortal() {
                   </div>
                 )}
               </Card>
-
-              {/* Detailed table */}
               {chartData.length > 0 && (
                 <Card>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-slate-700/50">
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">
-                            日付
-                          </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">
-                            閲覧数
-                          </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">
-                            クリック数
-                          </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">
-                            CTR
-                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">日付</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">閲覧数</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">クリック数</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">CTR</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-700/30">
                         {chartData.map((row) => (
                           <tr key={row.date} className="hover:bg-slate-800/30">
                             <td className="px-4 py-3 text-slate-300">{row.date}</td>
+                            <td className="px-4 py-3 text-slate-300">{formatNumber(row.views)}</td>
+                            <td className="px-4 py-3 text-slate-300">{formatNumber(row.clicks)}</td>
                             <td className="px-4 py-3 text-slate-300">
-                              {formatNumber(row.views)}
-                            </td>
-                            <td className="px-4 py-3 text-slate-300">
-                              {formatNumber(row.clicks)}
-                            </td>
-                            <td className="px-4 py-3 text-slate-300">
-                              {row.views
-                                ? `${((row.clicks / row.views) * 100).toFixed(1)}%`
-                                : '0.0%'}
+                              {row.views ? `${((row.clicks / row.views) * 100).toFixed(1)}%` : '0.0%'}
                             </td>
                           </tr>
                         ))}
@@ -571,21 +479,9 @@ export default function PartnerPortal() {
         </div>
       )}
 
-      {/* ─── EARNINGS TAB ───────────────────── */}
       {tab === 'earnings' && (
         <div className="space-y-6">
-          {!request ? (
-            <Card>
-              <div className="flex flex-col items-center justify-center py-14 text-center">
-                <div className="mb-4 rounded-2xl bg-slate-800 p-4">
-                  <DollarSign size={32} className="text-slate-500" />
-                </div>
-                <p className="text-sm text-slate-400">
-                  申請を提出すると収益情報が表示されます。
-                </p>
-              </div>
-            </Card>
-          ) : !request.estimatedMonthlyAmount ? (
+          {!site.estimatedMonthlyAmount ? (
             <Card>
               <div className="flex flex-col items-center justify-center py-14 text-center">
                 <div className="mb-4 rounded-2xl bg-slate-800 p-4">
@@ -602,7 +498,6 @@ export default function PartnerPortal() {
             </div>
           ) : (
             <>
-              {/* Monthly rate hero */}
               <Card className="border border-violet-500/30">
                 <div className="flex items-center gap-4">
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-violet-500/20">
@@ -620,69 +515,27 @@ export default function PartnerPortal() {
                 </div>
               </Card>
 
-              {/* Current period */}
               <div>
                 <h3 className="mb-3 text-sm font-semibold text-slate-300">
                   今月の期間（{earningsData?.currentPeriod?.start} 〜 {earningsData?.currentPeriod?.end}）
                 </h3>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <StatCard
-                    title="合計日数"
-                    value={`${earningsData?.currentPeriod?.totalDays || 0}日`}
-                    icon={FileText}
-                    color="blue"
-                  />
-                  <StatCard
-                    title="稼働日数"
-                    value={`${earningsData?.currentPeriod?.activeDays || 0}日`}
-                    icon={CheckCircle}
-                    color="green"
-                  />
-                  <StatCard
-                    title="日額単価"
-                    value={formatCurrency(earningsData?.currentPeriod?.dailyRate || 0)}
-                    icon={TrendingUp}
-                    color="amber"
-                  />
-                  <StatCard
-                    title="見込み収益"
-                    value={formatCurrency(earningsData?.currentPeriod?.estimatedEarnings || 0)}
-                    icon={DollarSign}
-                    color="violet"
-                  />
+                  <StatCard title="合計日数" value={`${earningsData?.currentPeriod?.totalDays || 0}日`} icon={FileText} color="blue" />
+                  <StatCard title="稼働日数" value={`${earningsData?.currentPeriod?.activeDays || 0}日`} icon={CheckCircle} color="green" />
+                  <StatCard title="日額単価" value={formatCurrency(earningsData?.currentPeriod?.dailyRate || 0)} icon={TrendingUp} color="amber" />
+                  <StatCard title="見込み収益" value={formatCurrency(earningsData?.currentPeriod?.estimatedEarnings || 0)} icon={DollarSign} color="violet" />
                 </div>
               </div>
 
-              {/* Previous period */}
               <div>
                 <h3 className="mb-3 text-sm font-semibold text-slate-300">
                   先月の期間（{earningsData?.previousPeriod?.start} 〜 {earningsData?.previousPeriod?.end}）
                 </h3>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <StatCard
-                    title="合計日数"
-                    value={`${earningsData?.previousPeriod?.totalDays || 0}日`}
-                    icon={FileText}
-                    color="blue"
-                  />
-                  <StatCard
-                    title="稼働日数"
-                    value={`${earningsData?.previousPeriod?.activeDays || 0}日`}
-                    icon={CheckCircle}
-                    color="green"
-                  />
-                  <StatCard
-                    title="日額単価"
-                    value={formatCurrency(earningsData?.previousPeriod?.dailyRate || 0)}
-                    icon={TrendingUp}
-                    color="amber"
-                  />
-                  <StatCard
-                    title="確定収益"
-                    value={formatCurrency(earningsData?.previousPeriod?.estimatedEarnings || 0)}
-                    icon={DollarSign}
-                    color="violet"
-                  />
+                  <StatCard title="合計日数" value={`${earningsData?.previousPeriod?.totalDays || 0}日`} icon={FileText} color="blue" />
+                  <StatCard title="稼働日数" value={`${earningsData?.previousPeriod?.activeDays || 0}日`} icon={CheckCircle} color="green" />
+                  <StatCard title="日額単価" value={formatCurrency(earningsData?.previousPeriod?.dailyRate || 0)} icon={TrendingUp} color="amber" />
+                  <StatCard title="確定収益" value={formatCurrency(earningsData?.previousPeriod?.estimatedEarnings || 0)} icon={DollarSign} color="violet" />
                 </div>
               </div>
 
@@ -692,7 +545,6 @@ export default function PartnerPortal() {
                     <AlertCircle size={18} className="shrink-0 mt-0.5 text-amber-400" />
                     <p className="text-sm text-amber-300">
                       スニペットがまだ設置されていないため稼働日数は0日です。
-                      スニペットをブログに設置すると収益が計上されます。
                     </p>
                   </div>
                 </div>
@@ -704,3 +556,111 @@ export default function PartnerPortal() {
     </div>
   )
 }
+
+function SiteCard({ site, onClick }) {
+  const domain = cleanDomain(site.blogUrl)
+  return (
+    <button
+      onClick={onClick}
+      className="group glass-card flex flex-col gap-3 p-5 text-left transition-all duration-200 hover:scale-[1.02] hover:shadow-lg hover:shadow-violet-500/10 w-full"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <Globe size={16} className="shrink-0 text-slate-400" />
+          <span className="truncate text-sm font-medium text-slate-200 group-hover:text-white">{domain}</span>
+        </div>
+        <StatusBadge status={site.status} />
+      </div>
+      <p className="text-xs text-slate-500">申請日: {new Date(site.createdAt).toLocaleDateString('ja-JP')}</p>
+    </button>
+  )
+}
+
+// ─── Main component ──────────────────────────────────────────────────────────
+export default function PartnerPortal() {
+  const [selectedSiteId, setSelectedSiteId] = useState(null)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const queryClient = useQueryClient()
+
+  const { data: portalData, isLoading } = useQuery({
+    queryKey: ['partner-portal'],
+    queryFn: () => api.get('/api/partner-portal').then((r) => r.data),
+  })
+
+  const applyMutation = useMutation({
+    mutationFn: (data) => api.post('/api/partner-portal/apply', data).then((r) => r.data),
+    onSuccess: (data) => {
+      toast.success('申請を送信しました')
+      queryClient.invalidateQueries({ queryKey: ['partner-portal'] })
+      setShowAddForm(false)
+      if (data?.request?._id) setSelectedSiteId(data.request._id)
+    },
+    onError: (err) => toast.error(err.response?.data?.error || '申請に失敗しました'),
+  })
+
+  const handleApply = (e) => {
+    e.preventDefault()
+    const fd = new FormData(e.target)
+    applyMutation.mutate({ blogUrl: fd.get('blogUrl'), message: fd.get('message') })
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 rounded-full border-4 border-slate-700 border-t-violet-500 animate-spin" />
+      </div>
+    )
+  }
+
+  const sites = portalData?.requests || []
+  const selectedSite = sites.find((s) => s._id === selectedSiteId) || null
+
+  if (selectedSite) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="パートナーポータル" subtitle={cleanDomain(selectedSite.blogUrl)} />
+        <SiteDetail site={selectedSite} onBack={() => setSelectedSiteId(null)} queryClient={queryClient} />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="パートナーポータル" subtitle="登録サイトの管理・申請・収益確認">
+        {!showAddForm && (
+          <Button onClick={() => setShowAddForm(true)}>
+            <Plus size={16} />
+            サイトを追加
+          </Button>
+        )}
+      </PageHeader>
+
+      {showAddForm && (
+        <ApplicationForm onSubmit={handleApply} isLoading={applyMutation.isPending} onCancel={() => setShowAddForm(false)} />
+      )}
+
+      {sites.length === 0 && !showAddForm ? (
+        <Card>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="mb-4 rounded-2xl bg-slate-800 p-5"><Globe size={36} className="text-slate-500" /></div>
+            <h3 className="mb-2 text-base font-semibold text-slate-200">まだサイトが登録されていません</h3>
+            <p className="mb-6 text-sm text-slate-400 max-w-sm">
+              パートナーとして参加するには、ブログを登録して申請を送信してください。審査後にスニペットコードを提供いたします。
+            </p>
+            <Button onClick={() => setShowAddForm(true)}>
+              <Plus size={16} />
+              最初のサイトを登録する
+            </Button>
+          </div>
+        </Card>
+      ) : sites.length > 0 ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {sites.map((site) => (
+            <SiteCard key={site._id} site={site} onClick={() => setSelectedSiteId(site._id)} />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+

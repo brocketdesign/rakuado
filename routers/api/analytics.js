@@ -1,12 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const db = global.db;
+const ensureAuthenticated = require('../../middleware/authMiddleware');
+
+// All analytics routes require authentication and admin access
+router.use(ensureAuthenticated);
+router.use((req, res, next) => {
+  if (!req.user || !req.user.isAdmin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+});
 
 // Helper to filter refery array to last 24 hours
 const filterRecentRefery = (refery) => {
   const cutoff = Date.now() - 24 * 60 * 60 * 1000;
   return (refery || []).filter(r => r.timestamp && r.timestamp >= cutoff);
 };
+
 
 // Detect if a sorted array of daily records is cumulative (monotonically non-decreasing)
 function detectCumulative(data) {

@@ -8,16 +8,13 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 
-// Groups shown to all logged-in users
+// Groups shown to all logged-in users (non-admins)
 const userMenuGroups = [
   {
     label: 'マイページ',
     items: [
       { to: '/dashboard', icon: LayoutDashboard, label: 'ホーム', end: true },
-      { to: '/dashboard/analytics', icon: BarChart3, label: 'アナリティクス' },
-      { to: '/dashboard/google-analytics', icon: LineChart, label: 'Google Analytics' },
       { to: '/dashboard/partner-portal', icon: Briefcase, label: 'パートナーポータル' },
-      { to: '/dashboard/referral', icon: TrendingUp, label: 'リファラル' },
     ],
   },
 ]

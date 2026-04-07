@@ -1,0 +1,696 @@
+extends default
+
+block content
+    script.
+        document.addEventListener('DOMContentLoaded', function() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.remove('rk-hidden');
+                        entry.target.classList.add('rk-visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.08 });
+
+            document.querySelectorAll('[data-rk-animate]').forEach(el => {
+                el.classList.add('rk-hidden');
+                observer.observe(el);
+            });
+
+            const chartCanvas = document.getElementById('earningsChart');
+            if (chartCanvas && window.Chart) {
+                const ctx = chartCanvas.getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['1ヶ月目', '2ヶ月目', '3ヶ月目', '4ヶ月目', '5ヶ月目', '6ヶ月目'],
+                        datasets: [{
+                            label: '推定収益（円）',
+                            data: [5000, 9000, 14000, 20000, 25000, 30000],
+                            borderColor: '#1e73d8',
+                            backgroundColor: 'rgba(30, 115, 216, 0.2)',
+                            tension: 0.35,
+                            fill: true,
+                            pointRadius: 5,
+                            pointBackgroundColor: '#0b4ea2'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                labels: { color: '#0b2f66', font: { weight: '600' } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => ` ${context.parsed.y.toLocaleString()}円`
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: '#335b8f' },
+                                grid: { display: false }
+                            },
+                            y: {
+                                ticks: {
+                                    color: '#335b8f',
+                                    callback: (value) => `${value.toLocaleString()}円`
+                                },
+                                grid: { color: 'rgba(11, 78, 162, 0.08)' }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+    script(src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js")
+    style.
+        :root {
+            --hero-blue: #0b4ea2;
+            --hero-blue-dark: #0a3c86;
+            --hero-blue-light: #1d69c6;
+        }
+        .cta-button{
+            font-size:1.3em;
+            transition: all 0.3s ease;
+        }
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+        .hidden {
+            opacity: 0;
+        }
+        .b-custom-gradient-text {
+            background: linear-gradient(90deg, var(--hero-blue) 0%, #1e73d8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .b-custom-gradient {
+            background: linear-gradient(90deg, var(--hero-blue) 0%, #1e73d8 100%);
+        }
+        .section {
+            padding: 80px 0;
+        }
+        .section-alt {
+            background: linear-gradient(135deg, #eef5ff 0%, #dbe9ff 100%);
+        }
+        .feature-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            height: 100%;
+            border: 1px solid #d9e7ff;
+            box-shadow: 0 8px 20px rgba(11,78,162,0.08);
+            transition: all 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 16px 34px rgba(11,78,162,0.18);
+        }
+        .feature-icon {
+            font-size: 3rem;
+            color: var(--hero-blue);
+            margin-bottom: 20px;
+        }
+        .features-timeline {
+            position: relative;
+            padding: 20px 0;
+        }
+        .features-timeline::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(180deg, rgba(11,78,162,0.2) 0%, rgba(11,78,162,0.5) 50%, rgba(11,78,162,0.2) 100%);
+            transform: translateX(-50%);
+        }
+        .feature-node {
+            position: relative;
+            display: flex;
+            gap: 40px;
+            align-items: center;
+            margin-bottom: 28px;
+        }
+        .feature-node:nth-child(even) {
+            flex-direction: row-reverse;
+        }
+        .feature-node::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            width: 16px;
+            height: 16px;
+            background: #ffffff;
+            border: 3px solid #1e73d8;
+            border-radius: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 0 0 6px rgba(30,115,216,0.12);
+        }
+        .feature-card.timeline-card {
+            max-width: 420px;
+        }
+        .feature-card.timeline-card h4 {
+            color: #0b2f66;
+        }
+        .feature-card.timeline-card p {
+            color: #4a6fa3;
+        }
+        .feature-icon-badge {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(30,115,216,0.12);
+            color: #0b4ea2;
+            font-size: 1.8rem;
+            margin-bottom: 16px;
+        }
+        @media (max-width: 991px) {
+            .features-timeline::before {
+                left: 24px;
+            }
+            .feature-node,
+            .feature-node:nth-child(even) {
+                flex-direction: row;
+                align-items: flex-start;
+            }
+            .feature-node::before {
+                left: 24px;
+                transform: none;
+            }
+            .feature-node {
+                gap: 16px;
+                padding-left: 48px;
+            }
+            .feature-card.timeline-card {
+                max-width: 100%;
+            }
+        }
+        .step-number {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--hero-blue) 0%, #1e73d8 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 0 auto 20px;
+        }
+        .benefit-item {
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .benefit-icon {
+            font-size: 2rem;
+            color: var(--hero-blue);
+            margin-right: 15px;
+        }
+        .benefits-banner {
+            background: linear-gradient(135deg, #f5faff 0%, #e7f1ff 100%);
+            border-radius: 24px;
+            padding: 70px 50px;
+            position: relative;
+            overflow: hidden;
+        }
+        .benefits-banner::before {
+            content: '';
+            position: absolute;
+            inset: 20px;
+            border-radius: 20px;
+            border: 1px dashed rgba(11,78,162,0.15);
+            pointer-events: none;
+        }
+        .benefits-title {
+            font-size: 2.7rem;
+            font-weight: 800;
+            color: #1e6bd2;
+            line-height: 1.25;
+        }
+        .benefits-subtitle {
+            display: inline-block;
+            margin-top: 16px;
+            font-size: 1.15rem;
+            color: #2f67b2;
+            font-weight: 700;
+            border-bottom: 3px solid #2f67b2;
+            padding-bottom: 6px;
+        }
+        .benefits-icons {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(120px, 1fr));
+            gap: 24px;
+            align-items: center;
+            justify-items: center;
+        }
+        .benefits-icons i {
+            font-size: 5.5rem;
+            color: #7aa8e9;
+        }
+        .benefits-icons .big {
+            font-size: 7rem;
+        }
+        @media (max-width: 991px) {
+            .benefits-banner {
+                padding: 50px 24px;
+            }
+            .benefits-title {
+                font-size: 2.2rem;
+            }
+            .benefits-icons {
+                margin-top: 30px;
+            }
+        }
+        #hero {
+            min-height: 90vh;
+            display: flex;
+            align-items: center;
+        }
+        .hero-banner {
+            position: relative;
+            background: linear-gradient(135deg, var(--hero-blue) 0%, var(--hero-blue-dark) 55%, var(--hero-blue-light) 100%);
+            color: #ffffff;
+            overflow: hidden;
+            border-radius: 0 0 24px 24px;
+        }
+        .hero-banner::after {
+            content: '';
+            position: absolute;
+            right: -120px;
+            top: -80px;
+            width: 55%;
+            height: 140%;
+            background: #0f62c8;
+            border-radius: 50%;
+            opacity: 0.65;
+            z-index: 0;
+        }
+        .hero-inner {
+            position: relative;
+            z-index: 1;
+            padding: 70px 0 40px;
+        }
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #ffffff;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-weight: 700;
+            background: rgba(255,255,255,0.08);
+            writing-mode: vertical-rl;
+            letter-spacing: 0.08em;
+            line-height: 1.2;
+        }
+        .hero-title {
+            font-size: 2.8rem;
+            font-weight: 800;
+            line-height: 1.2;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .hero-subtitle {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.9);
+        }
+        .hero-pill {
+            background: #ffffff;
+            color: #0b2b55;
+            border-radius: 999px;
+            padding: 16px 24px;
+            font-weight: 700;
+            font-size: 1.05rem;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+        }
+        .hero-pill + .hero-pill {
+            margin-top: 12px;
+        }
+        .hero-note {
+            font-size: 0.95rem;
+            color: rgba(255,255,255,0.9);
+            margin-top: 14px;
+        }
+        .hero-bottom-bar {
+            margin-top: 26px;
+            background: #0b2f66;
+            border-radius: 12px;
+            padding: 16px 20px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            text-align: center;
+            color: #ffffff;
+        }
+        .hero-photo {
+            background: #ffffff;
+            border-radius: 26px;
+            padding: 10px;
+            box-shadow: 0 18px 30px rgba(0,0,0,0.2);
+        }
+        .hero-photo img {
+            border-radius: 18px;
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        @media (max-width: 991px) {
+            #hero {
+                min-height: auto;
+            }
+            .hero-title {
+                font-size: 2.2rem;
+            }
+            .hero-inner {
+                padding: 50px 0 30px;
+            }
+            .hero-banner::after {
+                width: 80%;
+                right: -40%;
+                top: -40%;
+            }
+            .hero-content {
+                text-align: center;
+            }
+            .hero-content .d-flex.gap-3.align-items-start {
+                flex-direction: column;
+                align-items: center !important;
+            }
+            .hero-badge {
+                writing-mode: horizontal-tb;
+                letter-spacing: 0.12em;
+            }
+            .hero-pill {
+                max-width: 520px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .hero-bottom-bar {
+                max-width: 560px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .hero-photo {
+                max-width: 520px;
+            }
+        }
+        .hero-content {
+            z-index: 1;
+        }
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #0b2f66;
+        }
+        .section-subtitle {
+            font-size: 1.2rem;
+            color: #335b8f;
+            margin-bottom: 50px;
+        }
+        .cta-section {
+            background: linear-gradient(135deg, #0b4ea2 0%, #0a3c86 60%, #1d69c6 100%);
+            color: #ffffff;
+        }
+        .cta-section .btn-light {
+            color: #0b2f66;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+        }
+        .cta-section .btn-outline-light:hover {
+            color: #0b2f66;
+        }
+        .accent-check {
+            color: #0b4ea2;
+        }
+        .soft-illustration {
+            color: #0b4ea2;
+            opacity: 0.2;
+        }
+        .faq-accordion .accordion-button:not(.collapsed) {
+            background: #e8f0ff;
+            color: #0b2f66;
+            box-shadow: inset 0 -1px 0 rgba(11,78,162,0.1);
+        }
+        .faq-accordion .accordion-item {
+            border: 1px solid #d9e7ff;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+        .dashboard-card {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 24px;
+            border: 1px solid #d9e7ff;
+            box-shadow: 0 16px 30px rgba(11,78,162,0.12);
+        }
+        .chart-wrap {
+            height: 320px;
+        }
+        .chart-note {
+            font-size: 0.9rem;
+            color: #5577a6;
+            margin-top: 12px;
+        }
+    //- ログインポップアップ
+    #login-container.position-fixed.d-flex.align-items-center.d-none(data-animate="animate__fadeIn" onclick="hideLogin()" style="inset:0;z-index:99;background-color: #000000b0;")
+        .position-fixed.top-50.start-50.translate-middle#positionElement.d-flex.justify-content-center
+            .col(style="max-width: 90%;")
+                #login-form.card.shadow.bg-light.border.border-white.text-center
+                    .card-body.d-flex.flex-column.justify-content-center(style="min-height: 250px;")
+                        h1.card-title.text-center 
+                            span.b-custom-gradient-text.fw-bold Rakuado
+                            span.small(style="font-size:18px;") へようこそ
+                        span.fw-bold(style="font-size:16px;") 簡単設定で即スタート
+                        .mb-3
+                        .verify-email.d-none(style="min-height: 60px;")
+                            span メールアドレスを確認してログインしてください
+                            a#resend-email(href="#" style="display:block" onclick="resendSigninMail()") メールを再送する
+
+                        form.d-none
+                            .mb-3
+                                label.d-none(for='email', class='form-label') メールアドレス:
+                                .input-group
+                                    input(type='email', name='email', id='email', class='form-control' placeholder="メールアドレスを入力してください")
+                                    button.btn.btn-primary.shadow-0.input-group-append(type='submit') 
+                                        i.fas.fa-arrow-circle-right
+                        .separator.mb-3.d-none
+                            hr
+                            span または
+                            hr
+                        .container.text-center
+                            a(href='/auth/google', class='google-login-button')
+                                img.me-2(src='/img/googleauth.svg', alt='Googleで続ける')
+                                span で続ける
+                        .copyright.mt-3
+                            hr
+                            span.text-muted.small(style="font-size:12px") 続行することで、当社の利用規約およびプライバシーポリシーに同意するものとします。
+
+
+
+    //- Hero Section
+    section#hero.hero-banner.shadow-1-strong
+        .container.hero-inner
+            .row.align-items-center
+                .col-12.col-lg-7.hero-content(data-animate="animate__slideInLeft")
+                    .d-flex.gap-3.align-items-start
+                        .hero-badge 収益化募集
+                        div
+                            h1.hero-title.mb-3 安定収入で<br>ブログ収益を最大化
+                            p.hero-subtitle.mb-4 クリックに頼らない、毎月固定の広告収益
+                            .hero-pill Google AdSenseより高い固定報酬を実現
+                            .hero-pill 最低5,000円〜 実績では月30,000円以上も可能
+                            .hero-note • WordPress対応 • 日本語サポート付き
+                            a.hero-bottom-bar(href="/partner-recruitment" style="text-decoration: none; display: block;") あなたのブログはいくら稼げる？ 今すぐ無料見積もり
+                .col-12.col-lg-5.text-center.mt-4.mt-lg-0(data-animate="animate__slideInRight")
+                    .hero-photo.mx-auto
+                        img(src="/img/top-img.gif" alt="Blog revenue illustration")
+
+    //- Features Section
+    section.section
+        .container
+            .text-center.mb-5
+                h2.section-title(data-animate="animate__fadeInDown") 主な機能
+                p.section-subtitle(data-animate="animate__fadeInUp") ブロガーに最適化された機能で、収益化を簡単に
+            .features-timeline
+                .feature-node(data-animate="animate__fadeInUp")
+                    .feature-card.timeline-card
+                        .feature-icon-badge
+                            i.fas.fa-chart-line
+                        h4.fw-bold.mb-2 充実したダッシュボード
+                        p.text-muted 収益状況、アクセス解析、パフォーマンス指標を一目で確認できる直感的なダッシュボード
+                .feature-node(data-animate="animate__fadeInUp" data-delay="animate__delay-1s")
+                    .feature-card.timeline-card
+                        .feature-icon-badge
+                            i.fas.fa-bolt
+                        h4.fw-bold.mb-2 簡単な設定
+                        p.text-muted 複雑な設定は不要。わずか数ステップで広告を開始できます
+                .feature-node(data-animate="animate__fadeInUp" data-delay="animate__delay-2s")
+                    .feature-card.timeline-card
+                        .feature-icon-badge
+                            i.fas.fa-shield-alt
+                        h4.fw-bold.mb-2 安全で確実
+                        p.text-muted 信頼性の高い広告配信システムで、安定した収益を実現
+                .feature-node(data-animate="animate__fadeInUp")
+                    .feature-card.timeline-card
+                        .feature-icon-badge
+                            i.fas.fa-mobile-alt
+                        h4.fw-bold.mb-2 モバイル対応
+                        p.text-muted スマートフォンやタブレットからも、いつでもどこでも管理可能
+                .feature-node(data-animate="animate__fadeInUp" data-delay="animate__delay-1s")
+                    .feature-card.timeline-card
+                        .feature-icon-badge
+                            i.fas.fa-headset
+                        h4.fw-bold.mb-2 サポート充実
+                        p.text-muted 専任サポートチームが、お客様の成功を全力でサポート
+                .feature-node(data-animate="animate__fadeInUp" data-delay="animate__delay-2s")
+                    .feature-card.timeline-card
+                        .feature-icon-badge
+                            i.fas.fa-sync-alt
+                        h4.fw-bold.mb-2 自動更新
+                        p.text-muted 広告の自動更新機能で、常に最適な広告を配信
+
+    //- Benefits Section
+    section.section.section-alt
+        .container
+            .benefits-banner(data-animate="animate__fadeIn")
+                .row.align-items-center
+                    .col-12.col-lg-7
+                        h2.benefits-title もくもく進める、<br>シンプル軽作業。
+                        span.benefits-subtitle 収益化パートナー募集
+                    .col-12.col-lg-5
+                        .benefits-icons
+                            i.fas.fa-cogs
+                            i.fas.fa-calendar-check
+                            i.fas.fa-box-open.big
+            .row.align-items-start.mt-5
+                .col-12.col-lg-6(data-animate="animate__slideInLeft")
+                    .benefit-item.d-flex.align-items-start
+                        .benefit-icon
+                            i.fas.fa-check-circle
+                        div
+                            h5.fw-bold.mb-2 簡単な収益化プロセス
+                            p.text-muted 複雑な手続きは不要。審査通過後、すぐに収益化を開始できます
+                    .benefit-item.d-flex.align-items-start
+                        .benefit-icon
+                            i.fas.fa-check-circle
+                        div
+                            h5.fw-bold.mb-2 透明性の高いレポート
+                            p.text-muted 詳細な分析レポートで、収益の内訳を明確に把握できます
+                .col-12.col-lg-6(data-animate="animate__slideInRight")
+                    .benefit-item.d-flex.align-items-start
+                        .benefit-icon
+                            i.fas.fa-check-circle
+                        div
+                            h5.fw-bold.mb-2 柔軟な対応
+                            p.text-muted ブログの規模やジャンルに応じて、最適な広告プランを提案
+                    .benefit-item.d-flex.align-items-start
+                        .benefit-icon
+                            i.fas.fa-check-circle
+                        div
+                            h5.fw-bold.mb-2 サイト運営に集中
+                            p.text-muted 広告管理の手間を省き、コンテンツ制作に集中できます
+
+    //- How It Works Section
+    section.section
+        .container
+            .text-center.mb-5
+                h2.section-title(data-animate="animate__fadeInDown") 使い方
+                p.section-subtitle(data-animate="animate__fadeInUp") 4つの簡単なステップで始められます
+            .row.g-4
+                .col-12.col-md-6.col-lg-3(data-animate="animate__fadeInUp")
+                    .text-center
+                        .step-number 1
+                        h5.fw-bold.mb-3 審査申し込み
+                        p.text-muted 簡単なフォームから審査に申し込みます
+                .col-12.col-md-6.col-lg-3(data-animate="animate__fadeInUp" data-delay="animate__delay-1s")
+                    .text-center
+                        .step-number 2
+                        h5.fw-bold.mb-3 審査通過
+                        p.text-muted 審査が完了すると、承認通知が届きます
+                .col-12.col-md-6.col-lg-3(data-animate="animate__fadeInUp" data-delay="animate__delay-2s")
+                    .text-center
+                        .step-number 3
+                        h5.fw-bold.mb-3 簡単設定
+                        p.text-muted ダッシュボードから簡単に設定を行います
+                .col-12.col-md-6.col-lg-3(data-animate="animate__fadeInUp" data-delay="animate__delay-3s")
+                    .text-center
+                        .step-number 4
+                        h5.fw-bold.mb-3 収益開始
+                        p.text-muted 設定完了後、すぐに収益化が開始されます
+
+    //- Dashboard Preview Section
+    section.section.section-alt
+        .container
+            .row.align-items-center
+                .col-12.col-lg-6.order-lg-2(data-animate="animate__slideInRight")
+                    h2.section-title 充実したダッシュボード
+                    p.mb-4(style="font-size: 1.1em; color: #335b8f; line-height: 1.8;")
+                        | 直感的で使いやすいダッシュボードで、すべての情報を一元管理。
+                        br
+                        | 収益状況、アクセス解析、広告パフォーマンスをリアルタイムで確認できます。
+                    .mb-4
+                        .fw-bold.mb-2(style="color:#0b2f66;") 月間2万ユーザーのケース（シミュレーション）
+                        p.mb-0(style="color:#335b8f;") 月間2万ユーザー規模で、広告収益は約30,000円/月を想定。
+                        p.chart-note ※数値はシミュレーションです。ジャンルや広告単価などの要因で変動します。
+                    ul.list-unstyled
+                        li.mb-3
+                            i.fas.fa-check.accent-check.me-2
+                            | リアルタイム収益表示
+                        li.mb-3
+                            i.fas.fa-check.accent-check.me-2
+                            | 詳細な分析レポート
+                        li.mb-3
+                            i.fas.fa-check.accent-check.me-2
+                            | カスタマイズ可能な設定
+                        li.mb-3
+                            i.fas.fa-check.accent-check.me-2
+                            | モバイル対応の管理画面
+                .col-12.col-lg-6.order-lg-1(data-animate="animate__slideInLeft")
+                    .dashboard-card
+                        .d-flex.align-items-center.justify-content-between.mb-3
+                            h5.fw-bold.mb-0(style="color:#0b2f66;") 収益シミュレーション
+                            span.badge.rounded-pill(style="background:#e7f1ff;color:#0b4ea2;") Monthly
+                        .chart-wrap
+                            canvas#earningsChart
+
+    //- CTA Section
+    section.section.cta-section
+        .container
+            .text-center(data-animate="animate__zoomIn")
+                h2.fw-bold.mb-4(style="font-size: 2.5rem;") 今すぐ始めましょう
+                p.mb-5(style="font-size: 1.2em; opacity: 0.9;") ブロガーの皆様の収益化をサポートします。簡単な手続きで今すぐスタート
+                .d-flex.flex-column.flex-md-row.justify-content-center.gap-3
+                    a.btn.btn-light.btn-lg.px-5.py-3.cta-button(href="/partner-recruitment", role="button", style="border-radius:50px; text-decoration: none; font-weight: bold;") 審査申し込み
+                    button.btn.btn-outline-light.btn-lg.px-5.py-3.cta-button(onclick="displayLogin()", role="button", style="border-radius:50px; font-weight: bold;") ログイン
+
+    //- FAQ Section (if available)
+    if faq && faq.length > 0
+        section.section
+            .container
+                .text-center.mb-5
+                    h2.section-title(data-animate="animate__fadeInDown") よくある質問
+                    p.section-subtitle(data-animate="animate__fadeInUp") お客様からよくいただく質問
+                .row.justify-content-center
+                    .col-12.col-lg-8
+                        .accordion#faqAccordion.faq-accordion
+                            each item, index in faq
+                                .accordion-item(data-animate="animate__fadeInUp")
+                                    h2.accordion-header
+                                        button.accordion-button(type="button", class=index === 0 ? '' : 'collapsed', data-bs-toggle="collapse", data-bs-target=`#faq${index}`)
+                                            = item.question || item.q
+                                    .accordion-collapse.collapse(id=`faq${index}`, class=index === 0 ? 'show' : '', data-bs-parent="#faqAccordion")
+                                        .accordion-body
+                                            = item.answer || item.a
+                        

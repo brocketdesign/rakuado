@@ -3,6 +3,11 @@ const router = express.Router();
 const { google } = require('googleapis');
 const ensureAuthenticated = require('../../middleware/authMiddleware');
 
+const requireAdmin = (req, res, next) => {
+  if (!req.user || !req.user.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+  next();
+};
+
 const GA_SCOPES = [
   'https://www.googleapis.com/auth/analytics.readonly',
   'https://www.googleapis.com/auth/analytics.edit',
@@ -51,7 +56,7 @@ async function getAuthClient() {
 }
 
 // GET /api/ga/auth — initiate OAuth flow
-router.get('/auth', ensureAuthenticated, (req, res) => {
+router.get('/auth', ensureAuthenticated, requireAdmin, (req, res) => {
   const callbackURL = getCallbackURL(req);
   const oauth2Client = createOAuth2Client(callbackURL);
   const baseUrl = `${req.protocol}://${req.get('host').replace('192.168.10.115', 'localhost')}`;
@@ -116,7 +121,7 @@ router.get('/callback', async (req, res) => {
 });
 
 // GET /api/ga/status — check connection status
-router.get('/status', ensureAuthenticated, async (req, res) => {
+router.get('/status', ensureAuthenticated, requireAdmin, async (req, res) => {
   try {
     const db = global.db;
     const settings = await db.collection('gaSettings').findOne({ type: 'global' });
@@ -139,7 +144,7 @@ router.get('/status', ensureAuthenticated, async (req, res) => {
 });
 
 // GET /api/ga/properties — list all GA4 properties available to the connected account
-router.get('/properties', ensureAuthenticated, async (req, res) => {
+router.get('/properties', ensureAuthenticated, requireAdmin, async (req, res) => {
   try {
     const auth = await getAuthClient();
     if (!auth) return res.status(401).json({ error: 'GA not connected' });
@@ -166,7 +171,7 @@ router.get('/properties', ensureAuthenticated, async (req, res) => {
 });
 
 // GET /api/ga/data — fetch analytics data for all connected sites
-router.get('/data', ensureAuthenticated, async (req, res) => {
+router.get('/data', ensureAuthenticated, requireAdmin, async (req, res) => {
   const { startDate = '28daysAgo', endDate = 'today', propertyId } = req.query;
 
   try {
@@ -262,7 +267,7 @@ router.get('/data', ensureAuthenticated, async (req, res) => {
 });
 
 // PUT /api/ga/settings — update main site GA property
-router.put('/settings', ensureAuthenticated, async (req, res) => {
+router.put('/settings', ensureAuthenticated, requireAdmin, async (req, res) => {
   const { mainSitePropertyId, mainSiteUrl } = req.body;
 
   try {
@@ -280,7 +285,7 @@ router.put('/settings', ensureAuthenticated, async (req, res) => {
 });
 
 // DELETE /api/ga/disconnect — revoke and remove stored tokens
-router.delete('/disconnect', ensureAuthenticated, async (req, res) => {
+router.delete('/disconnect', ensureAuthenticated, requireAdmin, async (req, res) => {
   try {
     const db = global.db;
     await db.collection('gaSettings').updateOne(

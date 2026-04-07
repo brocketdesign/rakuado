@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { ObjectId } = require('mongodb');
 const ensureAuthenticated = require('../../middleware/authMiddleware');
 const { getCustomMonthPeriod, countActiveDaysFromAnalytics } = require('../../utils/partner-payment');
 
@@ -25,25 +26,21 @@ function formatLocalDate(date) {
   return `${y}-${m}-${d}`;
 }
 
-// GET /api/partner-portal - get the current user's partner request
+// GET /api/partner-portal - get all partner requests for the current user
 router.get('/', async (req, res) => {
   try {
     const userEmail = req.user.email;
     const userId = req.user._id.toString();
     const collection = global.db.collection('partnerRequests');
 
-    const request = await collection.findOne(
-      { $or: [{ userId }, { email: userEmail }] },
-      { sort: { createdAt: -1 } }
-    );
-
-    if (!request) {
-      return res.json({ success: true, request: null });
-    }
+    const requests = await collection
+      .find({ $or: [{ userId }, { email: userEmail }] })
+      .sort({ createdAt: -1 })
+      .toArray();
 
     res.json({
       success: true,
-      request: { ...request, _id: request._id.toString() },
+      requests: requests.map((r) => ({ ...r, _id: r._id.toString() })),
     });
   } catch (error) {
     console.error('Error fetching partner portal status:', error);
@@ -71,12 +68,16 @@ router.post('/apply', async (req, res) => {
 
     const collection = global.db.collection('partnerRequests');
 
-    const existing = await collection.findOne({
-      $or: [{ userId }, { email: userEmail }],
-    });
-
-    if (existing) {
-      return res.status(400).json({ success: false, error: 'An application already exists for this account' });
+    // Prevent registering the same domain twice for this user
+    const cleanedDomain = cleanDomain(blogUrl.trim());
+    const existingRequests = await collection
+      .find({ $or: [{ userId }, { email: userEmail }] })
+      .toArray();
+    const domainExists = existingRequests.some(
+      (r) => cleanDomain(r.blogUrl) === cleanedDomain
+    );
+    if (domainExists) {
+      return res.status(400).json({ success: false, error: 'このドメインはすでに登録済みです' });
     }
 
     const now = new Date();
@@ -159,17 +160,34 @@ router.put('/analytics-url', async (req, res) => {
   }
 });
 
-// GET /api/partner-portal/analytics - get analytics data for user's domain
+// GET /api/partner-portal/analytics - get analytics data for a user's domain
 router.get('/analytics', async (req, res) => {
   try {
     const userEmail = req.user.email;
     const userId = req.user._id.toString();
-    const { period = 'current' } = req.query;
+    const { period = 'current', requestId } = req.query;
 
     const collection = global.db.collection('partnerRequests');
-    const request = await collection.findOne({
-      $or: [{ userId }, { email: userEmail }],
-    });
+
+    let request;
+    if (requestId) {
+      // Validate requestId is a valid ObjectId to prevent injection
+      if (!/^[a-fA-F0-9]{24}$/.test(requestId)) {
+        return res.status(400).json({ success: false, error: 'Invalid requestId' });
+      }
+      request = await collection.findOne({
+        _id: new ObjectId(requestId),
+        $or: [{ userId }, { email: userEmail }],
+      });
+    } else {
+      // Fallback: first active (snippet sent/verified) request for this user
+      request = await collection.findOne({
+        $and: [
+          { $or: [{ userId }, { email: userEmail }] },
+          { $or: [{ snippetSent: true }, { snippetVerified: true }] },
+        ],
+      });
+    }
 
     if (!request) {
       return res.status(404).json({ success: false, error: 'Application not found' });
@@ -236,11 +254,24 @@ router.get('/earnings', async (req, res) => {
   try {
     const userEmail = req.user.email;
     const userId = req.user._id.toString();
+    const { requestId } = req.query;
 
     const collection = global.db.collection('partnerRequests');
-    const request = await collection.findOne({
-      $or: [{ userId }, { email: userEmail }],
-    });
+
+    let request;
+    if (requestId) {
+      if (!/^[a-fA-F0-9]{24}$/.test(requestId)) {
+        return res.status(400).json({ success: false, error: 'Invalid requestId' });
+      }
+      request = await collection.findOne({
+        _id: new ObjectId(requestId),
+        $or: [{ userId }, { email: userEmail }],
+      });
+    } else {
+      request = await collection.findOne({
+        $or: [{ userId }, { email: userEmail }],
+      });
+    }
 
     if (!request) {
       return res.status(404).json({ success: false, error: 'Application not found' });
