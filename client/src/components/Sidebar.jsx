@@ -22,6 +22,13 @@ const userMenuGroups = [
 // Additional groups shown only to admins
 const adminMenuGroups = [
   {
+    label: 'アナリティクス',
+    items: [
+      { to: '/dashboard/analytics', icon: BarChart3, label: 'アナリティクス' },
+      { to: '/dashboard/google-analytics', icon: LineChart, label: 'Googleアナリティクス' },
+    ],
+  },
+  {
     label: 'パートナー管理',
     items: [
       { to: '/dashboard/partners', icon: CreditCard, label: 'パートナー支払い' },

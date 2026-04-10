@@ -62,7 +62,7 @@ export default function Login() {
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            \u30b5\u30a4\u30f3\u30a4\u30f3
+            {'サインイン'}
           </button>
           <button
             type="button"
@@ -73,7 +73,7 @@ export default function Login() {
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            \u65b0\u898f\u767b\u9332
+            {'新規登録'}
           </button>
         </div>
 
@@ -85,7 +85,7 @@ export default function Login() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </div>
-              <h3 className="text-base font-semibold text-white mb-2">\u30e1\u30fc\u30eb\u3092\u78ba\u8a8d\u3057\u3066\u304f\u3060\u3055\u3044</h3>
+              <h3 className="text-base font-semibold text-white mb-2">{'メールを確認してください'}</h3>
               <p className="text-sm text-slate-400">
                 {isSignup
                   ? '\u30a2\u30ab\u30a6\u30f3\u30c8\u78ba\u8a8d\u30e1\u30fc\u30eb\u3092\u9001\u4fe1\u3057\u307e\u3057\u305f\u3002\u30e1\u30fc\u30eb\u5185\u306e\u30ea\u30f3\u30af\u3092\u30af\u30ea\u30c3\u30af\u3057\u3066\u304f\u3060\u3055\u3044\u3002'
@@ -96,7 +96,7 @@ export default function Login() {
                 onClick={() => setSent(false)}
                 className="mt-6 text-sm text-violet-400 hover:text-violet-300 underline"
               >
-                \u5225\u306e\u30e1\u30fc\u30eb\u30a2\u30c9\u30ec\u30b9\u3067\u8a66\u3059
+                {'別のメールアドレスで試す'}
               </button>
             </div>
           ) : (
@@ -126,14 +126,14 @@ export default function Login() {
                   <div className="w-full border-t border-slate-700" />
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="bg-[#1e293b] px-4 text-slate-500">\u307e\u305f\u306f</span>
+                  <span className="bg-[#1e293b] px-4 text-slate-500">{'または'}</span>
                 </div>
               </div>
 
               {/* Email form */}
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-slate-300">\u30e1\u30fc\u30eb\u30a2\u30c9\u30ec\u30b9</label>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-300">{'メールアドレス'}</label>
                   <input
                     type="email"
                     value={email}
@@ -154,7 +154,7 @@ export default function Login() {
 
               {isSignup && (
                 <p className="mt-4 text-center text-xs text-slate-500">
-                  \u767b\u9332\u3059\u308b\u3053\u3068\u3067\u5229\u7528\u898f\u7d04\u3068\u30d7\u30e9\u30a4\u30d0\u30b7\u30fc\u30dd\u30ea\u30b7\u30fc\u306b\u540c\u610f\u3059\u308b\u3082\u306e\u3068\u3057\u307e\u3059\u3002
+                  {'登録することで利用規約とプライバシーポリシーに同意するものとします。'}
                 </p>
               )}
             </>
