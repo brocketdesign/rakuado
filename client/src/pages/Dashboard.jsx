@@ -5,7 +5,7 @@ import api from '../lib/api'
 import { PageHeader, StatCard, Card } from '../components/UI'
 import {
   BarChart3, CreditCard, Mail, Users, UserPlus, TestTubes,
-  Globe, Megaphone, Bot, Wand2, Key, MailPlus, Rss, FileText, Eye,
+  Globe, Megaphone, Key, MailPlus, FileText, Eye,
   Briefcase, TrendingUp, Settings,
 } from 'lucide-react'
 
@@ -40,9 +40,6 @@ const toolLinks = [
   { label: 'A/Bテスト', to: '/dashboard/ab-tests', icon: TestTubes },
   { label: 'アフィリエイト', to: '/dashboard/affiliate', icon: Globe },
   { label: 'リファラル', to: '/dashboard/referral', icon: Megaphone },
-  { label: 'オートブログ', to: '/dashboard/autoblog', icon: Bot },
-  { label: 'コンテンツ生成', to: '/dashboard/generator/0', icon: Wand2 },
-  { label: 'RSSフィード', to: '/dashboard/rss', icon: Rss },
   { label: 'APIキー', to: '/dashboard/api-keys', icon: Key },
   { label: 'APIドキュメント', to: '/dashboard/api-docs', icon: FileText },
 ]

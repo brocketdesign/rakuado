@@ -10,8 +10,6 @@ const { MongoClient, ObjectId } = require('mongodb');
 const MongoDBStore = require('connect-mongodb-session')(session);
 const { StableDiffusionApi } = require("stable-diffusion-api");
 
-const { initializeCronJobs } = require('./modules/cronJobs-bot.js');
-const { initializeCronJobsForBlogs } = require('./modules/cronJobs-blog.js');
 const { initializeAnalyticsCronJobs } = require('./modules/cronjob-analytics.js');
 const { initializePartnersCronJobs } = require('./modules/cronjob-partners.js');
 
@@ -49,8 +47,6 @@ function startServer() {
 
       const db = client.db(dbName); // Use the database name from .env file
       global.db = db; // Save the db connection in a global variable
-      initializeCronJobsForBlogs(db)
-      initializeCronJobs(db)
       initializeAnalyticsCronJobs(db)
       initializePartnersCronJobs(db)
 
@@ -108,8 +104,6 @@ function startServer() {
         ['/user', './routers/user'],
         ['/auth', './routers/auth'],
         ['/payment', './routers/payment'],
-        ['/api/generator', './routers/api/generator'],
-        ['/api/autoblog', './routers/api/autoblog'],
         ['/api/affiliate', './routers/api/affiliate'],
         ['/api/abtest', './routers/api/abtest'],
         ['/api/referal', './routers/api/referal'],
@@ -121,7 +115,6 @@ function startServer() {
         ['/api/api-keys', './routers/api/api-keys'],
         ['/api/mailing-lists', './routers/api/mailing-lists'],
         ['/api/v1', './routers/api/v1'],
-        ['/api/rss', './routers/api/rss'],
         ['/api/ga', './routers/api/ga'],
       ];
 

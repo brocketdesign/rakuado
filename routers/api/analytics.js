@@ -470,4 +470,153 @@ router.post('/sync-today', async (req, res) => {
   }
 });
 
+// GET /api/analytics/sites-summary - per-site totals for the period (used by simple view)
+router.get('/sites-summary', async (req, res) => {
+  const { period = 'current' } = req.query;
+  try {
+    let startDate, endDate;
+    switch (period) {
+      case 'current': ({ startDate, endDate } = getCustomMonthPeriod(0)); break;
+      case 'previous': ({ startDate, endDate } = getCustomMonthPeriod(1)); break;
+      default: return res.status(400).json({ error: 'Invalid period' });
+    }
+
+    const dayBeforeStart = new Date(startDate);
+    dayBeforeStart.setDate(dayBeforeStart.getDate() - 1);
+
+    const data = await db.collection('analyticsDaily')
+      .find({
+        date: {
+          $gte: dayBeforeStart.toISOString().split('T')[0],
+          $lte: endDate.toISOString().split('T')[0]
+        }
+      })
+      .sort({ date: 1 })
+      .toArray();
+
+    const isCumulative = detectCumulative(data);
+    const startDateStr = startDate.toISOString().split('T')[0];
+
+    const siteSet = new Set();
+    for (const d of data) {
+      if (d.sites) Object.keys(d.sites).forEach(s => siteSet.add(s));
+    }
+
+    const sites = [];
+    for (const domain of siteSet) {
+      let views = 0, clicks = 0;
+      if (isCumulative && data.length >= 2) {
+        const first = data[0];
+        const last = data[data.length - 1];
+        views = Math.max(0, (last.sites?.[domain]?.views || 0) - (first.sites?.[domain]?.views || 0));
+        clicks = Math.max(0, (last.sites?.[domain]?.clicks || 0) - (first.sites?.[domain]?.clicks || 0));
+      } else {
+        for (const d of data) {
+          if (d.date < startDateStr) continue;
+          views += d.sites?.[domain]?.views || 0;
+          clicks += d.sites?.[domain]?.clicks || 0;
+        }
+      }
+      sites.push({
+        domain,
+        views,
+        clicks,
+        ctr: views > 0 ? Number((clicks / views * 100).toFixed(2)) : 0
+      });
+    }
+
+    sites.sort((a, b) => b.views - a.views);
+
+    res.json({
+      period,
+      sites,
+      periodInfo: {
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0]
+      }
+    });
+  } catch (error) {
+    console.error('Sites summary API error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/analytics/comparison - daily time series for all sites combined (used by comparison view)
+router.get('/comparison', async (req, res) => {
+  const { period = 'current' } = req.query;
+  try {
+    let startDate, endDate;
+    switch (period) {
+      case 'current': ({ startDate, endDate } = getCustomMonthPeriod(0)); break;
+      case 'previous': ({ startDate, endDate } = getCustomMonthPeriod(1)); break;
+      default: return res.status(400).json({ error: 'Invalid period' });
+    }
+
+    const dayBeforeStart = new Date(startDate);
+    dayBeforeStart.setDate(dayBeforeStart.getDate() - 1);
+
+    const data = await db.collection('analyticsDaily')
+      .find({
+        date: {
+          $gte: dayBeforeStart.toISOString().split('T')[0],
+          $lte: endDate.toISOString().split('T')[0]
+        }
+      })
+      .sort({ date: 1 })
+      .toArray();
+
+    const isCumulative = detectCumulative(data);
+
+    const siteSet = new Set();
+    for (const d of data) {
+      if (d.sites) Object.keys(d.sites).forEach(s => siteSet.add(s));
+    }
+    const sites = [...siteSet];
+
+    const dataByDate = {};
+    for (const item of data) dataByDate[item.date] = item;
+
+    const response = [];
+    const currentDate = new Date(startDate);
+    const endDateTime = new Date(endDate);
+
+    while (currentDate <= endDateTime) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      const entry = { date: dateStr };
+
+      for (const site of sites) {
+        const existing = dataByDate[dateStr];
+        let views = existing?.sites?.[site]?.views || 0;
+        let clicks = existing?.sites?.[site]?.clicks || 0;
+
+        if (isCumulative) {
+          const prevDate = new Date(currentDate);
+          prevDate.setDate(prevDate.getDate() - 1);
+          const prevData = dataByDate[prevDate.toISOString().split('T')[0]];
+          views = Math.max(0, views - (prevData?.sites?.[site]?.views || 0));
+          clicks = Math.max(0, clicks - (prevData?.sites?.[site]?.clicks || 0));
+        }
+
+        entry[site] = { views, clicks };
+      }
+
+      response.push(entry);
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    res.json({
+      period,
+      sites,
+      data: response,
+      periodInfo: {
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0]
+      }
+    });
+  } catch (error) {
+    console.error('Comparison API error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;

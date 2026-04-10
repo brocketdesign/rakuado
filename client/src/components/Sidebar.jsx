@@ -1,8 +1,8 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import {
-  LayoutDashboard, BarChart3, Users, UserPlus, Mail, Bot,
-  Wand2, Globe, TestTubes, Rss, Megaphone, Key, FileText,
+  LayoutDashboard, BarChart3, Users, UserPlus, Mail,
+  Globe, TestTubes, Megaphone, Key, FileText,
   MailPlus, Settings, LogOut, X, CreditCard, ChevronDown, ChevronRight,
   Briefcase, TrendingUp, LineChart,
 } from 'lucide-react'
@@ -35,14 +35,6 @@ const adminMenuGroups = [
       { to: '/dashboard/partner-list', icon: Users, label: 'パートナー一覧' },
       { to: '/dashboard/partner-recruitment', icon: UserPlus, label: 'パートナー募集' },
       { to: '/dashboard/partner-emails', icon: Mail, label: 'パートナーメール' },
-    ],
-  },
-  {
-    label: 'コンテンツ',
-    items: [
-      { to: '/dashboard/autoblog', icon: Bot, label: 'オートブログ' },
-      { to: '/dashboard/generator/0', icon: Wand2, label: 'コンテンツ生成' },
-      { to: '/dashboard/rss', icon: Rss, label: 'RSSフィード' },
     ],
   },
   {

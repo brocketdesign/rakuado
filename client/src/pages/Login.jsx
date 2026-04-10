@@ -1,9 +1,10 @@
 import { useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { Wand2 } from 'lucide-react'
 
 export default function Login() {
-  const { login } = useAuth()
+  const { login, user, isLoading } = useAuth()
   const [mode, setMode] = useState('signin') // 'signin' | 'signup'
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
@@ -36,6 +37,8 @@ export default function Login() {
   }
 
   const isSignup = mode === 'signup'
+
+  if (!isLoading && user) return <Navigate to="/dashboard" replace />
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#0f172a] p-4">
