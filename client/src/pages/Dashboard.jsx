@@ -6,7 +6,7 @@ import { PageHeader, StatCard, Card } from '../components/UI'
 import {
   BarChart3, CreditCard, Mail, Users, UserPlus, TestTubes,
   Globe, Megaphone, Key, MailPlus, FileText, Eye,
-  Briefcase, TrendingUp, Settings,
+  Briefcase, TrendingUp, Settings, Wand2,
 } from 'lucide-react'
 
 // User-facing quick links (shown to non-admins only)
