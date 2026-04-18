@@ -608,16 +608,6 @@ function SiteDetail({ site, onBack, queryClient }) {
             <MetricsSnippetCard code={site.metricsSnippetCode} />
           )}
 
-          {/* GA form — available from the moment of first submission, not just when admin requests it */}
-          {site.status !== 'rejected' && site.status !== 'snippet_verified' && (
-            <GAForm
-              onSubmit={handleGASubmit}
-              isLoading={analyticsUrlMutation.isPending}
-              alreadySubmitted={site.googleAnalyticsSubmitted}
-              existingUrl={site.googleAnalyticsUrl}
-            />
-          )}
-
           {site.snippetCode && <SnippetCard snippetCode={site.snippetCode} />}
 
           {site.snippetSent && !site.snippetVerified && (
@@ -839,6 +829,16 @@ function SiteDetail({ site, onBack, queryClient }) {
               </div>
             </>
           )
+          )}
+
+          {/* GA form — optional supplement for evaluation */}
+          {site.status !== 'rejected' && site.status !== 'snippet_verified' && (
+            <GAForm
+              onSubmit={handleGASubmit}
+              isLoading={analyticsUrlMutation.isPending}
+              alreadySubmitted={site.googleAnalyticsSubmitted}
+              existingUrl={site.googleAnalyticsUrl}
+            />
           )}
         </div>
       )}
