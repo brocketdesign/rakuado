@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api'
 import { formatNumber, formatCurrency } from '../lib/utils'
@@ -45,29 +46,120 @@ function cleanDomain(url) {
   return domain.split('/')[0]
 }
 
-// ─── Japanese Tooltip ─────────────────────────────────────────────────────────
+// ─── Portal Tooltip ───────────────────────────────────────────────────────────
+// Renders into document.body so it's never clipped by overflow:hidden parents.
+function TooltipPortal({ anchorRef, text, visible }) {
+  const [pos, setPos] = useState({ left: 0, top: 0, arrowLeft: 120 })
+  const [ready, setReady] = useState(false)
+  const TIP_W = 240
+
+  useEffect(() => {
+    if (!visible || !anchorRef.current) { setReady(false); return }
+
+    const rect = anchorRef.current.getBoundingClientRect()
+    const vw = window.innerWidth
+    const GAP = 10
+
+    let left = rect.left + rect.width / 2 - TIP_W / 2
+    const rawLeft = left
+    if (left < 12) left = 12
+    if (left + TIP_W > vw - 12) left = vw - TIP_W - 12
+
+    // Arrow points at the centre of the button regardless of clamping
+    const arrowLeft = Math.min(Math.max(rect.left + rect.width / 2 - left, 16), TIP_W - 16)
+
+    setPos({ left, top: rect.top - GAP, arrowLeft })
+    // Tiny delay so the element is mounted before we switch opacity to 1
+    requestAnimationFrame(() => setReady(true))
+  }, [visible, anchorRef])
+
+  if (!visible) return null
+
+  return createPortal(
+    <div
+      role="tooltip"
+      style={{
+        position: 'fixed',
+        left: pos.left,
+        top: pos.top,
+        width: TIP_W,
+        transform: 'translateY(-100%)',
+        zIndex: 9999,
+        pointerEvents: 'none',
+        opacity: ready ? 1 : 0,
+        scale: ready ? '1' : '0.94',
+        transition: 'opacity 140ms ease, scale 140ms ease',
+        paddingBottom: 9,
+      }}
+    >
+      {/* Bubble */}
+      <div
+        style={{
+          background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
+          border: '1px solid rgba(139,92,246,0.35)',
+          borderRadius: 14,
+          padding: '10px 14px',
+          fontSize: 12,
+          lineHeight: 1.65,
+          color: '#e2e8f0',
+          boxShadow: '0 12px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(139,92,246,0.1)',
+          position: 'relative',
+        }}
+      >
+        {/* Violet left accent bar */}
+        <div style={{
+          position: 'absolute', left: 0, top: 10, bottom: 10,
+          width: 3, borderRadius: 99,
+          background: 'linear-gradient(180deg, #8b5cf6, #6366f1)',
+        }} />
+        <span style={{ paddingLeft: 10, display: 'block' }}>{text}</span>
+      </div>
+
+      {/* Arrow — border layer */}
+      <div style={{
+        position: 'absolute', bottom: 0,
+        left: pos.arrowLeft - 7,
+        width: 0, height: 0,
+        borderLeft: '7px solid transparent',
+        borderRight: '7px solid transparent',
+        borderTop: '9px solid rgba(139,92,246,0.35)',
+      }} />
+      {/* Arrow — fill layer */}
+      <div style={{
+        position: 'absolute', bottom: 1,
+        left: pos.arrowLeft - 6,
+        width: 0, height: 0,
+        borderLeft: '6px solid transparent',
+        borderRight: '6px solid transparent',
+        borderTop: '8px solid #0f172a',
+      }} />
+    </div>,
+    document.body
+  )
+}
+
 function JTooltip({ text, children }) {
   const [show, setShow] = useState(false)
+  const btnRef = useRef(null)
+  const open = useCallback(() => setShow(true), [])
+  const close = useCallback(() => setShow(false), [])
+
   return (
-    <span className="relative inline-flex items-center">
+    <span className="inline-flex items-center">
       {children}
       <button
+        ref={btnRef}
         type="button"
-        className="ml-1 text-slate-500 hover:text-slate-300 focus:outline-none"
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-        onFocus={() => setShow(true)}
-        onBlur={() => setShow(false)}
+        className="ml-1 shrink-0 text-slate-500 hover:text-violet-400 focus:outline-none transition-colors duration-150"
+        onMouseEnter={open}
+        onMouseLeave={close}
+        onFocus={open}
+        onBlur={close}
         aria-label="ヘルプ"
       >
         <HelpCircle size={13} />
       </button>
-      {show && (
-        <span className="absolute bottom-full left-1/2 z-50 mb-2 w-60 -translate-x-1/2 rounded-xl border border-slate-600 bg-slate-800 px-3 py-2 text-xs text-slate-200 shadow-xl leading-relaxed pointer-events-none">
-          {text}
-          <span className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-4 border-transparent border-t-slate-600" />
-        </span>
-      )}
+      <TooltipPortal anchorRef={btnRef} text={text} visible={show} />
     </span>
   )
 }
@@ -218,36 +310,49 @@ function ApplicationForm({ onSubmit, isLoading }) {
 }
 
 // ─── Google Analytics URL form ───────────────────────────────────────────────
-function GAForm({ onSubmit, isLoading, alreadySubmitted }) {
+function GAForm({ onSubmit, isLoading, alreadySubmitted, existingUrl }) {
   return (
-    <Card className="border border-amber-500/30 bg-amber-500/5">
+    <Card className={alreadySubmitted ? 'border border-green-500/30 bg-green-500/5' : 'border border-amber-500/30 bg-amber-500/5'}>
       <div className="flex items-start gap-3 mb-4">
-        <AlertCircle size={20} className="text-amber-400 shrink-0 mt-0.5" />
+        {alreadySubmitted
+          ? <CheckCircle size={20} className="text-green-400 shrink-0 mt-0.5" />
+          : <AlertCircle size={20} className="text-amber-400 shrink-0 mt-0.5" />
+        }
         <div>
-          <h4 className="text-sm font-semibold text-amber-300">
-            Googleアナリティクス情報のご提出をお願いします
+          <h4 className={`text-sm font-semibold ${alreadySubmitted ? 'text-green-300' : 'text-amber-300'}`}>
+            <JTooltip text="Googleアナリティクスのレポートページ（またはビューURL）を共有してください。管理者がアクセス状況を確認し、報酬額の算定に使用します。計測スクリプトと併用することでより正確な審査が可能です。">
+              Googleアナリティクス情報の提出
+            </JTooltip>
           </h4>
           <p className="mt-1 text-sm text-slate-400">
-            審査を進めるため、ブログのGoogleアナリティクスレポートページのURLを共有してください。
+            {alreadySubmitted
+              ? '送信済みです。内容を更新する場合は下記から再送信できます。'
+              : '任意ですが、Googleアナリティクスのレポートを提出いただくと審査がスムーズに進みます。'}
           </p>
         </div>
       </div>
-      {alreadySubmitted && (
-        <div className="mb-4 rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-400">
-          ✓ すでにGoogleアナリティクス情報を送信済みです。引き続き審査中をお待ちください。
+
+      {alreadySubmitted && existingUrl && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-green-500/20 bg-green-500/5 px-4 py-2.5 text-sm">
+          <CheckCircle size={14} className="shrink-0 text-green-400" />
+          <a href={existingUrl} target="_blank" rel="noreferrer"
+            className="flex items-center gap-1 text-green-400 hover:underline truncate">
+            {existingUrl}
+            <ExternalLink size={11} />
+          </a>
         </div>
       )}
+
       <form onSubmit={onSubmit} className="space-y-4">
         <Input
-          label="GoogleアナリティクスURL"
+          label={alreadySubmitted ? 'URLを更新する' : 'GoogleアナリティクスURL（任意）'}
           name="googleAnalyticsUrl"
           type="url"
-          placeholder="https://analytics.google.com/..."
-          required
+          placeholder="https://analytics.google.com/analytics/web/..."
         />
-        <Button type="submit" disabled={isLoading || alreadySubmitted}>
+        <Button type="submit" variant={alreadySubmitted ? 'secondary' : 'primary'} disabled={isLoading}>
           <Send size={16} />
-          {isLoading ? '送信中...' : '送信'}
+          {isLoading ? '送信中...' : alreadySubmitted ? '更新する' : '送信する'}
         </Button>
       </form>
     </Card>
@@ -488,16 +593,19 @@ function SiteDetail({ site, onBack, queryClient }) {
             </Card>
           )}
 
-          {(site.currentStep === 'analytics_requested' || site.status === 'analytics_requested') && (
+          {/* Metrics snippet — shown immediately after applying so evaluation can start */}
+          {site.metricsSnippetCode && (
+            <MetricsSnippetCard code={site.metricsSnippetCode} />
+          )}
+
+          {/* GA form — available from the moment of first submission, not just when admin requests it */}
+          {site.status !== 'rejected' && site.status !== 'snippet_verified' && (
             <GAForm
               onSubmit={handleGASubmit}
               isLoading={analyticsUrlMutation.isPending}
               alreadySubmitted={site.googleAnalyticsSubmitted}
+              existingUrl={site.googleAnalyticsUrl}
             />
-          )}
-
-          {site.metricsSnippetSent && site.metricsSnippetCode && (
-            <MetricsSnippetCard code={site.metricsSnippetCode} />
           )}
 
           {site.snippetCode && <SnippetCard snippetCode={site.snippetCode} />}

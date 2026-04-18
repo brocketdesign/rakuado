@@ -100,10 +100,30 @@ router.post('/apply', async (req, res) => {
     };
 
     const result = await collection.insertOne(newRequest);
+    const newId = result.insertedId.toString();
+
+    // Auto-generate the metrics tracking snippet immediately so the partner
+    // can install it right away for traffic measurement during evaluation.
+    const appDomain = process.env.PRODUCT_URL || 'https://app.rakuado.net';
+    const metricsSnippetCode = `<!-- RakuAdo アクセス計測スクリプト (metrics) -->
+<script>
+  (function() {
+    var s = document.createElement('script');
+    s.src = '${appDomain}/api/partner-metrics.js?pid=${newId}';
+    s.async = true;
+    document.head.appendChild(s);
+  })();
+</script>
+<!-- End RakuAdo アクセス計測スクリプト -->`.trim();
+
+    await collection.updateOne(
+      { _id: result.insertedId },
+      { $set: { metricsSnippetSent: true, metricsSnippetCode } }
+    );
 
     res.json({
       success: true,
-      request: { ...newRequest, _id: result.insertedId.toString() },
+      request: { ...newRequest, _id: newId, metricsSnippetSent: true, metricsSnippetCode },
     });
   } catch (error) {
     console.error('Error submitting partner application:', error);
@@ -114,25 +134,33 @@ router.post('/apply', async (req, res) => {
 // PUT /api/partner-portal/analytics-url - submit Google Analytics URL
 router.put('/analytics-url', async (req, res) => {
   try {
-    const { googleAnalyticsUrl } = req.body;
+    const { googleAnalyticsUrl, requestId } = req.body;
     const userEmail = req.user.email;
     const userId = req.user._id.toString();
 
-    if (!googleAnalyticsUrl || !googleAnalyticsUrl.trim()) {
-      return res.status(400).json({ success: false, error: 'Google Analytics URL is required' });
-    }
-
-    // Basic URL validation
-    try {
-      new URL(googleAnalyticsUrl.trim());
-    } catch {
-      return res.status(400).json({ success: false, error: 'Invalid URL format' });
+    // GA URL is optional — partners may clear or update it
+    if (googleAnalyticsUrl && googleAnalyticsUrl.trim()) {
+      try {
+        new URL(googleAnalyticsUrl.trim());
+      } catch {
+        return res.status(400).json({ success: false, error: 'Invalid URL format' });
+      }
     }
 
     const collection = global.db.collection('partnerRequests');
-    const request = await collection.findOne({
-      $or: [{ userId }, { email: userEmail }],
-    });
+
+    let request;
+    if (requestId) {
+      if (!/^[a-fA-F0-9]{24}$/.test(requestId)) {
+        return res.status(400).json({ success: false, error: 'Invalid requestId' });
+      }
+      request = await collection.findOne({
+        _id: new ObjectId(requestId),
+        $or: [{ userId }, { email: userEmail }],
+      });
+    } else {
+      request = await collection.findOne({ $or: [{ userId }, { email: userEmail }] });
+    }
 
     if (!request) {
       return res.status(404).json({ success: false, error: 'Application not found' });

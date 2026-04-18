@@ -19,7 +19,7 @@ export default function Partners() {
     queryKey: ['partner-payments', period],
     queryFn: async () => {
       const res = await api.get('/api/partners/payments/calculate', { params: { period } })
-      return res.data
+      return res.data.data
     },
   })
 

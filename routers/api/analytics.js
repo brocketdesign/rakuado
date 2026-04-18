@@ -505,7 +505,25 @@ router.get('/sites-summary', async (req, res) => {
     const sites = [];
     for (const domain of siteSet) {
       let views = 0, clicks = 0;
-      if (isCumulative && data.length >= 2) {
+
+      // Detect cumulativeness per-site independently, since total.views and
+      // sites[domain].views may use different storage strategies (e.g. popup
+      // counters vs refery-based running totals). Using only the global
+      // isCumulative flag (derived from total.views) can cause the else-branch
+      // to sum cumulative per-site values, producing hugely inflated results.
+      const siteRecords = data.filter(d => d.sites?.[domain]);
+      let isSiteCumulative = false;
+      if (siteRecords.length >= 3) {
+        let nonDecreasing = 0;
+        for (let i = 1; i < siteRecords.length; i++) {
+          const prev = siteRecords[i - 1].sites[domain].views || 0;
+          const curr = siteRecords[i].sites[domain].views || 0;
+          if (curr >= prev) nonDecreasing++;
+        }
+        isSiteCumulative = nonDecreasing / (siteRecords.length - 1) >= 0.9;
+      }
+
+      if (isSiteCumulative && data.length >= 2) {
         const first = data[0];
         const last = data[data.length - 1];
         views = Math.max(0, (last.sites?.[domain]?.views || 0) - (first.sites?.[domain]?.views || 0));
@@ -565,13 +583,28 @@ router.get('/comparison', async (req, res) => {
       .sort({ date: 1 })
       .toArray();
 
-    const isCumulative = detectCumulative(data);
-
     const siteSet = new Set();
     for (const d of data) {
       if (d.sites) Object.keys(d.sites).forEach(s => siteSet.add(s));
     }
     const sites = [...siteSet];
+
+    // Build per-site cumulative flags independently (same rationale as sites-summary).
+    const siteCumulativeMap = {};
+    for (const site of sites) {
+      const siteRecords = data.filter(d => d.sites?.[site]);
+      if (siteRecords.length >= 3) {
+        let nonDecreasing = 0;
+        for (let i = 1; i < siteRecords.length; i++) {
+          const prev = siteRecords[i - 1].sites[site].views || 0;
+          const curr = siteRecords[i].sites[site].views || 0;
+          if (curr >= prev) nonDecreasing++;
+        }
+        siteCumulativeMap[site] = nonDecreasing / (siteRecords.length - 1) >= 0.9;
+      } else {
+        siteCumulativeMap[site] = false;
+      }
+    }
 
     const dataByDate = {};
     for (const item of data) dataByDate[item.date] = item;
@@ -589,7 +622,7 @@ router.get('/comparison', async (req, res) => {
         let views = existing?.sites?.[site]?.views || 0;
         let clicks = existing?.sites?.[site]?.clicks || 0;
 
-        if (isCumulative) {
+        if (siteCumulativeMap[site]) {
           const prevDate = new Date(currentDate);
           prevDate.setDate(prevDate.getDate() - 1);
           const prevData = dataByDate[prevDate.toISOString().split('T')[0]];
