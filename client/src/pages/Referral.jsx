@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api'
 import { PageHeader, Card, Badge, Button, Input, EmptyState } from '../components/UI'
 import Modal from '../components/Modal'
-import { Megaphone, Plus, Trash2, GripVertical, Eye, MousePointerClick, ExternalLink, Power, PowerOff } from 'lucide-react'
+import { Megaphone, Plus, Trash2, GripVertical, Eye, MousePointerClick, ExternalLink, Power, PowerOff, Pencil } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function Referral() {
@@ -103,6 +103,13 @@ export default function Referral() {
               <Card key={p._id} className="group relative">
                 <div className="absolute right-4 top-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
+                    onClick={() => openEdit(p)}
+                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-700 hover:text-white"
+                    title="編集"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
                     onClick={() => toggleMutation.mutate({ id: p._id, enabled: !p.enabled })}
                     className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-700 hover:text-white"
                   >
@@ -120,10 +127,7 @@ export default function Referral() {
                   <img src={p.imageUrl} alt="" className="mb-3 w-full rounded-lg object-cover h-32" />
                 )}
 
-                <h3
-                  className="mb-2 font-medium text-white cursor-pointer hover:text-violet-400"
-                  onClick={() => openEdit(p)}
-                >
+                <h3 className="mb-2 font-medium text-white">
                   {p.name || 'Untitled'}
                 </h3>
 
