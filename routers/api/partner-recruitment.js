@@ -448,4 +448,56 @@ router.post('/:id/reject', async (req, res) => {
   }
 });
 
+// ─── Send metrics tracking snippet ────────────────────────────────────────────
+router.post('/:id/send-metrics-snippet', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const col = global.db.collection('partnerRequests');
+
+    let request;
+    try {
+      request = await col.findOne({ _id: new ObjectId(id) });
+    } catch {
+      return res.status(400).json({ success: false, error: 'Invalid request ID' });
+    }
+
+    if (!request) {
+      return res.status(404).json({ success: false, error: 'Request not found' });
+    }
+
+    const appDomain = process.env.PRODUCT_URL || 'https://app.rakuado.net';
+
+    const metricsSnippetCode = `<!-- RakuAdo アクセス計測スクリプト (metrics) -->
+<script>
+  (function() {
+    var s = document.createElement('script');
+    s.src = '${appDomain}/api/partner-metrics.js?pid=${id}';
+    s.async = true;
+    document.head.appendChild(s);
+  })();
+</script>
+<!-- End RakuAdo アクセス計測スクリプト -->`.trim();
+
+    // Advance step to 'metrics_snippet_sent' only if still at the initial submitted step
+    const nextStep = request.currentStep === 'submitted' ? 'metrics_snippet_sent' : request.currentStep;
+
+    await col.updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          metricsSnippetSent: true,
+          metricsSnippetCode,
+          currentStep: nextStep,
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    res.json({ success: true, message: 'Metrics snippet generated', metricsSnippetCode });
+  } catch (error) {
+    console.error('Error sending metrics snippet:', error);
+    res.status(500).json({ success: false, error: 'Failed to generate metrics snippet' });
+  }
+});
+
 module.exports = router;

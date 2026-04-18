@@ -6,23 +6,21 @@ import { PageHeader, StatCard, Card, Button, Input, Tabs } from '../components/U
 import {
   FileText, BarChart3, DollarSign, CheckCircle, Clock, XCircle,
   AlertCircle, Send, Eye, MousePointerClick, TrendingUp, Code, ExternalLink,
-  Plus, Globe, ChevronLeft, Activity, HelpCircle, Smartphone, Link2,
+  Plus, Globe, ChevronLeft,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  PieChart, Pie, Cell,
 } from 'recharts'
 
-// ─── Step definitions ──────────────────────────────────────────────────────────
+// ─── Step definitions for the progress indicator ────────────────────────────
 const STEPS = [
-  { key: 'submitted',             label: '申請提出',         desc: 'ブログを登録して申請を送信した状態です。' },
-  { key: 'metrics_snippet_sent',  label: '計測スクリプト',   desc: '管理者からアクセス計測スクリプトが提供されました。スクリプトをサイトに設置してください。' },
-  { key: 'analytics_requested',   label: 'GA提出',           desc: 'Googleアナリティクスレポートの提出が求められています。' },
-  { key: 'reviewing',             label: '審査中',           desc: '管理者が申請内容を審査しています。' },
-  { key: 'approved',              label: '承認済み',         desc: '申請が承認されました。' },
-  { key: 'snippet_sent',          label: '広告スクリプト',   desc: 'RakuAdo広告スクリプトが提供されました。サイトに設置してください。' },
-  { key: 'snippet_verified',      label: '稼働中',           desc: '広告スクリプトの設置が確認され、パートナーとして稼働中です。' },
+  { key: 'submitted', label: '申請提出' },
+  { key: 'analytics_requested', label: 'GA提出' },
+  { key: 'reviewing', label: '審査中' },
+  { key: 'approved', label: '承認済み' },
+  { key: 'snippet_sent', label: 'スニペット送付' },
+  { key: 'snippet_verified', label: '設置確認済み' },
 ]
 const STEP_ORDER = STEPS.map((s) => s.key)
 
@@ -43,64 +41,6 @@ function cleanDomain(url) {
   domain = domain.replace(/^www\./, '')
   domain = domain.replace(/\/$/, '')
   return domain.split('/')[0]
-}
-
-// ─── Japanese Tooltip ─────────────────────────────────────────────────────────
-function JTooltip({ text, children }) {
-  const [show, setShow] = useState(false)
-  return (
-    <span className="relative inline-flex items-center">
-      {children}
-      <button
-        type="button"
-        className="ml-1 text-slate-500 hover:text-slate-300 focus:outline-none"
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-        onFocus={() => setShow(true)}
-        onBlur={() => setShow(false)}
-        aria-label="ヘルプ"
-      >
-        <HelpCircle size={13} />
-      </button>
-      {show && (
-        <span className="absolute bottom-full left-1/2 z-50 mb-2 w-60 -translate-x-1/2 rounded-xl border border-slate-600 bg-slate-800 px-3 py-2 text-xs text-slate-200 shadow-xl leading-relaxed pointer-events-none">
-          {text}
-          <span className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-4 border-transparent border-t-slate-600" />
-        </span>
-      )}
-    </span>
-  )
-}
-
-// ─── Info card ────────────────────────────────────────────────────────────────
-function InfoCard({ title, children, variant = 'default' }) {
-  const styles = {
-    default: 'border-slate-700/50',
-    blue:    'border-blue-500/30 bg-blue-500/5',
-    amber:   'border-amber-500/30 bg-amber-500/5',
-    green:   'border-green-500/30 bg-green-500/5',
-    violet:  'border-violet-500/30 bg-violet-500/5',
-    red:     'border-red-500/30 bg-red-500/5',
-  }
-  const icons = {
-    default: <HelpCircle size={18} className="text-slate-400 shrink-0 mt-0.5" />,
-    blue:    <AlertCircle size={18} className="text-blue-400 shrink-0 mt-0.5" />,
-    amber:   <AlertCircle size={18} className="text-amber-400 shrink-0 mt-0.5" />,
-    green:   <CheckCircle size={18} className="text-green-400 shrink-0 mt-0.5" />,
-    violet:  <Code size={18} className="text-violet-400 shrink-0 mt-0.5" />,
-    red:     <XCircle size={18} className="text-red-400 shrink-0 mt-0.5" />,
-  }
-  return (
-    <div className={`rounded-xl border p-4 ${styles[variant]}`}>
-      <div className="flex items-start gap-3">
-        {icons[variant]}
-        <div className="flex-1 min-w-0">
-          {title && <h4 className="mb-1 text-sm font-semibold text-white">{title}</h4>}
-          <div className="text-sm text-slate-300 space-y-1">{children}</div>
-        </div>
-      </div>
-    </div>
-  )
 }
 
 function StatusBadge({ status }) {
@@ -171,7 +111,7 @@ function StepIndicator({ currentStep, status }) {
                     : 'text-slate-500'
                 }`}
               >
-                <JTooltip text={step.desc || step.label}>{step.label}</JTooltip>
+                {step.label}
               </p>
             </div>
           )
@@ -290,112 +230,10 @@ function SnippetCard({ snippetCode }) {
   )
 }
 
-// ─── Metrics Snippet Card ────────────────────────────────────────────────────
-function MetricsSnippetCard({ code }) {
-  const [copied, setCopied] = useState(false)
-  const handleCopy = () => {
-    navigator.clipboard.writeText(code)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-  return (
-    <Card className="border border-blue-500/30 bg-blue-500/5">
-      <div className="flex items-start gap-3 mb-4">
-        <Activity size={20} className="text-blue-400 shrink-0 mt-0.5" />
-        <div>
-          <h4 className="text-sm font-semibold text-blue-300">
-            <JTooltip text="このスクリプトはGoogleアナリティクスなしでもアクセス数・セッション数・流入元などを計測できます。設置後すぐに集計が始まります。">
-              アクセス計測スクリプト
-            </JTooltip>
-          </h4>
-          <p className="mt-1 text-sm text-slate-400">
-            以下のコードをブログのすべてのページの <code className="text-blue-300">&lt;head&gt;</code> または <code className="text-blue-300">&lt;body&gt;</code> タグ内に設置してください。
-          </p>
-        </div>
-      </div>
-      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3 text-xs">
-        <div className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2.5">
-          <p className="font-semibold text-blue-300 mb-1">📊 計測できること</p>
-          <ul className="text-slate-400 space-y-0.5">
-            <li>• ページビュー数</li>
-            <li>• ユニークセッション</li>
-            <li>• 流入元（参照元サイト）</li>
-            <li>• デバイス種別</li>
-            <li>• 人気ページ TOP10</li>
-          </ul>
-        </div>
-        <div className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2.5">
-          <p className="font-semibold text-green-300 mb-1">✅ 設置方法</p>
-          <ol className="text-slate-400 space-y-0.5 list-decimal list-inside">
-            <li>下のコードをコピー</li>
-            <li>全ページの &lt;head&gt; に貼り付け</li>
-            <li>サイトを公開・更新</li>
-            <li>翌日から数値が反映</li>
-          </ol>
-        </div>
-        <div className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2.5">
-          <p className="font-semibold text-amber-300 mb-1">⚠️ 注意事項</p>
-          <ul className="text-slate-400 space-y-0.5">
-            <li>• 個人情報は収集しません</li>
-            <li>• Google Analytics不要</li>
-            <li>• 設置確認後に審査が進みます</li>
-          </ul>
-        </div>
-      </div>
-      <div className="relative">
-        <pre className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-xs text-slate-300 whitespace-pre-wrap break-all">
-          {code}
-        </pre>
-        <button
-          onClick={handleCopy}
-          className="absolute right-2 top-2 rounded-md bg-slate-700 px-2 py-1 text-xs text-slate-300 hover:bg-slate-600 transition-colors"
-        >
-          {copied ? '✓ コピー済み' : 'コピー'}
-        </button>
-      </div>
-    </Card>
-  )
-}
-
-// ─── Device pie chart ─────────────────────────────────────────────────────────
-const PIE_COLORS = ['#667eea', '#10b981']
-function DevicePieChart({ mobile, desktop }) {
-  const data = [
-    { name: 'モバイル', value: mobile || 0 },
-    { name: 'デスクトップ', value: desktop || 0 },
-  ]
-  const total = (mobile || 0) + (desktop || 0)
-  if (total === 0) return <p className="text-sm text-slate-500 text-center py-6">データなし</p>
-  return (
-    <div className="flex flex-col items-center gap-3">
-      <ResponsiveContainer width="100%" height={160}>
-        <PieChart>
-          <Pie data={data} cx="50%" cy="50%" innerRadius={40} outerRadius={60} dataKey="value" paddingAngle={3}>
-            {data.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
-          </Pie>
-          <Tooltip contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#f1f5f9', fontSize: 12 }} />
-        </PieChart>
-      </ResponsiveContainer>
-      <div className="flex gap-6 text-xs">
-        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#667eea]" />モバイル {Math.round((mobile / total) * 100)}%</span>
-        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#10b981]" />デスクトップ {Math.round((desktop / total) * 100)}%</span>
-      </div>
-    </div>
-  )
-}
-
 // ─── Site card (in the grid list) ────────────────────────────────────────────
 function SiteDetail({ site, onBack, queryClient }) {
   const [tab, setTab] = useState('application')
   const [analyticsPeriod, setAnalyticsPeriod] = useState('current')
-  const [metricsDays, setMetricsDays] = useState('30')
-
-  const { data: metricsData, isLoading: metricsLoading } = useQuery({
-    queryKey: ['partner-metrics', site._id, metricsDays],
-    queryFn: () =>
-      api.get('/api/partner-metrics/data', { params: { requestId: site._id, days: metricsDays } }).then((r) => r.data),
-    enabled: tab === 'metrics',
-  })
 
   const analyticsUrlMutation = useMutation({
     mutationFn: (data) => api.put('/api/partner-portal/analytics-url', data).then((r) => r.data),
@@ -459,8 +297,7 @@ function SiteDetail({ site, onBack, queryClient }) {
       <Tabs
         tabs={[
           { value: 'application', label: '申請状況' },
-          { value: 'metrics', label: 'サイト計測' },
-          { value: 'analytics', label: '広告分析' },
+          { value: 'analytics', label: 'アナリティクス' },
           { value: 'earnings', label: '収益' },
         ]}
         active={tab}
@@ -494,10 +331,6 @@ function SiteDetail({ site, onBack, queryClient }) {
               isLoading={analyticsUrlMutation.isPending}
               alreadySubmitted={site.googleAnalyticsSubmitted}
             />
-          )}
-
-          {site.metricsSnippetSent && site.metricsSnippetCode && (
-            <MetricsSnippetCard code={site.metricsSnippetCode} />
           )}
 
           {site.snippetCode && <SnippetCard snippetCode={site.snippetCode} />}
@@ -550,159 +383,6 @@ function SiteDetail({ site, onBack, queryClient }) {
               </div>
             </dl>
           </Card>
-        </div>
-      )}
-
-      {tab === 'metrics' && (
-        <div className="space-y-6">
-          {!site.metricsSnippetSent ? (
-            <Card>
-              <div className="flex flex-col items-center justify-center py-14 text-center">
-                <div className="mb-4 rounded-2xl bg-slate-800 p-4">
-                  <Activity size={32} className="text-slate-500" />
-                </div>
-                <h3 className="mb-2 text-sm font-semibold text-slate-300">アクセス計測スクリプト未設置</h3>
-                <p className="text-sm text-slate-400 max-w-sm">
-                  管理者からアクセス計測スクリプトが提供されると、Googleアナリティクスなしでもサイトのアクセス数が確認できます。
-                </p>
-              </div>
-            </Card>
-          ) : metricsLoading ? (
-            <div className="flex h-64 items-center justify-center">
-              <div className="h-8 w-8 rounded-full border-4 border-slate-700 border-t-violet-500 animate-spin" />
-            </div>
-          ) : !metricsData?.available ? (
-            <Card>
-              <div className="flex flex-col items-center justify-center py-14 text-center">
-                <div className="mb-4 rounded-2xl bg-slate-800 p-4">
-                  <Activity size={32} className="text-slate-500" />
-                </div>
-                <h3 className="mb-2 text-sm font-semibold text-slate-300">まだデータがありません</h3>
-                <p className="text-sm text-slate-400 max-w-sm">
-                  スクリプトをサイトに設置後、訪問者が来ると自動的にデータが記録されます。
-                </p>
-              </div>
-            </Card>
-          ) : (
-            <>
-              {/* Day range selector */}
-              <div className="flex justify-end gap-2">
-                {[['7', '7日'], ['30', '30日'], ['90', '90日']].map(([val, lbl]) => (
-                  <button key={val} onClick={() => setMetricsDays(val)}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
-                      metricsDays === val ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'
-                    }`}>
-                    {lbl}
-                  </button>
-                ))}
-              </div>
-
-              {/* KPI cards */}
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <StatCard
-                  title={<JTooltip text="スクリプトが読み込まれた回数です。1人のユーザーが複数ページを閲覧すると複数カウントされます。">ページビュー</JTooltip>}
-                  value={formatNumber(metricsData.totalPageviews)}
-                  icon={Eye}
-                  color="blue"
-                />
-                <StatCard
-                  title={<JTooltip text="一定時間内の連続したページ閲覧をまとめて1セッションとして計測します。ユニーク訪問者の推定値です。">セッション数</JTooltip>}
-                  value={formatNumber(metricsData.totalSessions)}
-                  icon={Activity}
-                  color="violet"
-                />
-                <StatCard
-                  title={<JTooltip text="1セッションあたりの平均ページビュー数です。数値が高いほど回遊率が良いことを示します。">平均PV/セッション</JTooltip>}
-                  value={
-                    metricsData.totalSessions > 0
-                      ? (metricsData.totalPageviews / metricsData.totalSessions).toFixed(1)
-                      : '—'
-                  }
-                  icon={TrendingUp}
-                  color="green"
-                />
-                <StatCard
-                  title={<JTooltip text="スマートフォン・タブレットからのアクセス比率です。">モバイル率</JTooltip>}
-                  value={
-                    (metricsData.devices?.mobile || 0) + (metricsData.devices?.desktop || 0) > 0
-                      ? `${Math.round((metricsData.devices.mobile / (metricsData.devices.mobile + metricsData.devices.desktop)) * 100)}%`
-                      : '—'
-                  }
-                  icon={Smartphone}
-                  color="amber"
-                />
-              </div>
-
-              {/* Daily chart */}
-              <Card>
-                <h3 className="mb-4 text-sm font-semibold text-slate-300">
-                  <JTooltip text="日別のページビュー数とセッション数の推移を表示しています。">日別アクセス推移</JTooltip>
-                </h3>
-                {metricsData.daily.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={280}>
-                    <LineChart data={metricsData.daily}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                      <XAxis dataKey="date" stroke="#64748b" tick={{ fontSize: 11 }} />
-                      <YAxis stroke="#64748b" tick={{ fontSize: 11 }} />
-                      <Tooltip contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', color: '#f1f5f9' }} />
-                      <Legend />
-                      <Line type="monotone" dataKey="pageviews" name="ページビュー" stroke="#667eea" strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
-                      <Line type="monotone" dataKey="sessions" name="セッション" stroke="#10b981" strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <p className="text-center text-sm text-slate-500 py-12">この期間のデータがありません</p>
-                )}
-              </Card>
-
-              {/* Top pages + Referrers + Devices */}
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                <Card className="lg:col-span-1">
-                  <h3 className="mb-4 text-sm font-semibold text-slate-300">
-                    <JTooltip text="最も多く閲覧されたページのパス（URL末尾）ランキングです。">人気ページ TOP10</JTooltip>
-                  </h3>
-                  {metricsData.topPaths.length > 0 ? (
-                    <ol className="space-y-2">
-                      {metricsData.topPaths.map(({ path, count }, i) => (
-                        <li key={path} className="flex items-center gap-2 text-xs">
-                          <span className="w-4 shrink-0 text-slate-500">{i + 1}.</span>
-                          <span className="flex-1 truncate text-slate-300" title={path}>{path}</span>
-                          <span className="shrink-0 font-semibold text-blue-400">{formatNumber(count)}</span>
-                        </li>
-                      ))}
-                    </ol>
-                  ) : <p className="text-xs text-slate-500">データなし</p>}
-                </Card>
-
-                <Card className="lg:col-span-1">
-                  <h3 className="mb-4 text-sm font-semibold text-slate-300">
-                    <JTooltip text="どのサイトからの流入が多いかを示します。ダイレクト流入・ブックマーク・SNSなどからは参照元が記録されない場合があります。">流入元 TOP10</JTooltip>
-                  </h3>
-                  {metricsData.topReferrers.length > 0 ? (
-                    <ol className="space-y-2">
-                      {metricsData.topReferrers.map(({ referrer, count }, i) => (
-                        <li key={referrer} className="flex items-center gap-2 text-xs">
-                          <span className="w-4 shrink-0 text-slate-500">{i + 1}.</span>
-                          <span className="flex items-center gap-1 flex-1 truncate text-slate-300" title={referrer}>
-                            <Link2 size={10} className="shrink-0 text-slate-500" />
-                            {referrer}
-                          </span>
-                          <span className="shrink-0 font-semibold text-violet-400">{formatNumber(count)}</span>
-                        </li>
-                      ))}
-                    </ol>
-                  ) : <p className="text-xs text-slate-500">データなし</p>}
-                </Card>
-
-                <Card className="lg:col-span-1">
-                  <h3 className="mb-4 text-sm font-semibold text-slate-300">
-                    <JTooltip text="モバイル（スマートフォン・タブレット）とデスクトップのアクセス比率です。">デバイス比率</JTooltip>
-                  </h3>
-                  <DevicePieChart mobile={metricsData.devices?.mobile} desktop={metricsData.devices?.desktop} />
-                </Card>
-              </div>
-            </>
-          )}
         </div>
       )}
 

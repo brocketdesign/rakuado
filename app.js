@@ -98,6 +98,10 @@ function startServer() {
       const partnerAdModule = require('./routers/api/partner-ad');
       app.get('/api/partner-ad.js', partnerAdModule.servePartnerAdScript);
 
+      // Handle partner-metrics.js tracking script route
+      const partnerMetricsModule = require('./routers/api/partner-metrics');
+      app.get('/api/partner-metrics.js', partnerMetricsModule.serveMetricsScript);
+
       // Define and use routers concisely
       const routers = [
         ['/', './routers/index'],
@@ -120,6 +124,9 @@ function startServer() {
 
       routers.forEach(([route, path]) => app.use(route, require(path)));
       
+      // Register partner metrics router (loaded above for the .js script route)
+      app.use('/api/partner-metrics', partnerMetricsModule.router);
+
       // Add partner emails API router
       app.use('/api/partners/emails', require('./routers/api/partner-emails'));
 

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api'
 import { PageHeader, Card, Badge, Button, EmptyState } from '../components/UI'
 import Modal from '../components/Modal'
-import { UserPlus, Search, ExternalLink } from 'lucide-react'
+import { UserPlus, Search, ExternalLink, Activity } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const statusMap = {
@@ -12,13 +12,15 @@ const statusMap = {
   reviewing: { label: 'レビュー中', variant: 'purple' },
   approved: { label: '承認済み', variant: 'success' },
   rejected: { label: '却下', variant: 'danger' },
-  snippet_sent: { label: 'スニペット送付済', variant: 'info' },
-  snippet_verified: { label: 'スニペット確認済', variant: 'success' },
+  snippet_sent: { label: '広告スニペット送付済', variant: 'info' },
+  snippet_verified: { label: '広告確認済', variant: 'success' },
+  metrics_snippet_sent: { label: '計測スクリプト送付済', variant: 'purple' },
 }
 
 const filters = [
   { value: 'all', label: 'すべて' },
   { value: 'pending', label: '審査中' },
+  { value: 'metrics_snippet_sent', label: '計測済' },
   { value: 'analytics_requested', label: 'Analytics依頼' },
   { value: 'reviewing', label: 'レビュー中' },
   { value: 'approved', label: '承認済み' },
@@ -49,11 +51,15 @@ export default function PartnerRecruitment() {
   })
 
   const actionMutation = useMutation({
-    mutationFn: ({ id, action }) => api.post(`/api/partner-recruitment/${id}/${action}`),
-    onSuccess: () => {
+    mutationFn: ({ id, action }) => api.post(`/api/partner-recruitment/${id}/${action}`).then((r) => r.data),
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries(['partner-recruitment'])
       toast.success('操作が完了しました')
-      setDetailOpen(false)
+      if (variables.action === 'send-metrics-snippet' && data?.metricsSnippetCode) {
+        setSelected((prev) => ({ ...prev, metricsSnippetCode: data.metricsSnippetCode, metricsSnippetSent: true }))
+      } else {
+        setDetailOpen(false)
+      }
     },
     onError: () => toast.error('操作に失敗しました'),
   })
@@ -170,16 +176,25 @@ export default function PartnerRecruitment() {
         size="lg"
         footer={
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => actionMutation.mutate({ id: selected?._id, action: 'request-analytics' })}>
+            <Button
+              variant="outline" size="sm"
+              title="アクセス計測用スクリプトコードを生成してパートナーに表示します。Google Analyticsなしでトラフィック測定が可能になります。"
+              disabled={actionMutation.isPending}
+              onClick={() => actionMutation.mutate({ id: selected?._id, action: 'send-metrics-snippet' })}
+            >
+              <Activity size={14} />
+              計測スクリプト
+            </Button>
+            <Button variant="outline" size="sm" disabled={actionMutation.isPending} onClick={() => actionMutation.mutate({ id: selected?._id, action: 'request-analytics' })}>
               Analytics依頼
             </Button>
-            <Button variant="outline" size="sm" onClick={() => actionMutation.mutate({ id: selected?._id, action: 'send-snippet' })}>
-              スニペット送付
+            <Button variant="outline" size="sm" disabled={actionMutation.isPending} onClick={() => actionMutation.mutate({ id: selected?._id, action: 'send-snippet' })}>
+              広告スニペット
             </Button>
-            <Button variant="outline" size="sm" onClick={() => actionMutation.mutate({ id: selected?._id, action: 'verify-snippet' })}>
-              スニペット確認
+            <Button variant="outline" size="sm" disabled={actionMutation.isPending} onClick={() => actionMutation.mutate({ id: selected?._id, action: 'verify-snippet' })}>
+              広告確認
             </Button>
-            <Button variant="danger" size="sm" onClick={() => actionMutation.mutate({ id: selected?._id, action: 'reject' })}>
+            <Button variant="danger" size="sm" disabled={actionMutation.isPending} onClick={() => actionMutation.mutate({ id: selected?._id, action: 'reject' })}>
               却下
             </Button>
           </div>
@@ -188,17 +203,33 @@ export default function PartnerRecruitment() {
         {selected && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><span className="text-slate-400">メール:</span> <span className="text-white">{selected.email}</span></div>
-              <div><span className="text-slate-400">ブログURL:</span> <span className="text-blue-400">{selected.blogUrl}</span></div>
-              <div><span className="text-slate-400">ステータス:</span> <Badge variant={(statusMap[selected.status] || statusMap.pending).variant}>{(statusMap[selected.status] || statusMap.pending).label}</Badge></div>
-              <div><span className="text-slate-400">ステップ:</span> <span className="text-white">{selected.currentStep}</span></div>
+              <div><span className="text-slate-400">メール:</span> <span className="text-white ml-1">{selected.email}</span></div>
+              <div className="break-all"><span className="text-slate-400">ブログURL:</span> <a href={selected.blogUrl} target="_blank" rel="noreferrer" className="text-blue-400 ml-1 hover:underline">{selected.blogUrl}</a></div>
+              <div><span className="text-slate-400">ステータス:</span> <Badge className="ml-1" variant={(statusMap[selected.status] || statusMap.pending).variant}>{(statusMap[selected.status] || statusMap.pending).label}</Badge></div>
+              <div><span className="text-slate-400">ステップ:</span> <span className="text-white ml-1">{selected.currentStep}</span></div>
+              <div><span className="text-slate-400">計測スクリプト:</span> <span className={`ml-1 text-xs font-semibold ${selected.metricsSnippetSent ? 'text-green-400' : 'text-slate-500'}`}>{selected.metricsSnippetSent ? '送付済み ✓' : '未送付'}</span></div>
+              <div><span className="text-slate-400">広告スニペット:</span> <span className={`ml-1 text-xs font-semibold ${selected.snippetSent ? 'text-green-400' : 'text-slate-500'}`}>{selected.snippetSent ? '送付済み ✓' : '未送付'}</span></div>
             </div>
+
             {selected.message && (
               <div>
                 <h4 className="mb-1 text-sm font-medium text-slate-300">メッセージ</h4>
                 <p className="rounded-lg bg-slate-800 p-3 text-sm text-slate-300">{selected.message}</p>
               </div>
             )}
+
+            {/* Metrics snippet display */}
+            {selected.metricsSnippetCode && (
+              <div>
+                <h4 className="mb-2 flex items-center gap-1.5 text-sm font-medium text-slate-300">
+                  <Activity size={14} className="text-blue-400" />
+                  アクセス計測スクリプト
+                  <span className="ml-auto text-xs text-slate-500">（パートナーサイトの &lt;head&gt; に設置）</span>
+                </h4>
+                <pre className="overflow-x-auto rounded-lg border border-blue-500/30 bg-slate-900 px-3 py-2.5 text-xs text-slate-300 whitespace-pre-wrap break-all">{selected.metricsSnippetCode}</pre>
+              </div>
+            )}
+
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-300">ステータス変更</label>
               <select
