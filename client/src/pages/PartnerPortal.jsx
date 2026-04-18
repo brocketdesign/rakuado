@@ -495,6 +495,16 @@ function SiteDetail({ site, onBack, queryClient }) {
   const [analyticsPeriod, setAnalyticsPeriod] = useState('current')
   const [metricsDays, setMetricsDays] = useState('30')
 
+  const getSnippetMutation = useMutation({
+    mutationFn: () =>
+      api.post('/api/partner-portal/get-metrics-snippet', { requestId: site._id }).then((r) => r.data),
+    onSuccess: () => {
+      toast.success('計測スクリプトを取得しました')
+      queryClient.invalidateQueries({ queryKey: ['partner-portal'] })
+    },
+    onError: (err) => toast.error(err.response?.data?.error || '取得に失敗しました'),
+  })
+
   const { data: metricsData, isLoading: metricsLoading } = useQuery({
     queryKey: ['partner-metrics', site._id, metricsDays],
     queryFn: () =>
@@ -663,36 +673,54 @@ function SiteDetail({ site, onBack, queryClient }) {
 
       {tab === 'metrics' && (
         <div className="space-y-6">
-          {!site.metricsSnippetSent ? (
-            <Card>
-              <div className="flex flex-col items-center justify-center py-14 text-center">
-                <div className="mb-4 rounded-2xl bg-slate-800 p-4">
-                  <Activity size={32} className="text-slate-500" />
-                </div>
-                <h3 className="mb-2 text-sm font-semibold text-slate-300">アクセス計測スクリプト未設置</h3>
-                <p className="text-sm text-slate-400 max-w-sm">
-                  管理者からアクセス計測スクリプトが提供されると、Googleアナリティクスなしでもサイトのアクセス数が確認できます。
-                </p>
-              </div>
-            </Card>
-          ) : metricsLoading ? (
-            <div className="flex h-64 items-center justify-center">
-              <div className="h-8 w-8 rounded-full border-4 border-slate-700 border-t-violet-500 animate-spin" />
-            </div>
-          ) : !metricsData?.available ? (
-            <Card>
-              <div className="flex flex-col items-center justify-center py-14 text-center">
-                <div className="mb-4 rounded-2xl bg-slate-800 p-4">
-                  <Activity size={32} className="text-slate-500" />
-                </div>
-                <h3 className="mb-2 text-sm font-semibold text-slate-300">まだデータがありません</h3>
-                <p className="text-sm text-slate-400 max-w-sm">
-                  スクリプトをサイトに設置後、訪問者が来ると自動的にデータが記録されます。
-                </p>
-              </div>
-            </Card>
+          {/* ── Snippet section ─────────────────────────────────────────── */}
+          {site.metricsSnippetCode ? (
+            <MetricsSnippetCard code={site.metricsSnippetCode} />
           ) : (
-            <>
+            <Card className="border border-blue-500/30 bg-blue-500/5">
+              <div className="flex flex-col sm:flex-row items-center gap-5">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-500/20">
+                  <Activity size={28} className="text-blue-400" />
+                </div>
+                <div className="flex-1 min-w-0 text-center sm:text-left">
+                  <h3 className="text-sm font-semibold text-white">アクセス計測スクリプトを取得する</h3>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Google Analytics なしでもページビュー・セッション・流入元を計測できます。
+                    ボタンを押すとスクリプトコードが発行されます。
+                  </p>
+                </div>
+                <Button
+                  onClick={() => getSnippetMutation.mutate()}
+                  disabled={getSnippetMutation.isPending}
+                  className="shrink-0"
+                >
+                  <Activity size={15} />
+                  {getSnippetMutation.isPending ? '生成中...' : 'スクリプトを取得'}
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          {/* ── Chart / data section ─────────────────────────────────────── */}
+          {site.metricsSnippetCode && (
+            metricsLoading ? (
+              <div className="flex h-64 items-center justify-center">
+                <div className="h-8 w-8 rounded-full border-4 border-slate-700 border-t-violet-500 animate-spin" />
+              </div>
+            ) : !metricsData?.available ? (
+              <Card>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="mb-4 rounded-2xl bg-slate-800 p-4">
+                    <BarChart3 size={28} className="text-slate-500" />
+                  </div>
+                  <h3 className="mb-1 text-sm font-semibold text-slate-300">データ待機中</h3>
+                  <p className="text-xs text-slate-500 max-w-xs">
+                    スクリプトをサイトに設置後、最初の訪問者が来ると自動でデータが記録されます。
+                  </p>
+                </div>
+              </Card>
+            ) : (
+              <>
               {/* Day range selector */}
               <div className="flex justify-end gap-2">
                 {[['7', '7日'], ['30', '30日'], ['90', '90日']].map(([val, lbl]) => (
@@ -810,6 +838,7 @@ function SiteDetail({ site, onBack, queryClient }) {
                 </Card>
               </div>
             </>
+          )
           )}
         </div>
       )}

@@ -353,4 +353,59 @@ router.get('/earnings', async (req, res) => {
   }
 });
 
+// POST /api/partner-portal/get-metrics-snippet
+// Partners can call this at any time to self-generate (or regenerate) their metrics snippet.
+router.post('/get-metrics-snippet', async (req, res) => {
+  try {
+    const { requestId } = req.body;
+    const userId = req.user._id.toString();
+    const userEmail = req.user.email;
+    const collection = global.db.collection('partnerRequests');
+
+    let request;
+    if (requestId) {
+      if (!/^[a-fA-F0-9]{24}$/.test(requestId)) {
+        return res.status(400).json({ success: false, error: 'Invalid requestId' });
+      }
+      request = await collection.findOne({
+        _id: new ObjectId(requestId),
+        $or: [{ userId }, { email: userEmail }],
+      });
+    } else {
+      request = await collection.findOne({ $or: [{ userId }, { email: userEmail }] });
+    }
+
+    if (!request) {
+      return res.status(404).json({ success: false, error: 'Application not found' });
+    }
+
+    if (request.status === 'rejected') {
+      return res.status(400).json({ success: false, error: 'Application has been rejected' });
+    }
+
+    const appDomain = process.env.PRODUCT_URL || 'https://app.rakuado.net';
+    const pid = request._id.toString();
+    const metricsSnippetCode = `<!-- RakuAdo アクセス計測スクリプト -->
+<script>
+  (function() {
+    var s = document.createElement('script');
+    s.src = '${appDomain}/api/partner-metrics.js?pid=${pid}';
+    s.async = true;
+    document.head.appendChild(s);
+  })();
+</script>
+<!-- End RakuAdo アクセス計測スクリプト -->`.trim();
+
+    await collection.updateOne(
+      { _id: request._id },
+      { $set: { metricsSnippetSent: true, metricsSnippetCode, updatedAt: new Date() } }
+    );
+
+    res.json({ success: true, metricsSnippetCode });
+  } catch (error) {
+    console.error('Error generating metrics snippet:', error);
+    res.status(500).json({ success: false, error: 'Failed to generate metrics snippet' });
+  }
+});
+
 module.exports = router;
