@@ -3,29 +3,51 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api'
 import { PageHeader, Card, Badge, Button, EmptyState } from '../components/UI'
 import Modal from '../components/Modal'
-import { UserPlus, Search, ExternalLink, Activity } from 'lucide-react'
+import { UserPlus, Search, ExternalLink, Activity, Timer, CheckCircle, Code } from 'lucide-react'
 import toast from 'react-hot-toast'
 
+// Mirrors the STEPS in PartnerPortal
+const STEP_LABELS = {
+  submitted:            'サイト登録',
+  metrics_snippet_sent: 'スクリプト設置',
+  analytics_requested:  'データ収集中',
+  data_waiting:         'データ収集中',
+  reviewing:            '審査中',
+  approved:             '承認済み',
+  snippet_sent:         '広告設置',
+  snippet_verified:     '稼働中',
+  rejected:             '却下',
+}
+
 const statusMap = {
-  pending: { label: '審査中', variant: 'warning' },
-  analytics_requested: { label: 'Analytics依頼中', variant: 'info' },
-  reviewing: { label: 'レビュー中', variant: 'purple' },
-  approved: { label: '承認済み', variant: 'success' },
-  rejected: { label: '却下', variant: 'danger' },
-  snippet_sent: { label: '広告スニペット送付済', variant: 'info' },
-  snippet_verified: { label: '広告確認済', variant: 'success' },
-  metrics_snippet_sent: { label: '計測スクリプト送付済', variant: 'purple' },
+  pending:              { label: '申請済み',          variant: 'warning' },
+  analytics_requested:  { label: 'データ収集中',      variant: 'info' },
+  data_waiting:         { label: 'データ収集中',      variant: 'info' },
+  reviewing:            { label: '審査中',            variant: 'purple' },
+  approved:             { label: '承認済み',          variant: 'success' },
+  rejected:             { label: '却下',              variant: 'danger' },
+  snippet_sent:         { label: '広告設置待ち',      variant: 'info' },
+  snippet_verified:     { label: '稼働中',            variant: 'success' },
+  metrics_snippet_sent: { label: 'スクリプト設置済',  variant: 'purple' },
 }
 
 const filters = [
-  { value: 'all', label: 'すべて' },
-  { value: 'pending', label: '審査中' },
-  { value: 'metrics_snippet_sent', label: '計測済' },
-  { value: 'analytics_requested', label: 'Analytics依頼' },
-  { value: 'reviewing', label: 'レビュー中' },
-  { value: 'approved', label: '承認済み' },
-  { value: 'rejected', label: '却下' },
+  { value: 'all',              label: 'すべて' },
+  { value: 'pending',          label: '申請済み' },
+  { value: 'data_waiting',     label: 'データ収集中' },
+  { value: 'reviewing',        label: '審査中' },
+  { value: 'approved',         label: '承認済み' },
+  { value: 'snippet_sent',     label: '広告設置待ち' },
+  { value: 'snippet_verified', label: '稼働中' },
+  { value: 'rejected',         label: '却下' },
 ]
+
+// Returns hours remaining in 72h window (or 0 if done)
+function hoursLeft(startedAt) {
+  if (!startedAt) return null
+  const rem = 72 * 60 * 60 * 1000 - (Date.now() - new Date(startedAt).getTime())
+  return rem <= 0 ? 0 : Math.ceil(rem / (60 * 60 * 1000))
+}
 
 export default function PartnerRecruitment() {
   const [filter, setFilter] = useState('all')
@@ -64,16 +86,21 @@ export default function PartnerRecruitment() {
     onError: () => toast.error('操作に失敗しました'),
   })
 
+  const pendingCount = requests.filter((r) => ['pending', 'data_waiting', 'reviewing'].includes(r.status)).length
+
   const filtered = requests.filter((r) => {
-    if (filter !== 'all' && r.status !== filter) return false
+    if (filter !== 'all') {
+      // data_waiting also covers analytics_requested (same logical step)
+      if (filter === 'data_waiting') {
+        if (!['data_waiting', 'analytics_requested'].includes(r.status)) return false
+      } else if (r.status !== filter) return false
+    }
     if (search) {
       const s = search.toLowerCase()
       return (r.email || '').toLowerCase().includes(s) || (r.blogUrl || '').toLowerCase().includes(s)
     }
     return true
   })
-
-  const pendingCount = requests.filter((r) => r.status === 'pending').length
 
   const openDetail = async (r) => {
     try {
@@ -143,6 +170,8 @@ export default function PartnerRecruitment() {
               <tbody className="divide-y divide-slate-700/30">
                 {filtered.map((r) => {
                   const st = statusMap[r.status] || statusMap.pending
+                  const stepLabel = STEP_LABELS[r.currentStep] || r.currentStep || 'submitted'
+                  const h = hoursLeft(r.dataWaitingStartedAt)
                   return (
                     <tr key={r._id} className="hover:bg-slate-800/30 cursor-pointer" onClick={() => openDetail(r)}>
                       <td className="px-4 py-3 text-slate-400">{new Date(r.createdAt).toLocaleDateString('ja-JP')}</td>
@@ -152,7 +181,14 @@ export default function PartnerRecruitment() {
                           {r.blogUrl} <ExternalLink size={12} />
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-slate-300">{r.currentStep || 'submitted'}</td>
+                      <td className="px-4 py-3">
+                        <span className="text-slate-300">{stepLabel}</span>
+                        {(r.currentStep === 'data_waiting' || r.currentStep === 'analytics_requested') && h !== null && (
+                          <span className="ml-1.5 text-xs text-amber-400">
+                            {h > 0 ? `あと${h}h` : '完了'}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-3"><Badge variant={st.variant}>{st.label}</Badge></td>
                       <td className="px-4 py-3">
                         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openDetail(r) }}>
@@ -175,42 +211,118 @@ export default function PartnerRecruitment() {
         title="申請詳細"
         size="lg"
         footer={
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline" size="sm"
-              title="アクセス計測用スクリプトコードを生成してパートナーに表示します。Google Analyticsなしでトラフィック測定が可能になります。"
-              disabled={actionMutation.isPending}
-              onClick={() => actionMutation.mutate({ id: selected?._id, action: 'send-metrics-snippet' })}
-            >
-              <Activity size={14} />
-              計測スクリプト
-            </Button>
-            <Button variant="outline" size="sm" disabled={actionMutation.isPending} onClick={() => actionMutation.mutate({ id: selected?._id, action: 'request-analytics' })}>
-              Analytics依頼
-            </Button>
-            <Button variant="outline" size="sm" disabled={actionMutation.isPending} onClick={() => actionMutation.mutate({ id: selected?._id, action: 'send-snippet' })}>
-              広告スニペット
-            </Button>
-            <Button variant="outline" size="sm" disabled={actionMutation.isPending} onClick={() => actionMutation.mutate({ id: selected?._id, action: 'verify-snippet' })}>
-              広告確認
-            </Button>
-            <Button variant="danger" size="sm" disabled={actionMutation.isPending} onClick={() => actionMutation.mutate({ id: selected?._id, action: 'reject' })}>
-              却下
-            </Button>
-          </div>
+          selected && (
+            <div className="flex flex-wrap gap-2">
+              {/* Approve — only when reviewing */}
+              {selected.currentStep === 'reviewing' && (
+                <Button size="sm" disabled={actionMutation.isPending}
+                  onClick={() => actionMutation.mutate({ id: selected._id, action: 'approve' })}>
+                  <CheckCircle size={14} /> 承認する
+                </Button>
+              )}
+              {/* Send ad snippet — once approved */}
+              {selected.status === 'approved' && !selected.snippetSent && (
+                <Button variant="outline" size="sm" disabled={actionMutation.isPending}
+                  onClick={() => actionMutation.mutate({ id: selected._id, action: 'send-snippet' })}>
+                  <Code size={14} /> 広告スニペットを送付
+                </Button>
+              )}
+              {/* Verify ad snippet — once sent */}
+              {selected.snippetSent && !selected.snippetVerified && (
+                <Button variant="outline" size="sm" disabled={actionMutation.isPending}
+                  onClick={() => actionMutation.mutate({ id: selected._id, action: 'verify-snippet' })}>
+                  <CheckCircle size={14} /> 広告確認済みにする
+                </Button>
+              )}
+              {/* Reject — not already rejected/verified */}
+              {!['rejected', 'snippet_verified'].includes(selected.status) && (
+                <Button variant="danger" size="sm" disabled={actionMutation.isPending}
+                  onClick={() => actionMutation.mutate({ id: selected._id, action: 'reject' })}>
+                  却下
+                </Button>
+              )}
+            </div>
+          )
         }
       >
         {selected && (
           <div className="space-y-4">
+
+            {/* ── Header info grid ─────────────────────────────────── */}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div><span className="text-slate-400">メール:</span> <span className="text-white ml-1">{selected.email}</span></div>
               <div className="break-all"><span className="text-slate-400">ブログURL:</span> <a href={selected.blogUrl} target="_blank" rel="noreferrer" className="text-blue-400 ml-1 hover:underline">{selected.blogUrl}</a></div>
-              <div><span className="text-slate-400">ステータス:</span> <Badge className="ml-1" variant={(statusMap[selected.status] || statusMap.pending).variant}>{(statusMap[selected.status] || statusMap.pending).label}</Badge></div>
-              <div><span className="text-slate-400">ステップ:</span> <span className="text-white ml-1">{selected.currentStep}</span></div>
-              <div><span className="text-slate-400">計測スクリプト:</span> <span className={`ml-1 text-xs font-semibold ${selected.metricsSnippetSent ? 'text-green-400' : 'text-slate-500'}`}>{selected.metricsSnippetSent ? '送付済み ✓' : '未送付'}</span></div>
-              <div><span className="text-slate-400">広告スニペット:</span> <span className={`ml-1 text-xs font-semibold ${selected.snippetSent ? 'text-green-400' : 'text-slate-500'}`}>{selected.snippetSent ? '送付済み ✓' : '未送付'}</span></div>
+              <div>
+                <span className="text-slate-400">ステータス:</span>
+                <Badge className="ml-1" variant={(statusMap[selected.status] || statusMap.pending).variant}>
+                  {(statusMap[selected.status] || statusMap.pending).label}
+                </Badge>
+              </div>
+              <div>
+                <span className="text-slate-400">ステップ:</span>
+                <span className="text-white ml-1">{STEP_LABELS[selected.currentStep] || selected.currentStep}</span>
+              </div>
             </div>
 
+            {/* ── Timeline indicators ───────────────────────────────── */}
+            <div className="grid grid-cols-2 gap-3 rounded-xl border border-slate-700 bg-slate-800/40 p-4 text-xs">
+              <div className="flex items-center gap-2">
+                <Activity size={13} className={selected.metricsSnippetSent ? 'text-green-400' : 'text-slate-500'} />
+                <span className="text-slate-400">計測スクリプト:</span>
+                <span className={selected.metricsSnippetSent ? 'text-green-400 font-semibold' : 'text-slate-500'}>
+                  {selected.metricsSnippetSent ? '設置済み ✓' : '未設置'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Activity size={13} className={selected.metricsScriptVerified ? 'text-green-400' : 'text-slate-500'} />
+                <span className="text-slate-400">スクリプト確認:</span>
+                <span className={selected.metricsScriptVerified ? 'text-green-400 font-semibold' : 'text-slate-500'}>
+                  {selected.metricsScriptVerified ? '検出済み ✓' : '未確認'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Timer size={13} className={(selected.currentStep === 'data_waiting' || selected.currentStep === 'analytics_requested') ? 'text-amber-400' : 'text-slate-500'} />
+                <span className="text-slate-400">データ収集:</span>
+                <span className="text-slate-300">
+                  {selected.dataWaitingStartedAt
+                    ? (hoursLeft(selected.dataWaitingStartedAt) > 0
+                      ? `あと約 ${hoursLeft(selected.dataWaitingStartedAt)}h`
+                      : '収集完了')
+                    : '未開始'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Code size={13} className={selected.snippetSent ? 'text-green-400' : 'text-slate-500'} />
+                <span className="text-slate-400">広告スニペット:</span>
+                <span className={selected.snippetSent ? (selected.snippetVerified ? 'text-green-400 font-semibold' : 'text-amber-400') : 'text-slate-500'}>
+                  {selected.snippetVerified ? '確認済み ✓' : selected.snippetSent ? '送付済み（未確認）' : '未送付'}
+                </span>
+              </div>
+            </div>
+
+            {/* ── GA URL if submitted ───────────────────────────────── */}
+            {selected.googleAnalyticsUrl && (
+              <div>
+                <h4 className="mb-1 text-sm font-medium text-slate-300">Google Analytics URL</h4>
+                <a href={selected.googleAnalyticsUrl} target="_blank" rel="noreferrer"
+                  className="break-all text-sm text-blue-400 hover:underline">
+                  {selected.googleAnalyticsUrl}
+                </a>
+              </div>
+            )}
+
+            {/* ── Metrics snippet code ─────────────────────────────── */}
+            {selected.metricsSnippetCode && (
+              <div>
+                <h4 className="mb-2 flex items-center gap-1.5 text-sm font-medium text-slate-300">
+                  <Activity size={14} className="text-blue-400" />
+                  アクセス計測スクリプト
+                </h4>
+                <pre className="overflow-x-auto rounded-lg border border-blue-500/30 bg-slate-900 px-3 py-2.5 text-xs text-slate-300 whitespace-pre-wrap break-all">{selected.metricsSnippetCode}</pre>
+              </div>
+            )}
+
+            {/* ── Message ─────────────────────────────────────────── */}
             {selected.message && (
               <div>
                 <h4 className="mb-1 text-sm font-medium text-slate-300">メッセージ</h4>
@@ -218,34 +330,30 @@ export default function PartnerRecruitment() {
               </div>
             )}
 
-            {/* Metrics snippet display */}
-            {selected.metricsSnippetCode && (
-              <div>
-                <h4 className="mb-2 flex items-center gap-1.5 text-sm font-medium text-slate-300">
-                  <Activity size={14} className="text-blue-400" />
-                  アクセス計測スクリプト
-                  <span className="ml-auto text-xs text-slate-500">（パートナーサイトの &lt;head&gt; に設置）</span>
-                </h4>
-                <pre className="overflow-x-auto rounded-lg border border-blue-500/30 bg-slate-900 px-3 py-2.5 text-xs text-slate-300 whitespace-pre-wrap break-all">{selected.metricsSnippetCode}</pre>
+            {/* ── Notes + payment proposal ────────────────────────── */}
+            {selected.currentStep === 'reviewing' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-300">社内メモ</label>
+                  <textarea
+                    defaultValue={selected.notes || ''}
+                    onBlur={(e) => updateMutation.mutate({ id: selected._id, data: { notes: e.target.value } })}
+                    rows={2}
+                    className="w-full rounded-xl border border-slate-600 bg-slate-800/50 px-4 py-2.5 text-sm text-white"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-300">月額報酬（予定）</label>
+                  <input
+                    type="number"
+                    defaultValue={selected.estimatedMonthlyAmount || ''}
+                    onBlur={(e) => updateMutation.mutate({ id: selected._id, data: { estimatedMonthlyAmount: e.target.value, sendPaymentProposal: !!e.target.value } })}
+                    placeholder="例：30000"
+                    className="w-full rounded-xl border border-slate-600 bg-slate-800/50 px-4 py-2.5 text-sm text-white"
+                  />
+                </div>
               </div>
             )}
-
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-300">ステータス変更</label>
-              <select
-                value={selected.status}
-                onChange={(e) => {
-                  const newVal = e.target.value
-                  setSelected((prev) => ({ ...prev, status: newVal }))
-                  updateMutation.mutate({ id: selected._id, data: { status: newVal } })
-                }}
-                className="w-full rounded-xl border border-slate-600 bg-slate-800/50 px-4 py-2.5 text-sm text-white"
-              >
-                {Object.entries(statusMap).map(([key, val]) => (
-                  <option key={key} value={key}>{val.label}</option>
-                ))}
-              </select>
-            </div>
           </div>
         )}
       </Modal>

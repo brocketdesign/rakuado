@@ -500,4 +500,29 @@ router.post('/:id/send-metrics-snippet', async (req, res) => {
   }
 });
 
+// ─── Approve request (reviewing → approved) ───────────────────────────────────
+router.post('/:id/approve', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const col = global.db.collection('partnerRequests');
+    let request;
+    try {
+      request = await col.findOne({ _id: new ObjectId(id) });
+    } catch {
+      return res.status(400).json({ success: false, error: 'Invalid request ID' });
+    }
+    if (!request) return res.status(404).json({ success: false, error: 'Request not found' });
+
+    await col.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { status: 'approved', currentStep: 'approved', updatedAt: new Date() } }
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error approving request:', error);
+    res.status(500).json({ success: false, error: 'Failed to approve request' });
+  }
+});
+
 module.exports = router;

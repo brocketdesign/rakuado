@@ -5,6 +5,7 @@ const https = require('https');
 const http = require('http');
 const ensureAuthenticated = require('../../middleware/authMiddleware');
 const { getCustomMonthPeriod, countActiveDaysFromAnalytics } = require('../../utils/partner-payment');
+const { sendEmail } = require('../../services/email');
 
 // Fetch a page's HTML source (follows 1 redirect, hard timeout)
 function fetchPageHTML(url, timeout = 12000) {
@@ -85,6 +86,22 @@ router.get('/', async (req, res) => {
           );
           r.currentStep = 'reviewing';
           r.status = 'reviewing';
+
+          // Notify admin to review the site
+          try {
+            const adminEmail = process.env.ADMIN_EMAIL;
+            if (adminEmail) {
+              await sendEmail(adminEmail, 'partner recruitment admin', {
+                blogUrl: r.blogUrl,
+                email: r.email,
+                name: r.email.split('@')[0],
+                message: `72時間のデータ収集が完了しました。サイトの審査をお願いします。`,
+                requestId: r._id.toString(),
+              });
+            }
+          } catch (emailErr) {
+            console.error('Failed to send admin review notification:', emailErr);
+          }
         }
       }
     }
