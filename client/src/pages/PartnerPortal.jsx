@@ -442,7 +442,6 @@ function MetricsSnippetCard({ code }) {
           <p className="font-semibold text-amber-300 mb-1">⚠️ 注意事項</p>
           <ul className="text-slate-400 space-y-0.5">
             <li>• 個人情報は収集しません</li>
-            <li>• Google Analytics不要</li>
             <li>• 設置確認後に審査が進みます</li>
           </ul>
         </div>
@@ -601,11 +600,6 @@ function SiteDetail({ site, onBack, queryClient }) {
                 </div>
               </div>
             </Card>
-          )}
-
-          {/* Metrics snippet — shown immediately after applying so evaluation can start */}
-          {site.metricsSnippetCode && (
-            <MetricsSnippetCard code={site.metricsSnippetCode} />
           )}
 
           {site.snippetCode && <SnippetCard snippetCode={site.snippetCode} />}
