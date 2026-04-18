@@ -8,7 +8,7 @@ import toast from 'react-hot-toast'
 
 export default function Referral() {
   const [modalOpen, setModalOpen] = useState(false)
-  const [form, setForm] = useState({ popup: '', imageUrl: '', targetUrl: '', slug: '' })
+  const [form, setForm] = useState({ _id: '', name: '', imageUrl: '', targetUrl: '', slug: '' })
   const [editing, setEditing] = useState(null)
   const queryClient = useQueryClient()
 
@@ -53,20 +53,21 @@ export default function Referral() {
   })
 
   const openCreate = () => {
-    setForm({ popup: '', imageUrl: '', targetUrl: '', slug: '' })
+    setForm({ _id: '', name: '', imageUrl: '', targetUrl: '', slug: '' })
     setEditing(null)
     setModalOpen(true)
   }
 
   const openEdit = (p) => {
-    setForm({ popup: p.popup || '', imageUrl: p.imageUrl || '', targetUrl: p.targetUrl || '', slug: p.slug || '', _id: p._id })
+    setForm({ _id: p._id || '', name: p.name || '', imageUrl: p.imageUrl || '', targetUrl: p.targetUrl || '', slug: p.slug || '' })
     setEditing(p._id)
     setModalOpen(true)
   }
 
   const handleSave = (e) => {
     e.preventDefault()
-    saveMutation.mutate(form)
+    const { _id, name, imageUrl, targetUrl, slug } = form
+    saveMutation.mutate({ popup: _id || undefined, name, imageUrl, targetUrl, slug })
   }
 
   const getMetrics = (p) => {
@@ -123,7 +124,7 @@ export default function Referral() {
                   className="mb-2 font-medium text-white cursor-pointer hover:text-violet-400"
                   onClick={() => openEdit(p)}
                 >
-                  {p.popup || 'Untitled'}
+                  {p.name || 'Untitled'}
                 </h3>
 
                 {p.targetUrl && (
@@ -157,7 +158,7 @@ export default function Referral() {
         }
       >
         <form onSubmit={handleSave} className="space-y-4">
-          <Input label="ポップアップ名" value={form.popup} onChange={(e) => setForm({ ...form, popup: e.target.value })} required />
+          <Input label="ポップアップ名" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           <Input label="画像URL" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="https://..." />
           <Input label="ターゲットURL" value={form.targetUrl} onChange={(e) => setForm({ ...form, targetUrl: e.target.value })} placeholder="https://..." />
           <Input label="スラッグ" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />

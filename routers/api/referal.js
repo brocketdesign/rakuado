@@ -292,7 +292,7 @@ router.post('/order', ensureAuthenticated, requireAdmin, async (req, res) => {
 
 // POST save (add or update by _id)
 router.post('/save', upload.single('image'), ensureAuthenticated, requireAdmin, async (req, res) => {
-  let { popup, targetUrl, enabled, slug } = req.body;
+  let { popup, name, targetUrl, enabled, slug } = req.body;
   let imageUrl = req.body.imageUrl;
   const normalizedSlug = normalizeSlug(slug);
   console.log('[referal::save] Incoming save request', { popup, targetUrl, slug: normalizedSlug });
@@ -320,6 +320,7 @@ router.post('/save', upload.single('image'), ensureAuthenticated, requireAdmin, 
     const count = await POPUPS.countDocuments({});
     const nextOrder = count + 1;
     const result = await POPUPS.insertOne({
+      name,
       imageUrl,
       targetUrl,
       slug: normalizedSlug,
@@ -335,7 +336,7 @@ router.post('/save', upload.single('image'), ensureAuthenticated, requireAdmin, 
     // update
     await POPUPS.updateOne(
       { _id: new ObjectId(popup) },
-      { $set: { imageUrl, targetUrl, enabled, slug: normalizedSlug } }
+      { $set: { name, imageUrl, targetUrl, enabled, slug: normalizedSlug } }
     );
     console.log('[referal::save] Updated popup', { id: popup, slug: normalizedSlug });
     return res.json({ imageUrl, slug: normalizedSlug });
