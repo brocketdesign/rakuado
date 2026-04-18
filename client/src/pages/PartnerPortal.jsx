@@ -8,6 +8,7 @@ import {
   FileText, BarChart3, DollarSign, CheckCircle, Clock, XCircle,
   AlertCircle, Send, Eye, MousePointerClick, TrendingUp, Code, ExternalLink,
   Plus, Globe, ChevronLeft, Activity, HelpCircle, Smartphone, Link2,
+  Search, Timer, ArrowRight, RefreshCw,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import {
@@ -17,15 +18,23 @@ import {
 
 // ─── Step definitions ──────────────────────────────────────────────────────────
 const STEPS = [
-  { key: 'submitted',             label: '申請提出',         desc: 'ブログを登録して申請を送信した状態です。' },
-  { key: 'metrics_snippet_sent',  label: '計測スクリプト',   desc: '管理者からアクセス計測スクリプトが提供されました。スクリプトをサイトに設置してください。' },
-  { key: 'analytics_requested',   label: 'GA提出',           desc: 'Googleアナリティクスレポートの提出が求められています。' },
-  { key: 'reviewing',             label: '審査中',           desc: '管理者が申請内容を審査しています。' },
-  { key: 'approved',              label: '承認済み',         desc: '申請が承認されました。' },
-  { key: 'snippet_sent',          label: '広告スクリプト',   desc: 'RakuAdo広告スクリプトが提供されました。サイトに設置してください。' },
-  { key: 'snippet_verified',      label: '稼働中',           desc: '広告スクリプトの設置が確認され、パートナーとして稼働中です。' },
+  { key: 'submitted',             label: 'サイト登録',     desc: 'ブログURLを登録しました。「サイト計測」タブで計測スクリプトを設置してください。' },
+  { key: 'metrics_snippet_sent',  label: 'スクリプト設置', desc: '計測スクリプトの設置が確認されました。「サイト計測」タブでデータ収集を開始してください。' },
+  { key: 'data_waiting',          label: 'データ収集中',   desc: '72時間のアクセスデータを収集しています。Google Analyticsの情報は任意で提出できます。' },
+  { key: 'reviewing',             label: '審査中',         desc: '管理者がデータと申請内容を審査しています。' },
+  { key: 'approved',              label: '承認済み',       desc: '申請が承認されました。「申請状況」タブで広告スクリプトを確認し設置してください。' },
+  { key: 'snippet_sent',          label: '広告設置',       desc: '広告スクリプトをサイトに設置し、設置確認ボタンを押してください。' },
+  { key: 'snippet_verified',      label: '稼働中',         desc: 'パートナーとして稼働中です。「収益」タブで報酬を確認できます。' },
 ]
-const STEP_ORDER = STEPS.map((s) => s.key)
+// analytics_requested kept in STEP_ORDER for DB backward compat (maps to data_waiting position)
+const STEP_ORDER = ['submitted', 'metrics_snippet_sent', 'analytics_requested', 'data_waiting', 'reviewing', 'approved', 'snippet_sent', 'snippet_verified']
+
+// Returns hours remaining in the 72h data-waiting window, or 0 if complete
+function hoursRemaining(startedAt) {
+  if (!startedAt) return null
+  const remaining = 72 * 60 * 60 * 1000 - (Date.now() - new Date(startedAt).getTime())
+  return remaining <= 0 ? 0 : Math.ceil(remaining / (60 * 60 * 1000))
+}
 
 const STATUS_LABELS = {
   pending: { label: '審査待ち', color: 'amber' },
@@ -493,6 +502,8 @@ function SiteDetail({ site, onBack, queryClient }) {
   const [tab, setTab] = useState('application')
   const [analyticsPeriod, setAnalyticsPeriod] = useState('current')
   const [metricsDays, setMetricsDays] = useState('30')
+  const [metricsCheckResult, setMetricsCheckResult] = useState(null)
+  const [adsCheckResult, setAdsCheckResult] = useState(null)
 
   const getSnippetMutation = useMutation({
     mutationFn: () =>
@@ -502,6 +513,42 @@ function SiteDetail({ site, onBack, queryClient }) {
       queryClient.invalidateQueries({ queryKey: ['partner-portal'] })
     },
     onError: (err) => toast.error(err.response?.data?.error || '取得に失敗しました'),
+  })
+
+  const checkMetricsMutation = useMutation({
+    mutationFn: () =>
+      api.post('/api/partner-portal/check-metrics-script', { requestId: site._id }).then((r) => r.data),
+    onSuccess: (data) => {
+      setMetricsCheckResult(data)
+      if (data.detected) {
+        toast.success('スクリプトを検出しました！')
+        queryClient.invalidateQueries({ queryKey: ['partner-portal'] })
+      }
+    },
+    onError: (err) => toast.error(err.response?.data?.error || '確認に失敗しました'),
+  })
+
+  const startDataWaitingMutation = useMutation({
+    mutationFn: () =>
+      api.post('/api/partner-portal/start-data-waiting', { requestId: site._id }).then((r) => r.data),
+    onSuccess: () => {
+      toast.success('データ収集を開始しました')
+      queryClient.invalidateQueries({ queryKey: ['partner-portal'] })
+    },
+    onError: (err) => toast.error(err.response?.data?.error || '失敗しました'),
+  })
+
+  const checkAdsMutation = useMutation({
+    mutationFn: () =>
+      api.post('/api/partner-portal/check-ads-snippet', { requestId: site._id }).then((r) => r.data),
+    onSuccess: (data) => {
+      setAdsCheckResult(data)
+      if (data.detected) {
+        toast.success('広告スクリプトの設置を確認しました！')
+        queryClient.invalidateQueries({ queryKey: ['partner-portal'] })
+      }
+    },
+    onError: (err) => toast.error(err.response?.data?.error || '確認に失敗しました'),
   })
 
   const { data: metricsData, isLoading: metricsLoading } = useQuery({
@@ -602,17 +649,81 @@ function SiteDetail({ site, onBack, queryClient }) {
             </Card>
           )}
 
-          {site.snippetCode && <SnippetCard snippetCode={site.snippetCode} />}
-
-          {site.snippetSent && !site.snippetVerified && (
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
-              <div className="flex items-start gap-3">
-                <Clock size={18} className="shrink-0 mt-0.5 text-amber-400" />
-                <p className="text-sm text-amber-300">
-                  スニペットの設置確認中です。ブログに設置後、担当者が確認いたします。
-                </p>
+          {/* ── Next-action nudge ──────────────────────────────────── */}
+          {site.currentStep === 'submitted' && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-500/30 bg-blue-500/5 px-5 py-4">
+              <div className="flex items-center gap-3">
+                <ArrowRight size={18} className="shrink-0 text-blue-400" />
+                <p className="text-sm text-slate-300">次のステップ：<strong className="text-white">サイト計測タブ</strong>で計測スクリプトを設置してください。</p>
               </div>
+              <Button onClick={() => setTab('metrics')} className="shrink-0">
+                サイト計測へ <ArrowRight size={14} />
+              </Button>
             </div>
+          )}
+          {site.currentStep === 'metrics_snippet_sent' && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet-500/30 bg-violet-500/5 px-5 py-4">
+              <div className="flex items-center gap-3">
+                <ArrowRight size={18} className="shrink-0 text-violet-400" />
+                <p className="text-sm text-slate-300">次のステップ：<strong className="text-white">サイト計測タブ</strong>でデータ収集を開始してください。</p>
+              </div>
+              <Button onClick={() => setTab('metrics')} className="shrink-0">
+                サイト計測へ <ArrowRight size={14} />
+              </Button>
+            </div>
+          )}
+          {(site.currentStep === 'data_waiting' || site.currentStep === 'analytics_requested') && (
+            <div className="flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 px-5 py-4">
+              <Timer size={18} className="shrink-0 text-amber-400" />
+              <p className="text-sm text-amber-300">
+                {hoursRemaining(site.dataWaitingStartedAt) > 0
+                  ? `データ収集中です。あと約 ${hoursRemaining(site.dataWaitingStartedAt)} 時間で審査ステップへ進みます。`
+                  : 'データ収集期間が完了しました。まもなく審査ステップへ進みます。'}
+              </p>
+            </div>
+          )}
+
+          {/* ── Ads snippet: show code + verify button ──────────────── */}
+          {site.snippetCode && (
+            <>
+              <SnippetCard snippetCode={site.snippetCode} />
+              {site.currentStep === 'snippet_sent' && (
+                <Card className="border border-violet-500/30 bg-violet-500/5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/20">
+                      <Search size={18} className="text-violet-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-white">広告スクリプトの設置を確認する</h3>
+                      <p className="text-xs text-slate-400">サイトに設置したら、ボタンを押して確認してください。</p>
+                    </div>
+                  </div>
+                  {adsCheckResult && (
+                    <div className={`mb-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${
+                      adsCheckResult.detected ? 'bg-green-500/10 text-green-300' : 'bg-red-500/10 text-red-300'
+                    }`}>
+                      {adsCheckResult.detected ? (
+                        <><CheckCircle size={15} /> スクリプトを検出しました！</>
+                      ) : (
+                        <><AlertCircle size={15} /> {adsCheckResult.fetchError || 'スクリプトが見つかりませんでした。設置を確認してもう一度お試しください。'}</>
+                      )}
+                    </div>
+                  )}
+                  <Button onClick={() => checkAdsMutation.mutate()} disabled={checkAdsMutation.isPending}>
+                    <Search size={15} />
+                    {checkAdsMutation.isPending ? '確認中...' : '設置を確認する'}
+                  </Button>
+                </Card>
+              )}
+              {site.snippetSent && !site.snippetVerified && site.currentStep !== 'snippet_sent' && (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+                  <div className="flex items-start gap-3">
+                    <Clock size={18} className="shrink-0 mt-0.5 text-amber-400" />
+                    <p className="text-sm text-amber-300">スニペットの設置確認中です。ブログに設置後、担当者が確認いたします。</p>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           <Card>
@@ -657,7 +768,8 @@ function SiteDetail({ site, onBack, queryClient }) {
 
       {tab === 'metrics' && (
         <div className="space-y-6">
-          {/* ── Snippet section ─────────────────────────────────────────── */}
+
+          {/* ── STEP 2: Get / show the metrics snippet ───────────────── */}
           {site.metricsSnippetCode ? (
             <MetricsSnippetCard code={site.metricsSnippetCode} />
           ) : (
@@ -669,15 +781,10 @@ function SiteDetail({ site, onBack, queryClient }) {
                 <div className="flex-1 min-w-0 text-center sm:text-left">
                   <h3 className="text-sm font-semibold text-white">アクセス計測スクリプトを取得する</h3>
                   <p className="mt-1 text-xs text-slate-400">
-                    Google Analytics なしでもページビュー・セッション・流入元を計測できます。
-                    ボタンを押すとスクリプトコードが発行されます。
+                    ページビュー・セッション・流入元を計測できます。ボタンを押すとスクリプトコードが発行されます。
                   </p>
                 </div>
-                <Button
-                  onClick={() => getSnippetMutation.mutate()}
-                  disabled={getSnippetMutation.isPending}
-                  className="shrink-0"
-                >
+                <Button onClick={() => getSnippetMutation.mutate()} disabled={getSnippetMutation.isPending} className="shrink-0">
                   <Activity size={15} />
                   {getSnippetMutation.isPending ? '生成中...' : 'スクリプトを取得'}
                 </Button>
@@ -685,7 +792,90 @@ function SiteDetail({ site, onBack, queryClient }) {
             </Card>
           )}
 
-          {/* ── Chart / data section ─────────────────────────────────────── */}
+          {/* ── Verify installation — shown until script is confirmed ── */}
+          {site.metricsSnippetCode && site.currentStep === 'submitted' && (
+            <Card className="border border-blue-500/30 bg-blue-500/5">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/20">
+                  <Search size={18} className="text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-white">スクリプトの設置を確認する</h3>
+                  <p className="text-xs text-slate-400">上のコードを &lt;head&gt; タグ内に設置したら、確認ボタンを押してください。</p>
+                </div>
+              </div>
+              {metricsCheckResult && (
+                <div className={`mb-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${
+                  metricsCheckResult.detected ? 'bg-green-500/10 text-green-300' : 'bg-red-500/10 text-red-300'
+                }`}>
+                  {metricsCheckResult.detected
+                    ? <><CheckCircle size={15} /> スクリプトを検出しました！</>
+                    : <><AlertCircle size={15} /> {metricsCheckResult.fetchError || 'スクリプトが見つかりませんでした。設置を確認してもう一度お試しください。'}</>}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button onClick={() => checkMetricsMutation.mutate()} disabled={checkMetricsMutation.isPending}>
+                  <Search size={15} />
+                  {checkMetricsMutation.isPending ? '確認中...' : '設置を確認する'}
+                </Button>
+                {metricsCheckResult && !metricsCheckResult.detected && (
+                  <Button onClick={() => { setMetricsCheckResult(null); checkMetricsMutation.mutate() }} disabled={checkMetricsMutation.isPending} className="bg-slate-700 hover:bg-slate-600">
+                    <RefreshCw size={14} /> 再確認
+                  </Button>
+                )}
+              </div>
+            </Card>
+          )}
+
+          {/* ── Verified badge when script confirmed but not yet collecting ── */}
+          {site.metricsSnippetCode && site.currentStep === 'metrics_snippet_sent' && (
+            <Card className="border border-green-500/30 bg-green-500/5">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-green-500/20">
+                  <CheckCircle size={18} className="text-green-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-green-300">スクリプト設置確認済み</h3>
+                  <p className="text-xs text-slate-400">次は72時間のデータ収集を開始してください。Google Analyticsの提出は任意です。</p>
+                </div>
+              </div>
+              <Button onClick={() => startDataWaitingMutation.mutate()} disabled={startDataWaitingMutation.isPending}>
+                <Timer size={15} />
+                {startDataWaitingMutation.isPending ? '開始中...' : '72時間データ収集を開始する'}
+              </Button>
+            </Card>
+          )}
+
+          {/* ── 72h data collection countdown ─────────────────────────── */}
+          {site.metricsSnippetCode && (site.currentStep === 'data_waiting' || site.currentStep === 'analytics_requested') && (
+            <Card className="border border-amber-500/30 bg-amber-500/5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/20">
+                  <Timer size={18} className="text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-amber-300">データ収集中</h3>
+                  <p className="text-xs text-slate-400">
+                    {hoursRemaining(site.dataWaitingStartedAt) > 0
+                      ? `あと約 ${hoursRemaining(site.dataWaitingStartedAt)} 時間で審査ステップへ自動的に進みます。`
+                      : '収集期間が完了しました。まもなく審査ステップへ進みます。'}
+                  </p>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* ── GA form (optional, from script onward) ────────────────── */}
+          {site.metricsSnippetCode && site.status !== 'rejected' && site.status !== 'snippet_verified' && (
+            <GAForm
+              onSubmit={handleGASubmit}
+              isLoading={analyticsUrlMutation.isPending}
+              alreadySubmitted={site.googleAnalyticsSubmitted}
+              existingUrl={site.googleAnalyticsUrl}
+            />
+          )}
+
+          {/* ── Charts ───────────────────────────────────────────────── */}
           {site.metricsSnippetCode && (
             metricsLoading ? (
               <div className="flex h-64 items-center justify-center">
@@ -823,16 +1013,6 @@ function SiteDetail({ site, onBack, queryClient }) {
               </div>
             </>
           )
-          )}
-
-          {/* GA form — optional supplement for evaluation */}
-          {site.status !== 'rejected' && site.status !== 'snippet_verified' && (
-            <GAForm
-              onSubmit={handleGASubmit}
-              isLoading={analyticsUrlMutation.isPending}
-              alreadySubmitted={site.googleAnalyticsSubmitted}
-              existingUrl={site.googleAnalyticsUrl}
-            />
           )}
         </div>
       )}
