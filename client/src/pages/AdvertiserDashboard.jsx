@@ -12,9 +12,6 @@ function NoProfile() {
     <div className="flex flex-col items-center justify-center py-24 text-center">
       <Megaphone size={48} className="mb-4 text-slate-600" />
       <h2 className="text-xl font-bold text-white mb-2">広告主アカウントがありません</h2>
-      <p className="text-slate-400 mb-6 max-w-sm">
-        RakuAdoのセルフサーブ広告プラットフォームで、13サイトに広告を配信しましょう。
-      </p>
       <Link to="/dashboard/advertiser/register">
         <Button>
           <PlusCircle size={16} />
