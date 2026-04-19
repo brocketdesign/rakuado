@@ -1,8 +1,8 @@
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import toast from 'react-hot-toast'
-import { Wallet, Plus, ArrowUpCircle, ArrowDownCircle, PlusCircle, BarChart2, ShieldCheck } from 'lucide-react'
+import { Wallet, Plus, ArrowUpCircle, ArrowDownCircle, PlusCircle, BarChart2, ShieldCheck, AlertCircle, X } from 'lucide-react'
 import api from '../lib/api'
 import { useAdvertiser } from '../hooks/useAdvertiser'
 import { Card, PageHeader, Button, Input, Table, Badge } from '../components/UI'
@@ -15,12 +15,21 @@ export default function AdvertiserBudget() {
   const [searchParams] = useSearchParams()
   const { advertiser, hasProfile, isLoading: profileLoading } = useAdvertiser()
   const [amount, setAmount] = useState('')
+  const [showCancelledBanner, setShowCancelledBanner] = useState(false)
+  const depositInputRef = useRef(null)
 
   useEffect(() => {
     if (searchParams.get('success') === '1') toast.success('入金が完了しました！')
-    if (searchParams.get('cancelled') === '1') toast.info('支払いがキャンセルされました')
+    if (searchParams.get('cancelled') === '1') {
+      setShowCancelledBanner(true)
+    }
     if (searchParams.get('error')) toast.error('エラーが発生しました')
   }, [searchParams])
+
+  const scrollToDeposit = () => {
+    depositInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    depositInputRef.current?.focus()
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['advertiser-budget'],
@@ -107,6 +116,33 @@ export default function AdvertiserBudget() {
         subtitle="広告予算のチャージと利用履歴"
       />
 
+      {/* Cancelled payment banner */}
+      {showCancelledBanner && (
+        <div className="mb-6 flex items-start gap-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-5 py-4">
+          <AlertCircle size={20} className="mt-0.5 shrink-0 text-amber-400" />
+          <div className="flex-1">
+            <p className="font-semibold text-amber-300">支払いはキャンセルされました</p>
+            <p className="mt-0.5 text-sm text-amber-200/80">
+              ご安心ください — お客様への請求は行われていません。もう一度チャージを試みる場合は、下のフォームから手続きをしてください。
+            </p>
+            <button
+              onClick={scrollToDeposit}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-1.5 text-sm font-semibold text-slate-900 hover:bg-amber-400 transition-colors"
+            >
+              <Wallet size={14} />
+              チャージを再試行する
+            </button>
+          </div>
+          <button
+            onClick={() => setShowCancelledBanner(false)}
+            className="shrink-0 rounded-lg p-1 text-amber-400/60 hover:bg-amber-400/10 hover:text-amber-400 transition-colors"
+            aria-label="閉じる"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Balance + Deposit */}
       <div className="mb-8 grid gap-6 md:grid-cols-2">
         <Card>
@@ -121,6 +157,7 @@ export default function AdvertiserBudget() {
           </div>
         </Card>
 
+        <div ref={depositInputRef}>
         <Card>
           <p className="mb-3 text-sm font-medium text-slate-300">予算チャージ</p>
           <div className="flex gap-3">
@@ -147,6 +184,7 @@ export default function AdvertiserBudget() {
           </div>
           <p className="mt-2 text-xs text-slate-500">Stripeの安全な決済ページに移動します（JPY）</p>
         </Card>
+        </div>
       </div>
 
       {/* Quick-select amounts */}

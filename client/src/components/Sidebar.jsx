@@ -4,7 +4,7 @@ import {
   LayoutDashboard, BarChart3, Users, UserPlus, Mail,
   Globe, TestTubes, Megaphone, Key, FileText,
   MailPlus, Settings, LogOut, X, CreditCard, ChevronDown, ChevronRight,
-  Briefcase, TrendingUp, LineChart, Wallet, PlusCircle, ShieldCheck,
+  Briefcase, TrendingUp, LineChart, Wallet, PlusCircle, ShieldCheck, LifeBuoy,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -162,6 +162,17 @@ export default function Sidebar({ onClose }) {
 
       {/* Footer */}
       <div className="border-t border-[#1e293b] p-3 space-y-1">
+        <NavLink
+          to="/dashboard/support"
+          className={({ isActive }) =>
+            `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-200 ${
+              isActive ? 'bg-violet-600/20 text-violet-300' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
+            }`
+          }
+        >
+          <LifeBuoy size={18} />
+          Support
+        </NavLink>
         <NavLink
           to="/dashboard/settings"
           className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"

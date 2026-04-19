@@ -128,6 +128,7 @@ function startServer() {
         ['/api/ads', './routers/api/ads'],
         ['/api/admin', './routers/api/admin-ads'],
         ['/api/admin', './routers/api/admin-email-config'],
+        ['/api/support', './routers/api/support'],
       ];
 
       routers.forEach(([route, path]) => app.use(route, require(path)));
@@ -142,6 +143,8 @@ function startServer() {
         db.collection('adClicks').createIndex({ campaignId: 1, createdAt: -1 }),
         db.collection('adClicks').createIndex({ impressionId: 1, ipHash: 1 }),
         db.collection('adBudgetTransactions').createIndex({ stripeSessionId: 1 }, { sparse: true }),
+        db.collection('supportTickets').createIndex({ userId: 1, createdAt: -1 }),
+        db.collection('supportTickets').createIndex({ status: 1, createdAt: -1 }),
       ]).catch((err) => console.error('Ad network index creation error:', err));
       
       // Register partner metrics router (loaded above for the .js script route)
