@@ -372,7 +372,7 @@ router.get('/me', async (req, res) => {
     const userId = req.user._id;
     const user = await global.db.collection('users').findOne(
       { _id: userId },
-      { projection: { email: 1, profileImage: 1, name: 1, isAdmin: 1 } }
+      { projection: { email: 1, profileImage: 1, name: 1, isAdmin: 1, accountType: 1 } }
     );
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json({
@@ -381,9 +381,29 @@ router.get('/me', async (req, res) => {
       profileImage: user.profileImage || null,
       name: user.name || user.email,
       isAdmin: !!(user.isAdmin),
+      accountType: user.accountType || null,
     });
   } catch (error) {
     console.error('Failed to get user info:', error);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// Save the account type chosen during onboarding
+router.post('/account-type', async (req, res) => {
+  if (!req.user || !req.user._id) return res.status(401).json({ error: 'Unauthorized' });
+  const { accountType } = req.body;
+  if (!['partner', 'advertiser'].includes(accountType)) {
+    return res.status(400).json({ error: 'Invalid account type. Must be partner or advertiser.' });
+  }
+  try {
+    await global.db.collection('users').updateOne(
+      { _id: req.user._id },
+      { $set: { accountType, updatedAt: new Date() } }
+    );
+    res.json({ success: true, accountType });
+  } catch (error) {
+    console.error('Failed to save account type:', error);
     res.status(500).json({ error: 'Internal server error.' });
   }
 });

@@ -1221,16 +1221,48 @@ export default function PartnerPortal() {
 
       {sites.length === 0 && !showAddForm ? (
         <Card>
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="mb-4 rounded-2xl bg-slate-800 p-5"><Globe size={36} className="text-slate-500" /></div>
-            <h3 className="mb-2 text-base font-semibold text-slate-200">まだサイトが登録されていません</h3>
-            <p className="mb-6 text-sm text-slate-400 max-w-sm">
-              パートナーとして参加するには、ブログを登録して申請を送信してください。審査後にスニペットコードを提供いたします。
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            {/* Icon badge */}
+            <div className="relative mb-6">
+              <div className="rounded-2xl bg-violet-500/10 p-5 ring-1 ring-violet-500/20">
+                <DollarSign size={40} className="text-violet-400" />
+              </div>
+              <div className="absolute -right-2 -bottom-2 rounded-xl bg-slate-800 p-2 ring-1 ring-slate-700">
+                <Globe size={18} className="text-slate-400" />
+              </div>
+            </div>
+
+            {/* Title & description */}
+            <h2 className="mb-2 text-xl font-bold text-slate-100">ブログで収益を得よう</h2>
+            <p className="mb-8 text-sm text-slate-400 max-w-md leading-relaxed">
+              WordPressや独自ブログをパートナー登録するだけで広告収益を獲得できます。
+              サイトを登録して審査を通過すると、専用の広告スクリプトが提供されます。
             </p>
+
+            {/* Feature highlights */}
+            <div className="mb-8 grid w-full max-w-lg grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="rounded-xl bg-slate-800/60 p-4 text-center ring-1 ring-slate-700/50">
+                <BarChart3 size={20} className="mx-auto mb-2 text-violet-400" />
+                <p className="text-xs font-semibold text-slate-200">アクセス解析</p>
+                <p className="mt-1 text-xs text-slate-500">サイトの流入データを自動収集・可視化</p>
+              </div>
+              <div className="rounded-xl bg-slate-800/60 p-4 text-center ring-1 ring-slate-700/50">
+                <DollarSign size={20} className="mx-auto mb-2 text-green-400" />
+                <p className="text-xs font-semibold text-slate-200">月次報酬</p>
+                <p className="mt-1 text-xs text-slate-500">クリック数に応じた報酬を毎月お支払い</p>
+              </div>
+              <div className="rounded-xl bg-slate-800/60 p-4 text-center ring-1 ring-slate-700/50">
+                <TrendingUp size={20} className="mx-auto mb-2 text-blue-400" />
+                <p className="text-xs font-semibold text-slate-200">収益レポート</p>
+                <p className="mt-1 text-xs text-slate-500">詳細な収益データをダッシュボードで確認</p>
+              </div>
+            </div>
+
             <Button onClick={() => setShowAddForm(true)}>
               <Plus size={16} />
-              最初のサイトを登録する
+              ブログを登録して始める
             </Button>
+            <p className="mt-3 text-xs text-slate-500">WordPress・独自ブログ・メディアサイトに対応</p>
           </div>
         </Card>
       ) : sites.length > 0 ? (

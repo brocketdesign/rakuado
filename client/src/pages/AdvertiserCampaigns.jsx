@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
-import { PlusCircle, Pause, Play, Trash2, Eye, Pencil, Send } from 'lucide-react'
+import { PlusCircle, Pause, Play, Trash2, Eye, Pencil, Send, Megaphone, Target, BarChart2 } from 'lucide-react'
 import api from '../lib/api'
 import { useAdvertiser } from '../hooks/useAdvertiser'
 import { Card, PageHeader, Button, Badge, Table } from '../components/UI'
@@ -67,8 +67,50 @@ export default function AdvertiserCampaigns() {
 
   if (profileLoading) return null
   if (!hasProfile) {
-    navigate('/dashboard/advertiser/register', { replace: true })
-    return null
+    return (
+      <div>
+        <div className="mb-8 flex items-center gap-3">
+          <div className="rounded-xl bg-violet-500/10 p-3">
+            <Megaphone size={28} className="text-violet-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white">Campaign Manager</h1>
+            <p className="text-slate-400 text-sm">Create and manage your ad campaigns</p>
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3 mb-8">
+          <div className="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-5">
+            <Target size={22} className="mb-3 text-violet-400" />
+            <p className="font-semibold text-white mb-1">Targeted Placements</p>
+            <p className="text-sm text-slate-400">Choose banner, in-article, or product card formats to reach the right readers.</p>
+          </div>
+          <div className="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-5">
+            <BarChart2 size={22} className="mb-3 text-blue-400" />
+            <p className="font-semibold text-white mb-1">Real-time Stats</p>
+            <p className="text-sm text-slate-400">Track impressions, clicks, and CTR for every campaign as they happen.</p>
+          </div>
+          <div className="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-5">
+            <PlusCircle size={22} className="mb-3 text-emerald-400" />
+            <p className="font-semibold text-white mb-1">Easy Setup</p>
+            <p className="text-sm text-slate-400">Go live in minutes — set your bid, daily budget, and submit for review.</p>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-dashed border-slate-600 bg-slate-800/20 p-12 text-center">
+          <Megaphone size={48} className="mx-auto mb-4 text-slate-600" />
+          <h2 className="text-xl font-bold text-white mb-2">No advertiser account yet</h2>
+          <p className="text-slate-400 mb-6 max-w-sm mx-auto">
+            You need an advertiser account before you can create campaigns.
+          </p>
+          <button
+            onClick={() => navigate('/dashboard/advertiser/register')}
+            className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 transition-colors"
+          >
+            <PlusCircle size={16} />
+            Create an advertiser account
+          </button>
+        </div>
+      </div>
+    )
   }
 
   const campaigns = data || []
@@ -110,11 +152,13 @@ export default function AdvertiserCampaigns() {
         {isLoading ? (
           <div className="p-8 text-center text-slate-400">読み込み中...</div>
         ) : campaigns.length === 0 ? (
-          <div className="p-8 text-center text-slate-400">
-            <p className="mb-4">キャンペーンがありません</p>
+          <div className="p-12 text-center">
+            <Megaphone size={40} className="mx-auto mb-4 text-slate-600" />
+            <p className="text-white font-semibold mb-1">No campaigns yet</p>
+            <p className="text-slate-400 text-sm mb-5">Create your first campaign to start showing ads across the network.</p>
             <Button onClick={() => navigate('/dashboard/advertiser/campaigns/new')}>
               <PlusCircle size={16} />
-              最初のキャンペーンを作成
+              Create your first campaign
             </Button>
           </div>
         ) : (

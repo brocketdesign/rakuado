@@ -9,15 +9,50 @@ import { formatCurrency } from '../lib/utils'
 
 function NoProfile() {
   return (
-    <div className="flex flex-col items-center justify-center py-24 text-center">
-      <Megaphone size={48} className="mb-4 text-slate-600" />
-      <h2 className="text-xl font-bold text-white mb-2">広告主アカウントがありません</h2>
-      <Link to="/dashboard/advertiser/register">
-        <Button>
-          <PlusCircle size={16} />
-          広告を出稿する
-        </Button>
-      </Link>
+    <div>
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="rounded-xl bg-violet-500/10 p-3">
+            <Megaphone size={28} className="text-violet-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white">Advertiser Dashboard</h1>
+            <p className="text-slate-400 text-sm">Promote your products and services across the Rakuado network</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3 mb-8">
+        <div className="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-5">
+          <Megaphone size={22} className="mb-3 text-violet-400" />
+          <p className="font-semibold text-white mb-1">Run Campaigns</p>
+          <p className="text-sm text-slate-400">Create banner, in-article, or product card ads and reach thousands of readers.</p>
+        </div>
+        <div className="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-5">
+          <Wallet size={22} className="mb-3 text-emerald-400" />
+          <p className="font-semibold text-white mb-1">Control Your Budget</p>
+          <p className="text-sm text-slate-400">Top up your balance and set daily limits so you never overspend.</p>
+        </div>
+        <div className="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-5">
+          <Eye size={22} className="mb-3 text-blue-400" />
+          <p className="font-semibold text-white mb-1">Track Performance</p>
+          <p className="text-sm text-slate-400">Monitor impressions, clicks, and spend in real time from one dashboard.</p>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-dashed border-slate-600 bg-slate-800/20 p-12 text-center">
+        <Megaphone size={48} className="mx-auto mb-4 text-slate-600" />
+        <h2 className="text-xl font-bold text-white mb-2">No advertiser account yet</h2>
+        <p className="text-slate-400 mb-6 max-w-sm mx-auto">
+          Create an advertiser account to start running ads and growing your audience on Rakuado.
+        </p>
+        <Link to="/dashboard/advertiser/register">
+          <Button>
+            <PlusCircle size={16} />
+            Create an advertiser account
+          </Button>
+        </Link>
+      </div>
     </div>
   )
 }

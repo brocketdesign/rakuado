@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import {
   LayoutDashboard, BarChart3, Users, UserPlus, Mail,
@@ -14,15 +14,6 @@ const userMenuGroups = [
     label: 'マイページ',
     items: [
       { to: '/dashboard', icon: LayoutDashboard, label: 'ホーム', end: true },
-      { to: '/dashboard/partner-portal', icon: Briefcase, label: 'パートナーポータル' },
-    ],
-  },
-  {
-    label: '広告主',
-    items: [
-      { to: '/dashboard/advertiser', icon: Megaphone, label: '広告ダッシュボード' },
-      { to: '/dashboard/advertiser/campaigns', icon: PlusCircle, label: 'キャンペーン' },
-      { to: '/dashboard/advertiser/budget', icon: Wallet, label: '予算管理' },
     ],
   },
 ]
@@ -101,17 +92,48 @@ function NavGroup({ group, collapsed, onToggle, onClose }) {
 }
 
 export default function Sidebar({ onClose }) {
-  const { logout, isAdmin } = useAuth()
-  const location = useLocation()
+  const { user, logout, isAdmin } = useAuth()
   const [collapsed, setCollapsed] = useState({})
+
+  const accountType = user?.accountType // 'partner' | 'advertiser' | null
 
   const toggleGroup = (label) => {
     setCollapsed((prev) => ({ ...prev, [label]: !prev[label] }))
   }
 
+  // Build the user-visible menu based on account type
+  const filteredUserGroups = userMenuGroups
+    .map((group) => {
+      if (group.label === 'マイページ') return group // always show home
+      return null
+    })
+    .filter(Boolean)
+
+  // Partner section (only for partner accounts)
+  const partnerGroup = accountType === 'partner'
+    ? [{
+        label: 'パートナー',
+        items: [
+          { to: '/dashboard/partner-portal', icon: Briefcase, label: 'パートナーポータル' },
+        ],
+      }]
+    : []
+
+  // Advertiser section (only for advertiser accounts)
+  const advertiserGroup = accountType === 'advertiser'
+    ? [{
+        label: '広告主',
+        items: [
+          { to: '/dashboard/advertiser', icon: Megaphone, label: '広告ダッシュボード' },
+          { to: '/dashboard/advertiser/campaigns', icon: PlusCircle, label: 'キャンペーン' },
+          { to: '/dashboard/advertiser/budget', icon: Wallet, label: '予算管理' },
+        ],
+      }]
+    : []
+
   const visibleGroups = isAdmin
-    ? [...userMenuGroups, ...adminMenuGroups]
-    : userMenuGroups
+    ? [...filteredUserGroups, ...partnerGroup, ...advertiserGroup, ...adminMenuGroups]
+    : [...filteredUserGroups, ...partnerGroup, ...advertiserGroup]
 
   return (
     <div className="flex h-full flex-col bg-[#0f172a] border-r border-[#1e293b]">

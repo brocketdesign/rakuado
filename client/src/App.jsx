@@ -27,12 +27,22 @@ import AdvertiserCampaigns from './pages/AdvertiserCampaigns'
 import AdvertiserCampaignForm from './pages/AdvertiserCampaignForm'
 import AdvertiserCampaignDetail from './pages/AdvertiserCampaignDetail'
 import AdManagement from './pages/AdManagement'
+import AccountTypeSelection from './pages/AccountTypeSelection'
 import Loading from './components/Loading'
 
 function ProtectedRoute({ children }) {
   const { user, isLoading } = useAuth()
   if (isLoading) return <Loading />
   if (!user) return <Navigate to="/login" replace />
+  return children
+}
+
+// Redirects to onboarding if the user hasn't chosen an account type yet
+function OnboardedRoute({ children }) {
+  const { user, isLoading } = useAuth()
+  if (isLoading) return <Loading />
+  if (!user) return <Navigate to="/login" replace />
+  if (!user.accountType) return <Navigate to="/onboarding" replace />
   return children
 }
 
@@ -57,11 +67,19 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route
-        path="/dashboard/*"
+        path="/onboarding"
         element={
           <ProtectedRoute>
-            <DashboardLayout />
+            <AccountTypeSelection />
           </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/*"
+        element={
+          <OnboardedRoute>
+            <DashboardLayout />
+          </OnboardedRoute>
         }
       >
         <Route index element={<Dashboard />} />

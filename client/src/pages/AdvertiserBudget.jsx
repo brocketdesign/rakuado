@@ -2,7 +2,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
-import { Wallet, Plus, ArrowUpCircle, ArrowDownCircle } from 'lucide-react'
+import { Wallet, Plus, ArrowUpCircle, ArrowDownCircle, PlusCircle, BarChart2, ShieldCheck } from 'lucide-react'
 import api from '../lib/api'
 import { useAdvertiser } from '../hooks/useAdvertiser'
 import { Card, PageHeader, Button, Input, Table, Badge } from '../components/UI'
@@ -43,8 +43,50 @@ export default function AdvertiserBudget() {
 
   if (profileLoading) return null
   if (!hasProfile) {
-    navigate('/dashboard/advertiser/register', { replace: true })
-    return null
+    return (
+      <div>
+        <div className="mb-8 flex items-center gap-3">
+          <div className="rounded-xl bg-emerald-500/10 p-3">
+            <Wallet size={28} className="text-emerald-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white">Budget & Billing</h1>
+            <p className="text-slate-400 text-sm">Top up your balance and track ad spend</p>
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3 mb-8">
+          <div className="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-5">
+            <Wallet size={22} className="mb-3 text-emerald-400" />
+            <p className="font-semibold text-white mb-1">Prepaid Balance</p>
+            <p className="text-sm text-slate-400">Add funds to your account and spend only what you choose — no surprise charges.</p>
+          </div>
+          <div className="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-5">
+            <BarChart2 size={22} className="mb-3 text-blue-400" />
+            <p className="font-semibold text-white mb-1">Transaction History</p>
+            <p className="text-sm text-slate-400">See every deposit and deduction in a clear, itemised ledger.</p>
+          </div>
+          <div className="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-5">
+            <ShieldCheck size={22} className="mb-3 text-violet-400" />
+            <p className="font-semibold text-white mb-1">Secure Payments</p>
+            <p className="text-sm text-slate-400">Top up safely via Stripe — your card details are never stored on our servers.</p>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-dashed border-slate-600 bg-slate-800/20 p-12 text-center">
+          <Wallet size={48} className="mx-auto mb-4 text-slate-600" />
+          <h2 className="text-xl font-bold text-white mb-2">No advertiser account yet</h2>
+          <p className="text-slate-400 mb-6 max-w-sm mx-auto">
+            Create an advertiser account to manage your budget and start running campaigns.
+          </p>
+          <button
+            onClick={() => navigate('/dashboard/advertiser/register')}
+            className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 transition-colors"
+          >
+            <PlusCircle size={16} />
+            Create an advertiser account
+          </button>
+        </div>
+      </div>
+    )
   }
 
   const amountNum = parseInt(amount, 10)
