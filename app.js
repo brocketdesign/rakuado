@@ -50,6 +50,10 @@ function startServer() {
       initializeAnalyticsCronJobs(db)
       initializePartnersCronJobs(db)
 
+      // Seed default email notification configs
+      const { seedEmailConfig } = require('./services/adminNotifications');
+      seedEmailConfig();
+
       // Use the express-session middleware
       app.use(
         session({
@@ -123,6 +127,7 @@ function startServer() {
         ['/api/advertiser', './routers/api/advertiser'],
         ['/api/ads', './routers/api/ads'],
         ['/api/admin', './routers/api/admin-ads'],
+        ['/api/admin', './routers/api/admin-email-config'],
       ];
 
       routers.forEach(([route, path]) => app.use(route, require(path)));

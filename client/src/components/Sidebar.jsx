@@ -52,6 +52,7 @@ const adminMenuGroups = [
       { to: '/dashboard/mailing-lists', icon: MailPlus, label: 'メーリングリスト' },
       { to: '/dashboard/api-keys', icon: Key, label: 'APIキー' },
       { to: '/dashboard/api-docs', icon: FileText, label: 'APIドキュメント' },
+      { to: '/dashboard/admin-email-dashboard', icon: Mail, label: 'メール通知設定' },
     ],
   },
 ]

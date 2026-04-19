@@ -5,6 +5,7 @@ const multer = require('multer');
 const crypto = require('crypto');
 const stripe = require('stripe')(process.env.STRIPE_SECRET);
 const ensureAuthenticated = require('../../middleware/authMiddleware');
+const { notifyAdmin } = require('../../services/adminNotifications');
 const { uploadFileToS3 } = require('../../services/aws');
 
 const MIN_DEPOSIT_JPY = 50000;
@@ -71,6 +72,17 @@ router.post('/register', async (req, res) => {
       createdAt: new Date(),
     };
     const result = await global.db.collection('advertisers').insertOne(doc);
+
+    // Notify admin about new advertiser registration
+    const userRecord = await global.db.collection('users').findOne({ _id: req.user._id });
+    notifyAdmin('new_advertiser_registration', {
+      companyName: doc.companyName,
+      contactName: doc.contactName,
+      email: userRecord?.email || '',
+      website: doc.website || '',
+      registeredAt: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+    });
+
     res.status(201).json({ advertiser: { ...doc, _id: result.insertedId } });
   } catch (err) {
     console.error('POST /api/advertiser/register', err);
@@ -392,6 +404,18 @@ router.post('/campaigns/:id/submit', async (req, res) => {
     await global.db
       .collection('adCampaigns')
       .updateOne({ _id: campaignId }, { $set: { status: 'pending_review', submittedAt: new Date() } });
+
+    // Notify admin about campaign submitted for review
+    const userRecord = await global.db.collection('users').findOne({ _id: req.user._id });
+    notifyAdmin('campaign_submitted', {
+      campaignName: campaign.name,
+      campaignType: campaign.type,
+      companyName: advertiser.companyName,
+      email: userRecord?.email || '',
+      dailyBudget: (campaign.dailyBudget || 0).toLocaleString('ja-JP'),
+      submittedAt: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+    });
+
     res.json({ ok: true });
   } catch (err) {
     console.error('POST /api/advertiser/campaigns/:id/submit', err);

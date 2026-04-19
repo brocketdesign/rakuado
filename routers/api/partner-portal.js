@@ -6,6 +6,7 @@ const http = require('http');
 const ensureAuthenticated = require('../../middleware/authMiddleware');
 const { getCustomMonthPeriod, countActiveDaysFromAnalytics } = require('../../utils/partner-payment');
 const { sendEmail } = require('../../services/email');
+const { notifyAdmin } = require('../../services/adminNotifications');
 
 // Fetch a page's HTML source (follows 1 redirect, hard timeout)
 function fetchPageHTML(url, timeout = 12000) {
@@ -192,6 +193,14 @@ router.post('/apply', async (req, res) => {
     res.json({
       success: true,
       request: { ...newRequest, _id: newId, metricsSnippetSent: true, metricsSnippetCode },
+    });
+
+    // Notify admin about new partner application (fire-and-forget after response)
+    notifyAdmin('new_partner_application', {
+      email: userEmail,
+      blogUrl: blogUrl.trim(),
+      message: (newRequest.message || '').substring(0, 500),
+      appliedAt: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
     });
   } catch (error) {
     console.error('Error submitting partner application:', error);

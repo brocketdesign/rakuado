@@ -9,6 +9,7 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const passport = require('passport');
 const { email, sendEmail } = require('../services/email')
+const { notifyAdmin } = require('../services/adminNotifications')
 
 const { ObjectId } = require('mongodb');
 const { hostname } = require('os');
@@ -289,6 +290,13 @@ router.post('/login', async (req, res, next) => {
       sendEmail(email, 'welcome', welcomeEmailData)
         .then(() => console.log('Email sent!'))
         .catch(error => console.error(`Error sending email: ${error}`));
+
+      // Notify admin about new user signup
+      notifyAdmin('new_user_signup', {
+        email,
+        username: generatedUsername,
+        signupDate: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+      });
   
       return res.send({
         presign: true,

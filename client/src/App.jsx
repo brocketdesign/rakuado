@@ -28,6 +28,7 @@ import AdvertiserCampaignForm from './pages/AdvertiserCampaignForm'
 import AdvertiserCampaignDetail from './pages/AdvertiserCampaignDetail'
 import AdManagement from './pages/AdManagement'
 import AdvertiserAdmin from './pages/AdvertiserAdmin'
+import AdminEmailDashboard from './pages/AdminEmailDashboard'
 import AccountTypeSelection from './pages/AccountTypeSelection'
 import Loading from './components/Loading'
 
@@ -125,6 +126,7 @@ export default function App() {
         <Route path="advertiser/campaigns/:id/edit" element={<AdvertiserRoute><AdvertiserCampaignForm /></AdvertiserRoute>} />
         <Route path="ad-management" element={<AdminRoute><AdManagement /></AdminRoute>} />
         <Route path="advertiser-admin" element={<AdminRoute><AdvertiserAdmin /></AdminRoute>} />
+        <Route path="admin-email-dashboard" element={<AdminRoute><AdminEmailDashboard /></AdminRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
