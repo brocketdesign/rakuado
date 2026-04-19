@@ -39,6 +39,7 @@ const adminMenuGroups = [
   {
     label: '広告管理',
     items: [
+      { to: '/dashboard/advertiser-admin', icon: Users, label: '広告主管理' },
       { to: '/dashboard/affiliate', icon: Globe, label: 'アフィリエイト' },
       { to: '/dashboard/ab-tests', icon: TestTubes, label: 'A/Bテスト' },
       { to: '/dashboard/referral', icon: Megaphone, label: 'リファラル' },

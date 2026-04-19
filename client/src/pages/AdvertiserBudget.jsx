@@ -50,39 +50,39 @@ export default function AdvertiserBudget() {
             <Wallet size={28} className="text-emerald-400" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">Budget & Billing</h1>
-            <p className="text-slate-400 text-sm">Top up your balance and track ad spend</p>
+            <h1 className="text-2xl font-bold text-white">予算・請求</h1>
+            <p className="text-slate-400 text-sm">残高をチャージして広告費を管理</p>
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-3 mb-8">
           <div className="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-5">
             <Wallet size={22} className="mb-3 text-emerald-400" />
-            <p className="font-semibold text-white mb-1">Prepaid Balance</p>
-            <p className="text-sm text-slate-400">Add funds to your account and spend only what you choose — no surprise charges.</p>
+            <p className="font-semibold text-white mb-1">プリペイド残高</p>
+            <p className="text-sm text-slate-400">アカウントに入金して、選択した金額だけを使用 — 予期せぬ請求なし。</p>
           </div>
           <div className="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-5">
             <BarChart2 size={22} className="mb-3 text-blue-400" />
-            <p className="font-semibold text-white mb-1">Transaction History</p>
-            <p className="text-sm text-slate-400">See every deposit and deduction in a clear, itemised ledger.</p>
+            <p className="font-semibold text-white mb-1">取引履歴</p>
+            <p className="text-sm text-slate-400">すべての入金と利用を分かりやすい明細で確認できます。</p>
           </div>
           <div className="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-5">
             <ShieldCheck size={22} className="mb-3 text-violet-400" />
-            <p className="font-semibold text-white mb-1">Secure Payments</p>
-            <p className="text-sm text-slate-400">Top up safely via Stripe — your card details are never stored on our servers.</p>
+            <p className="font-semibold text-white mb-1">安全な決済</p>
+            <p className="text-sm text-slate-400">Stripeで安全にチャージ — カード情報はサーバーに保存されません。</p>
           </div>
         </div>
         <div className="rounded-2xl border border-dashed border-slate-600 bg-slate-800/20 p-12 text-center">
           <Wallet size={48} className="mx-auto mb-4 text-slate-600" />
-          <h2 className="text-xl font-bold text-white mb-2">No advertiser account yet</h2>
+          <h2 className="text-xl font-bold text-white mb-2">広告主アカウントがありません</h2>
           <p className="text-slate-400 mb-6 max-w-sm mx-auto">
-            Create an advertiser account to manage your budget and start running campaigns.
+            予算を管理してキャンペーンを開始するには広告主アカウントを作成してください。
           </p>
           <button
             onClick={() => navigate('/dashboard/advertiser/register')}
             className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 transition-colors"
           >
             <PlusCircle size={16} />
-            Create an advertiser account
+            広告主アカウントを作成
           </button>
         </div>
       </div>

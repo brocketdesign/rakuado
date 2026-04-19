@@ -27,6 +27,7 @@ import AdvertiserCampaigns from './pages/AdvertiserCampaigns'
 import AdvertiserCampaignForm from './pages/AdvertiserCampaignForm'
 import AdvertiserCampaignDetail from './pages/AdvertiserCampaignDetail'
 import AdManagement from './pages/AdManagement'
+import AdvertiserAdmin from './pages/AdvertiserAdmin'
 import AccountTypeSelection from './pages/AccountTypeSelection'
 import Loading from './components/Loading'
 
@@ -51,6 +52,22 @@ function AdminRoute({ children }) {
   if (isLoading) return <Loading />
   if (!user) return <Navigate to="/login" replace />
   if (!isAdmin) return <Navigate to="/dashboard" replace />
+  return children
+}
+
+function PartnerRoute({ children }) {
+  const { user, isAdmin, isLoading } = useAuth()
+  if (isLoading) return <Loading />
+  if (!user) return <Navigate to="/login" replace />
+  if (!isAdmin && user.accountType !== 'partner') return <Navigate to="/dashboard" replace />
+  return children
+}
+
+function AdvertiserRoute({ children }) {
+  const { user, isAdmin, isLoading } = useAuth()
+  if (isLoading) return <Loading />
+  if (!user) return <Navigate to="/login" replace />
+  if (!isAdmin && user.accountType !== 'advertiser') return <Navigate to="/dashboard" replace />
   return children
 }
 
@@ -85,28 +102,29 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="analytics" element={<AdminRoute><Analytics /></AdminRoute>} />
         <Route path="google-analytics" element={<AdminRoute><GoogleAnalytics /></AdminRoute>} />
-        <Route path="partners" element={<Partners />} />
-        <Route path="partner-list" element={<PartnerList />} />
-        <Route path="partner-recruitment" element={<PartnerRecruitment />} />
-        <Route path="partner-emails" element={<PartnerEmails />} />
-        <Route path="affiliate" element={<Affiliate />} />
-        <Route path="affiliate/status" element={<AffiliateStatus />} />
-        <Route path="ab-tests" element={<ABTests />} />
-        <Route path="create-ab-test" element={<CreateABTest />} />
+        <Route path="partners" element={<AdminRoute><Partners /></AdminRoute>} />
+        <Route path="partner-list" element={<AdminRoute><PartnerList /></AdminRoute>} />
+        <Route path="partner-recruitment" element={<AdminRoute><PartnerRecruitment /></AdminRoute>} />
+        <Route path="partner-emails" element={<AdminRoute><PartnerEmails /></AdminRoute>} />
+        <Route path="affiliate" element={<AdminRoute><Affiliate /></AdminRoute>} />
+        <Route path="affiliate/status" element={<AdminRoute><AffiliateStatus /></AdminRoute>} />
+        <Route path="ab-tests" element={<AdminRoute><ABTests /></AdminRoute>} />
+        <Route path="create-ab-test" element={<AdminRoute><CreateABTest /></AdminRoute>} />
         <Route path="referral" element={<AdminRoute><Referral /></AdminRoute>} />
-        <Route path="api-keys" element={<ApiKeys />} />
-        <Route path="api-docs" element={<ApiDocs />} />
-        <Route path="mailing-lists" element={<MailingLists />} />
+        <Route path="api-keys" element={<AdminRoute><ApiKeys /></AdminRoute>} />
+        <Route path="api-docs" element={<AdminRoute><ApiDocs /></AdminRoute>} />
+        <Route path="mailing-lists" element={<AdminRoute><MailingLists /></AdminRoute>} />
         <Route path="settings" element={<Settings />} />
-        <Route path="partner-portal" element={<PartnerPortal />} />
-        <Route path="advertiser" element={<AdvertiserDashboard />} />
-        <Route path="advertiser/register" element={<AdvertiserRegister />} />
-        <Route path="advertiser/budget" element={<AdvertiserBudget />} />
-        <Route path="advertiser/campaigns" element={<AdvertiserCampaigns />} />
-        <Route path="advertiser/campaigns/new" element={<AdvertiserCampaignForm />} />
-        <Route path="advertiser/campaigns/:id" element={<AdvertiserCampaignDetail />} />
-        <Route path="advertiser/campaigns/:id/edit" element={<AdvertiserCampaignForm />} />
+        <Route path="partner-portal" element={<PartnerRoute><PartnerPortal /></PartnerRoute>} />
+        <Route path="advertiser" element={<AdvertiserRoute><AdvertiserDashboard /></AdvertiserRoute>} />
+        <Route path="advertiser/register" element={<AdvertiserRoute><AdvertiserRegister /></AdvertiserRoute>} />
+        <Route path="advertiser/budget" element={<AdvertiserRoute><AdvertiserBudget /></AdvertiserRoute>} />
+        <Route path="advertiser/campaigns" element={<AdvertiserRoute><AdvertiserCampaigns /></AdvertiserRoute>} />
+        <Route path="advertiser/campaigns/new" element={<AdvertiserRoute><AdvertiserCampaignForm /></AdvertiserRoute>} />
+        <Route path="advertiser/campaigns/:id" element={<AdvertiserRoute><AdvertiserCampaignDetail /></AdvertiserRoute>} />
+        <Route path="advertiser/campaigns/:id/edit" element={<AdvertiserRoute><AdvertiserCampaignForm /></AdvertiserRoute>} />
         <Route path="ad-management" element={<AdminRoute><AdManagement /></AdminRoute>} />
+        <Route path="advertiser-admin" element={<AdminRoute><AdvertiserAdmin /></AdminRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

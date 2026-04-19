@@ -74,39 +74,39 @@ export default function AdvertiserCampaigns() {
             <Megaphone size={28} className="text-violet-400" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">Campaign Manager</h1>
-            <p className="text-slate-400 text-sm">Create and manage your ad campaigns</p>
+            <h1 className="text-2xl font-bold text-white">キャンペーン管理</h1>
+            <p className="text-slate-400 text-sm">広告キャンペーンの作成と管理</p>
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-3 mb-8">
           <div className="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-5">
             <Target size={22} className="mb-3 text-violet-400" />
-            <p className="font-semibold text-white mb-1">Targeted Placements</p>
-            <p className="text-sm text-slate-400">Choose banner, in-article, or product card formats to reach the right readers.</p>
+            <p className="font-semibold text-white mb-1">ターゲット広告配置</p>
+            <p className="text-sm text-slate-400">バナー・記事内・商品カード形式から選択して、適切な読者にリーチしましょう。</p>
           </div>
           <div className="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-5">
             <BarChart2 size={22} className="mb-3 text-blue-400" />
-            <p className="font-semibold text-white mb-1">Real-time Stats</p>
-            <p className="text-sm text-slate-400">Track impressions, clicks, and CTR for every campaign as they happen.</p>
+            <p className="font-semibold text-white mb-1">リアルタイム統計</p>
+            <p className="text-sm text-slate-400">すべてのキャンペーンのインプレッション・クリック・CTRをリアルタイムで追跡。</p>
           </div>
           <div className="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-5">
             <PlusCircle size={22} className="mb-3 text-emerald-400" />
-            <p className="font-semibold text-white mb-1">Easy Setup</p>
-            <p className="text-sm text-slate-400">Go live in minutes — set your bid, daily budget, and submit for review.</p>
+            <p className="font-semibold text-white mb-1">簡単セットアップ</p>
+            <p className="text-sm text-slate-400">数分で配信開始 — 入札単価・日次予算を設定して審査に提出するだけ。</p>
           </div>
         </div>
         <div className="rounded-2xl border border-dashed border-slate-600 bg-slate-800/20 p-12 text-center">
           <Megaphone size={48} className="mx-auto mb-4 text-slate-600" />
-          <h2 className="text-xl font-bold text-white mb-2">No advertiser account yet</h2>
+          <h2 className="text-xl font-bold text-white mb-2">広告主アカウントがありません</h2>
           <p className="text-slate-400 mb-6 max-w-sm mx-auto">
-            You need an advertiser account before you can create campaigns.
+            キャンペーンを作成するには広告主アカウントが必要です。
           </p>
           <button
             onClick={() => navigate('/dashboard/advertiser/register')}
             className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 transition-colors"
           >
             <PlusCircle size={16} />
-            Create an advertiser account
+            広告主アカウントを作成
           </button>
         </div>
       </div>
@@ -154,11 +154,11 @@ export default function AdvertiserCampaigns() {
         ) : campaigns.length === 0 ? (
           <div className="p-12 text-center">
             <Megaphone size={40} className="mx-auto mb-4 text-slate-600" />
-            <p className="text-white font-semibold mb-1">No campaigns yet</p>
-            <p className="text-slate-400 text-sm mb-5">Create your first campaign to start showing ads across the network.</p>
+            <p className="text-white font-semibold mb-1">キャンペーンがありません</p>
+            <p className="text-slate-400 text-sm mb-5">ネットワーク全体で広告を配信するには最初のキャンペーンを作成してください。</p>
             <Button onClick={() => navigate('/dashboard/advertiser/campaigns/new')}>
               <PlusCircle size={16} />
-              Create your first campaign
+              最初のキャンペーンを作成
             </Button>
           </div>
         ) : (

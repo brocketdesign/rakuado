@@ -9,8 +9,8 @@ import {
   Briefcase, TrendingUp, Settings, Wand2,
 } from 'lucide-react'
 
-// User-facing quick links (shown to non-admins only)
-const userLinks = [
+// User-facing quick links per account type
+const partnerLinks = [
   {
     label: 'パートナーポータル',
     to: '/dashboard/partner-portal',
@@ -18,6 +18,16 @@ const userLinks = [
     color: 'from-violet-500 to-purple-500',
     desc: 'サイト登録・申請状況・収益確認',
   },
+  {
+    label: '設定',
+    to: '/dashboard/settings',
+    icon: Settings,
+    color: 'from-slate-500 to-slate-600',
+    desc: 'アカウント設定の変更',
+  },
+]
+
+const advertiserLinks = [
   {
     label: '広告を出稿する',
     to: '/dashboard/advertiser',
@@ -67,6 +77,7 @@ export default function Dashboard() {
 
   // ── Regular user view ──────────────────────────────────────────────────────
   if (!isAdmin) {
+    const userLinks = user?.accountType === 'advertiser' ? advertiserLinks : partnerLinks
     return (
       <div className="space-y-8">
         {/* Welcome */}
