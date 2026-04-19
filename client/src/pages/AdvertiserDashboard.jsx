@@ -15,10 +15,12 @@ function NoProfile() {
       <p className="text-slate-400 mb-6 max-w-sm">
         RakuAdoのセルフサーブ広告プラットフォームで、13サイトに広告を配信しましょう。
       </p>
-      <Button as={Link} to="/dashboard/advertiser/register">
-        <PlusCircle size={16} />
-        広告主登録
-      </Button>
+      <Link to="/dashboard/advertiser/register">
+        <Button>
+          <PlusCircle size={16} />
+          広告を出稿する
+        </Button>
+      </Link>
     </div>
   )
 }

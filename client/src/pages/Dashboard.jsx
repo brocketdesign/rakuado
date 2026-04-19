@@ -19,6 +19,13 @@ const userLinks = [
     desc: 'サイト登録・申請状況・収益確認',
   },
   {
+    label: '広告を出稿する',
+    to: '/dashboard/advertiser',
+    icon: Megaphone,
+    color: 'from-amber-500 to-orange-500',
+    desc: 'セルフサーブ広告でサイトに集客',
+  },
+  {
     label: '設定',
     to: '/dashboard/settings',
     icon: Settings,
