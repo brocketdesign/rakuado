@@ -20,6 +20,13 @@ import MailingLists from './pages/MailingLists'
 import Settings from './pages/Settings'
 import PartnerPortal from './pages/PartnerPortal'
 import GoogleAnalytics from './pages/GoogleAnalytics'
+import AdvertiserDashboard from './pages/AdvertiserDashboard'
+import AdvertiserRegister from './pages/AdvertiserRegister'
+import AdvertiserBudget from './pages/AdvertiserBudget'
+import AdvertiserCampaigns from './pages/AdvertiserCampaigns'
+import AdvertiserCampaignForm from './pages/AdvertiserCampaignForm'
+import AdvertiserCampaignDetail from './pages/AdvertiserCampaignDetail'
+import AdManagement from './pages/AdManagement'
 import Loading from './components/Loading'
 
 function ProtectedRoute({ children }) {
@@ -74,6 +81,14 @@ export default function App() {
         <Route path="mailing-lists" element={<MailingLists />} />
         <Route path="settings" element={<Settings />} />
         <Route path="partner-portal" element={<PartnerPortal />} />
+        <Route path="advertiser" element={<AdvertiserDashboard />} />
+        <Route path="advertiser/register" element={<AdvertiserRegister />} />
+        <Route path="advertiser/budget" element={<AdvertiserBudget />} />
+        <Route path="advertiser/campaigns" element={<AdvertiserCampaigns />} />
+        <Route path="advertiser/campaigns/new" element={<AdvertiserCampaignForm />} />
+        <Route path="advertiser/campaigns/:id" element={<AdvertiserCampaignDetail />} />
+        <Route path="advertiser/campaigns/:id/edit" element={<AdvertiserCampaignForm />} />
+        <Route path="ad-management" element={<AdminRoute><AdManagement /></AdminRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

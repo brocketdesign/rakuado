@@ -26,9 +26,6 @@ export default function TopBar({ onMenuToggle }) {
             <p className="text-sm font-medium text-slate-200">
               {user?.email || 'User'}
             </p>
-            <p className="text-xs text-slate-500">
-              {user?.credits ?? 0} クレジット
-            </p>
           </div>
           <div className="h-9 w-9 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-sm font-bold text-white">
             {(user?.email || 'U')[0].toUpperCase()}

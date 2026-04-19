@@ -117,7 +117,6 @@ export default function Dashboard() {
         <StatCard title="今日の閲覧数" value={todayViews} icon={Eye} color="blue" />
         <StatCard title="パートナー" value="—" icon={Users} color="violet" />
         <StatCard title="コンテンツ" value="—" icon={Wand2} color="green" />
-        <StatCard title="クレジット" value="—" icon={CreditCard} color="amber" />
       </div>
 
       {/* Partner Management */}

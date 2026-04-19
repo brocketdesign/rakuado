@@ -198,18 +198,6 @@ router.get('/get-ab-test-image', async (req, res) => {
 
         const test = tests[0];
 
-        // Get the userId from the test and find the user
-        const user = await global.db.collection('users').findOne({ _id: new ObjectId(test.userId) });
-
-        const isAdmin = await checkIfAdmin(user);
-
-        // If the user is not an admin, verify credits
-        if (!isAdmin) {
-            if (user.credits < 0.3) {
-                return res.status(403).json({ error: 'Insufficient credits.' });
-            }
-        }
-
         const image = test.images.find(img => img.variant === abChoice);
 
         if (!image) {
@@ -243,27 +231,6 @@ router.patch('/activate-test', async (req, res) => {
         // Validate testId format
         if (!ObjectId.isValid(testId)) {
             return res.status(400).json({ error: 'Invalid testId format.' });
-        }
-
-        // If activating, check if user has enough credits
-
-        const isAdmin = await checkIfAdmin(req.user)
-        if (active && !isAdmin) {
-            const abTest = await global.db.collection('abTests').findOne({ testId: testId });
-            if (!abTest) {
-                return res.status(404).json({ error: 'A/B Test not found.' });
-            }
-            
-            const userId = abTest.userId ? new ObjectId(abTest.userId) : req.user._id;
-            const user = await global.db.collection('users').findOne({ _id: userId });
-            if (!user) {
-                return res.status(404).json({ error: 'User not found.' });
-            }
-            const minimumCredits = 500;
-            const userCredit = user.credits ? user.credits : 0 
-            if (userCredit < minimumCredits) {
-                return res.status(403).json({ error: 'A/Bテストをアクティブにするためのクレジットが不足しています。' });
-            }
         }
 
         // Update the active status in the abTests collection
@@ -368,18 +335,6 @@ router.get('/register-click', async (req, res) => {
             return res.status(404).json({ error: 'A/B Test not found.' });
         }
 
-        //Deduct 1 credit and deactivate ads if necessary
-        const advertiserId = new ObjectId(test.userId);
-        const user = await global.db.collection('users').findOne({ _id: advertiserId });
-        const isAdmin = await checkIfAdmin(user)
-        if(!isAdmin){
-            if (user.credits < 1) {
-            await global.db.collection('abTests').updateMany({ userId: advertiserId }, { $set: { active: false } });
-            return res.status(403).json({ error: 'Insufficient credits.' });
-            }
-            await global.db.collection('users').updateOne({ _id: advertiserId }, { $inc: { credits: -1 } });
-        }
-
         // Find the specific image within the test
         const image = test.images.find(img => img.imageId === imageId);
         if (!image) {
@@ -455,18 +410,6 @@ router.get('/register-view', async (req, res) => {
         const test = await global.db.collection('abTests').findOne({ testId: testId });
         if (!test) {
             return res.status(404).json({ error: 'A/B Test not found.' });
-        }
-
-        //Deduct 0.3 credits and deactivate ads if necessary
-        const advertiserId = new ObjectId(test.userId);
-        const user = await global.db.collection('users').findOne({ _id: advertiserId });
-        const isAdmin = await checkIfAdmin(user)
-        if(!isAdmin){
-            if (user.credits < 0.3) {
-            await global.db.collection('abTests').updateMany({ userId: advertiserId }, { $set: { active: false } });
-            return res.status(403).json({ error: 'Insufficient credits.' });
-            }
-            await global.db.collection('users').updateOne({ _id: advertiserId }, { $inc: { credits: -0.3 } });
         }
 
         // Find the specific image within the test

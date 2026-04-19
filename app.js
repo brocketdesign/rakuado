@@ -120,9 +120,24 @@ function startServer() {
         ['/api/mailing-lists', './routers/api/mailing-lists'],
         ['/api/v1', './routers/api/v1'],
         ['/api/ga', './routers/api/ga'],
+        ['/api/advertiser', './routers/api/advertiser'],
+        ['/api/ads', './routers/api/ads'],
+        ['/api/admin', './routers/api/admin-ads'],
       ];
 
       routers.forEach(([route, path]) => app.use(route, require(path)));
+
+      // Create indexes for ad network collections
+      Promise.all([
+        db.collection('adCampaigns').createIndex({ status: 1, type: 1, startDate: 1, endDate: 1 }),
+        db.collection('adBudgetTransactions').createIndex({ advertiserId: 1, createdAt: -1 }),
+        db.collection('adBudgetTransactions').createIndex({ campaignId: 1, type: 1, createdAt: -1 }),
+        db.collection('adImpressions').createIndex({ campaignId: 1, createdAt: -1 }),
+        db.collection('adImpressions').createIndex({ advertiserId: 1, createdAt: -1 }),
+        db.collection('adClicks').createIndex({ campaignId: 1, createdAt: -1 }),
+        db.collection('adClicks').createIndex({ impressionId: 1, ipHash: 1 }),
+        db.collection('adBudgetTransactions').createIndex({ stripeSessionId: 1 }, { sparse: true }),
+      ]).catch((err) => console.error('Ad network index creation error:', err));
       
       // Register partner metrics router (loaded above for the .js script route)
       app.use('/api/partner-metrics', partnerMetricsModule.router);

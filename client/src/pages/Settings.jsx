@@ -40,7 +40,6 @@ export default function Settings() {
               </div>
               <div>
                 <p className="text-white font-medium">{user?.email || 'User'}</p>
-                <p className="text-sm text-slate-400">{user?.credits || 0} クレジット</p>
               </div>
             </div>
 

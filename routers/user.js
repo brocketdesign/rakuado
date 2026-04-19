@@ -372,13 +372,12 @@ router.get('/me', async (req, res) => {
     const userId = req.user._id;
     const user = await global.db.collection('users').findOne(
       { _id: userId },
-      { projection: { email: 1, credits: 1, profileImage: 1, name: 1, isAdmin: 1 } }
+      { projection: { email: 1, profileImage: 1, name: 1, isAdmin: 1 } }
     );
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json({
       _id: user._id,
       email: user.email,
-      credits: user.credits || 0,
       profileImage: user.profileImage || null,
       name: user.name || user.email,
       isAdmin: !!(user.isAdmin),
@@ -389,23 +388,6 @@ router.get('/me', async (req, res) => {
   }
 });
 
-// Endpoint to get the current user's credits
-router.get('/credits', async (req, res) => {
-  if (!req.user || !req.user._id) return res.status(401).json({ error: 'Unauthorized' });
-  try {
-      const userId = req.user._id;
-      const user = await global.db.collection('users').findOne({ _id: userId }, { projection: { credits: 1 } });
-
-      if (!user) {
-          return res.status(404).json({ error: 'User not found.' });
-      }
-      const userCredit = user.credits ? user.credits : 0
-      res.json({ credits: userCredit });
-  } catch (error) {
-      console.error('Failed to get user credits:', error);
-      res.status(500).json({ error: 'Internal server error.' });
-  }
-});
 // Endpoint to check if the current user is an administrator
 router.get('/is-admin', async (req, res) => {
   if (!req.user || !req.user._id) return res.status(401).json({ error: 'Unauthorized' });

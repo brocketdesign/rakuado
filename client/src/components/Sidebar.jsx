@@ -4,7 +4,7 @@ import {
   LayoutDashboard, BarChart3, Users, UserPlus, Mail,
   Globe, TestTubes, Megaphone, Key, FileText,
   MailPlus, Settings, LogOut, X, CreditCard, ChevronDown, ChevronRight,
-  Briefcase, TrendingUp, LineChart,
+  Briefcase, TrendingUp, LineChart, Wallet, PlusCircle, ShieldCheck,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -15,6 +15,14 @@ const userMenuGroups = [
     items: [
       { to: '/dashboard', icon: LayoutDashboard, label: 'ホーム', end: true },
       { to: '/dashboard/partner-portal', icon: Briefcase, label: 'パートナーポータル' },
+    ],
+  },
+  {
+    label: '広告主',
+    items: [
+      { to: '/dashboard/advertiser', icon: Megaphone, label: '広告ダッシュボード' },
+      { to: '/dashboard/advertiser/campaigns', icon: PlusCircle, label: 'キャンペーン' },
+      { to: '/dashboard/advertiser/budget', icon: Wallet, label: '予算管理' },
     ],
   },
 ]
@@ -43,6 +51,7 @@ const adminMenuGroups = [
       { to: '/dashboard/affiliate', icon: Globe, label: 'アフィリエイト' },
       { to: '/dashboard/ab-tests', icon: TestTubes, label: 'A/Bテスト' },
       { to: '/dashboard/referral', icon: Megaphone, label: 'リファラル' },
+      { to: '/dashboard/ad-management', icon: ShieldCheck, label: '広告ネットワーク管理' },
     ],
   },
   {

@@ -59,24 +59,6 @@ window.showNotification = function(message, icon) {
         }
     });
 }
-window.updateUserCredits = function() {
-    $.ajax({
-      url: '/user/credits',
-      type: 'GET',
-      success: function(response) {
-        if (response.credits !== undefined) {
-          $('.user-credits').text(parseFloat(response.credits).toFixed(1));
-        }
-      },
-      error: function(xhr) {
-        console.error('Failed to fetch user credits:', xhr.responseJSON.error);
-      }
-    });
-}
-
-$(document).ready(function() {
-updateUserCredits();
-});
 $(document).ready(function() {
     // Function to check for payment query parameters in the URL
     function getQueryParams(param) {

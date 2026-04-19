@@ -487,6 +487,7 @@ async function findOwnRequest(collection, requestId, userId, userEmail) {
 
 // POST /api/partner-portal/check-metrics-script
 // Fetches the partner site and checks whether the metrics pixel script is present.
+// Falls back to checking partnerMetricsDaily for beacon hits if the HTML fetch is blocked.
 router.post('/check-metrics-script', async (req, res) => {
   try {
     const { requestId } = req.body;
@@ -498,20 +499,48 @@ router.post('/check-metrics-script', async (req, res) => {
     if (!request) return res.status(404).json({ success: false, error: 'Application not found' });
 
     const pid = request._id.toString();
+    let detected = false;
+    let fetchError = null;
+    let verifiedVia = null;
+
+    // Primary check: fetch HTML and look for the script tag
     try {
       const html = await fetchPageHTML(request.blogUrl);
-      const detected = html.includes(`partner-metrics.js?pid=${pid}`);
-
-      if (detected) {
-        const update = { metricsScriptVerified: true, updatedAt: new Date() };
-        if (request.currentStep === 'submitted') update.currentStep = 'metrics_snippet_sent';
-        await collection.updateOne({ _id: request._id }, { $set: update });
+      if (html.includes(`partner-metrics.js?pid=${pid}`)) {
+        detected = true;
+        verifiedVia = 'html';
       }
-
-      return res.json({ success: true, detected });
     } catch (fetchErr) {
-      return res.json({ success: true, detected: false, fetchError: fetchErr.message });
+      fetchError = fetchErr.message;
     }
+
+    // Secondary check: if HTML fetch failed or script not found, check for beacon hits
+    if (!detected) {
+      try {
+        const domain = cleanDomain(request.blogUrl);
+        const recentHit = await global.db.collection('partnerMetricsDaily').findOne(
+          { domain, pageviews: { $gt: 0 } },
+          { sort: { date: -1 }, projection: { date: 1, pageviews: 1 } }
+        );
+        if (recentHit) {
+          detected = true;
+          verifiedVia = 'beacon';
+        }
+      } catch (_) { /* ignore */ }
+    }
+
+    if (detected) {
+      const now = new Date();
+      const update = { metricsScriptVerified: true, metricsSnippetSent: true, updatedAt: now };
+      // Automatically start 72h data collection — skip the intermediate metrics_snippet_sent step
+      if (['submitted', 'metrics_snippet_sent'].includes(request.currentStep)) {
+        update.currentStep = 'data_waiting';
+        update.dataWaitingStartedAt = now;
+      }
+      await collection.updateOne({ _id: request._id }, { $set: update });
+    }
+
+    return res.json({ success: true, detected, ...(fetchError && !detected ? { fetchError } : {}), ...(verifiedVia ? { verifiedVia } : {}) });
   } catch (error) {
     console.error('check-metrics-script error:', error);
     res.status(500).json({ success: false, error: 'Failed to check script' });
