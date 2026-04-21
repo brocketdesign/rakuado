@@ -55,6 +55,22 @@ const DEFAULT_NOTIFICATIONS = [
     category: 'partners',
     enabled: true,
   },
+  {
+    key: 'partner_request_approved',
+    name: 'Partner Request Approved',
+    description: 'Sent when an admin approves a partner site application.',
+    template: 'admin-new-partner',
+    category: 'partners',
+    enabled: true,
+  },
+  {
+    key: 'advertiser_campaign_approved',
+    name: 'Advertiser Campaign Approved',
+    description: 'Sent when an admin approves an advertiser campaign for delivery.',
+    template: 'admin-campaign-submitted',
+    category: 'advertisers',
+    enabled: true,
+  },
 ];
 
 /**

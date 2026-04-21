@@ -4,8 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 import api from '../lib/api'
 import { PageHeader, StatCard, Card } from '../components/UI'
 import {
-  BarChart3, CreditCard, Mail, Users, UserPlus, TestTubes,
-  Globe, Megaphone, Key, MailPlus, FileText, Eye,
+  BarChart3, CreditCard, Mail, Users, UserPlus,
+  Megaphone, Key, MailPlus, FileText, Eye,
   Briefcase, TrendingUp, Settings, Wand2,
 } from 'lucide-react'
 
@@ -54,8 +54,6 @@ const adminLinks = [
 ]
 
 const toolLinks = [
-  { label: 'A/Bテスト', to: '/dashboard/ab-tests', icon: TestTubes },
-  { label: 'アフィリエイト', to: '/dashboard/affiliate', icon: Globe },
   { label: 'リファラル', to: '/dashboard/referral', icon: Megaphone },
   { label: 'APIキー', to: '/dashboard/api-keys', icon: Key },
   { label: 'APIドキュメント', to: '/dashboard/api-docs', icon: FileText },

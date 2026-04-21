@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import {
   LayoutDashboard, BarChart3, Users, UserPlus, Mail,
-  Globe, TestTubes, Megaphone, Key, FileText,
+  Megaphone, Key, FileText,
   MailPlus, Settings, LogOut, X, CreditCard, ChevronDown, ChevronRight,
   Briefcase, TrendingUp, LineChart, Wallet, PlusCircle, ShieldCheck, LifeBuoy,
 } from 'lucide-react'
@@ -40,8 +40,6 @@ const adminMenuGroups = [
     label: '広告管理',
     items: [
       { to: '/dashboard/advertiser-admin', icon: Users, label: '広告主管理' },
-      { to: '/dashboard/affiliate', icon: Globe, label: 'アフィリエイト' },
-      { to: '/dashboard/ab-tests', icon: TestTubes, label: 'A/Bテスト' },
       { to: '/dashboard/referral', icon: Megaphone, label: 'リファラル' },
       { to: '/dashboard/ad-management', icon: ShieldCheck, label: '広告ネットワーク管理' },
     ],

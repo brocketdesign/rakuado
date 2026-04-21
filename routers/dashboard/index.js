@@ -21,42 +21,6 @@ router.get('/', ensureAuthenticated, ensureMembership, async (req, res) => {
     res.status(500).send('Server Error');
   }
 }); 
-// Route to render the A/B test creation page
-router.get('/app/create-ab-test', (req, res) => {
-  res.render('dashboard/app/abtest/create-ab-test',{user:req.user, isPublic: false}); // Render the PUG template
-});
-router.get('/app/ab-test-results', async (req, res) => {
-  const { affiliateId } = req.query; // Optional query parameter
-
-  try {
-      // Build the API URL with or without affiliateId
-      let apiUrl = `${req.protocol}://${req.get('host')}/api/abtest/get-ab-test-results?userId=${req.user._id}`;
-      if (affiliateId) {
-          apiUrl += `?affiliateId=${affiliateId}`;
-      }
-
-      // Fetch data from the API
-      const response = await axios.get(apiUrl);
-      const results = response.data;
-
-      res.render('dashboard/app/abtest/list', { user:req.user, results, affiliateId, isPublic: false });
-  } catch (error) {
-      console.error('Failed to fetch A/B test results:', error);
-      res.status(500).send('Failed to fetch A/B test results');
-  }
-});
-
-//Route for handling '/affiliate/'
-router.get('/app/affiliate/', ensureAuthenticated,ensureMembership, async (req, res) => {  
-  res.render('dashboard/app/affiliate/list',{user:req.user,title:"RAKUBUN - Dashboard", isPublic: false});
-});
-router.get('/app/affiliate/status', ensureAuthenticated,ensureMembership, async (req, res) => {  
-  res.render('dashboard/app/affiliate/status',{user:req.user,title:"RAKUBUN - Dashboard", isPublic: false});
-});
-router.get('/app/affiliate/graph/:affiliateId', ensureAuthenticated,ensureMembership, async (req, res) => {  
-  const affiliateId = req.params.affiliateId
-  res.render('dashboard/app/affiliate/graph',{user:req.user,affiliateId, title:"RAKUBUN - Dashboard", isPublic: false});
-});
 router.get('/app/referal', ensureAuthenticated, ensureMembership, async (req, res) => {
   // Fetch all popups (no userId filter)
   const popupsRaw = await POPUPS.find({}).sort({ order: 1 }).toArray();

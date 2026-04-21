@@ -9,10 +9,6 @@ import Partners from './pages/Partners'
 import PartnerList from './pages/PartnerList'
 import PartnerRecruitment from './pages/PartnerRecruitment'
 import PartnerEmails from './pages/PartnerEmails'
-import Affiliate from './pages/Affiliate'
-import AffiliateStatus from './pages/AffiliateStatus'
-import ABTests from './pages/ABTests'
-import CreateABTest from './pages/CreateABTest'
 import Referral from './pages/Referral'
 import ApiKeys from './pages/ApiKeys'
 import ApiDocs from './pages/ApiDocs'
@@ -108,10 +104,6 @@ export default function App() {
         <Route path="partner-list" element={<AdminRoute><PartnerList /></AdminRoute>} />
         <Route path="partner-recruitment" element={<AdminRoute><PartnerRecruitment /></AdminRoute>} />
         <Route path="partner-emails" element={<AdminRoute><PartnerEmails /></AdminRoute>} />
-        <Route path="affiliate" element={<AdminRoute><Affiliate /></AdminRoute>} />
-        <Route path="affiliate/status" element={<AdminRoute><AffiliateStatus /></AdminRoute>} />
-        <Route path="ab-tests" element={<AdminRoute><ABTests /></AdminRoute>} />
-        <Route path="create-ab-test" element={<AdminRoute><CreateABTest /></AdminRoute>} />
         <Route path="referral" element={<AdminRoute><Referral /></AdminRoute>} />
         <Route path="api-keys" element={<AdminRoute><ApiKeys /></AdminRoute>} />
         <Route path="api-docs" element={<AdminRoute><ApiDocs /></AdminRoute>} />

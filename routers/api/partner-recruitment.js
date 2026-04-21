@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { ObjectId } = require('mongodb');
 const { sendEmail, sendEmailWithUserSettings } = require('../../services/email');
+const { notifyAdmin } = require('../../services/adminNotifications');
 const ensureAuthenticated = require('../../middleware/authMiddleware');
 const ensureMembership = require('../../middleware/ensureMembership');
 
@@ -517,6 +518,33 @@ router.post('/:id/approve', async (req, res) => {
       { _id: new ObjectId(id) },
       { $set: { status: 'approved', currentStep: 'approved', updatedAt: new Date() } }
     );
+
+    // Send approval email to the partner applicant
+    const nameFromEmail = request.email.split('@')[0];
+    const emailData = {
+      email: request.email,
+      name: nameFromEmail + '様',
+      blogUrl: request.blogUrl,
+      requestId: id,
+    };
+
+    try {
+      const adminUser = await global.db.collection('users').findOne({ _id: req.user._id });
+      if (adminUser && adminUser.mailSettings && adminUser.mailSettings.email && adminUser.mailSettings.password) {
+        await sendEmailWithUserSettings(adminUser.mailSettings, request.email, 'partner recruitment approved', emailData);
+      } else {
+        await sendEmail(request.email, 'partner recruitment approved', emailData);
+      }
+    } catch (emailError) {
+      console.error('Error sending partner approval email:', emailError);
+    }
+
+    // Notify admin
+    notifyAdmin('partner_request_approved', {
+      blogUrl: request.blogUrl,
+      email: request.email,
+      approvedAt: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+    });
 
     res.json({ success: true });
   } catch (error) {

@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { ObjectId } = require('mongodb');
 const ensureAuthenticated = require('../../middleware/authMiddleware');
+const { sendEmail } = require('../../services/email');
+const { notifyAdmin } = require('../../services/adminNotifications');
 
 // All routes require authentication + admin
 router.use(ensureAuthenticated);
@@ -116,6 +118,32 @@ router.put('/campaigns/:id/approve', async (req, res) => {
     if (result.matchedCount === 0) {
       return res.status(404).json({ error: 'Campaign not found or not in pending_review status' });
     }
+
+    // Notify the advertiser by email
+    try {
+      const campaign = await global.db.collection('adCampaigns').findOne({ _id: campaignId });
+      if (campaign) {
+        const advertiser = await global.db.collection('advertisers').findOne({ _id: new ObjectId(campaign.advertiserId) });
+        if (advertiser) {
+          const user = await global.db.collection('users').findOne({ _id: new ObjectId(advertiser.userId) });
+          if (user && user.email) {
+            await sendEmail(user.email, 'advertiser campaign approved', {
+              contactName: advertiser.contactName || user.email,
+              campaignName: campaign.name || campaign.title || campaignId.toString(),
+            });
+          }
+        }
+        // Notify admin
+        notifyAdmin('advertiser_campaign_approved', {
+          campaignName: campaign.name || campaign.title || campaignId.toString(),
+          advertiserId: campaign.advertiserId,
+          approvedAt: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+        });
+      }
+    } catch (notifyErr) {
+      console.error('Campaign approval notification error:', notifyErr.message);
+    }
+
     res.json({ ok: true });
   } catch (err) {
     console.error('PUT /api/admin/campaigns/:id/approve', err);
