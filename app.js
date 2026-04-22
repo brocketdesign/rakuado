@@ -129,6 +129,7 @@ function startServer() {
         ['/api/admin', './routers/api/admin-ads'],
         ['/api/admin', './routers/api/admin-email-config'],
         ['/api/support', './routers/api/support'],
+        ['/api/rakubun', './routers/api/rakubun'],
       ];
 
       routers.forEach(([route, path]) => app.use(route, require(path)));

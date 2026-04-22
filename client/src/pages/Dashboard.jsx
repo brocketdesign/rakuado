@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
 import api from '../lib/api'
 import { PageHeader, StatCard, Card } from '../components/UI'
+import RakubunWidget from '../components/RakubunWidget'
 import {
   BarChart3, CreditCard, Mail, Users, UserPlus,
   Megaphone, Key, MailPlus, FileText, Eye,
@@ -110,6 +111,12 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
+
+        {/* Rakubun integration widget */}
+        <div>
+          <h2 className="mb-4 text-lg font-semibold text-white">コンテンツ管理</h2>
+          <RakubunWidget />
+        </div>
       </div>
     )
   }
@@ -157,6 +164,12 @@ export default function Dashboard() {
       </div>
 
       {/* Tools */}
+      <div>
+        <h2 className="mb-4 text-lg font-semibold text-white">コンテンツ管理</h2>
+        <RakubunWidget />
+      </div>
+
+      {/* Ads & Tools */}
       <div>
         <h2 className="mb-4 text-lg font-semibold text-white">広告管理 & ツール</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
