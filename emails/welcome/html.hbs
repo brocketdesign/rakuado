@@ -170,13 +170,13 @@
                         word-break: break-word;
                       "
                     >
-  <h1>Welcome, {{FIRSTNAME}}</h1>
-    <p>Thank you for signing up with {{product_name}}. We're delighted to have you on board.</p>
-    <p>Login to our platform with this link :  <a href="http://{{HOSTNAME}}:3000/dashboard?randomkey={{RANDOMKEY}}&userID={{USERID}}">click here</a></p>
-    <p>Note that the above link is available for 30 minutes only.</p>
-    <p>For security reasons, we've provided you with a temporary password: <span class="important">{{PASSWORD}}</span></p>
-    <p>We recommend you to update this password promptly in your user profile page for your own safety.</p>
-    <p>Should you have any questions, don't hesitate to reach out. Welcome to the {{product_name}} community!</p>
+  <h1>{{FIRSTNAME}}さん、ようこそ！</h1>
+    <p>{{product_name}}にご登録いただきありがとうございます。ご参加を心より歓迎いたします。</p>
+    <p>以下のリンクよりプラットフォームにログインしてください：<a href="http://{{HOSTNAME}}:3000/dashboard?randomkey={{RANDOMKEY}}&userID={{USERID}}">こちらをクリック</a></p>
+    <p>上記のリンクは30分間のみ有効です。</p>
+    <p>セキュリティのため、仮パスワードをご用意しました：<span class="important">{{PASSWORD}}</span></p>
+    <p>安全のため、ユーザープロフィールページにてパスワードを速やかに変更されることをお勧めします。</p>
+    <p>ご不明な点がございましたら、お気軽にお問い合わせください。{{product_name}}コミュニティへようこそ！</p>
                     </td>
                   </tr>
                 </table>
