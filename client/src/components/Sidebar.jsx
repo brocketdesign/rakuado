@@ -14,7 +14,6 @@ const userMenuGroups = [
     label: 'マイページ',
     items: [
       { to: '/dashboard', icon: LayoutDashboard, label: 'ホーム', end: true },
-      { to: '/dashboard/rakubun', icon: Wand2, label: 'Rakubun' },
     ],
   },
 ]
@@ -115,6 +114,7 @@ export default function Sidebar({ onClose }) {
     ? [{
         label: 'パートナー',
         items: [
+          { to: '/dashboard/rakubun', icon: Wand2, label: 'Rakubun' },
           { to: '/dashboard/partner-portal', icon: Briefcase, label: 'パートナーポータル' },
         ],
       }]
