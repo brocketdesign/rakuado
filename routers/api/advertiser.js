@@ -8,7 +8,7 @@ const ensureAuthenticated = require('../../middleware/authMiddleware');
 const { notifyAdmin } = require('../../services/adminNotifications');
 const { uploadFileToS3 } = require('../../services/aws');
 
-const MIN_DEPOSIT_JPY = 50000;
+const MIN_DEPOSIT_JPY = 500000;
 
 const upload = multer({
   storage: multer.memoryStorage(),
