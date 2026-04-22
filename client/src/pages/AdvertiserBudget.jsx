@@ -8,7 +8,7 @@ import { useAdvertiser } from '../hooks/useAdvertiser'
 import { Card, PageHeader, Button, Input, Table, Badge } from '../components/UI'
 import { formatCurrency, formatDate } from '../lib/utils'
 
-const MIN_DEPOSIT = 50000
+const MIN_DEPOSIT = 500000
 
 export default function AdvertiserBudget() {
   const navigate = useNavigate()
@@ -164,7 +164,7 @@ export default function AdvertiserBudget() {
             <div className="flex-1">
               <Input
                 type="number"
-                placeholder="50000"
+                placeholder="500000"
                 min={MIN_DEPOSIT}
                 step={1000}
                 value={amount}
@@ -189,7 +189,7 @@ export default function AdvertiserBudget() {
 
       {/* Quick-select amounts */}
       <div className="mb-8 flex gap-2 flex-wrap">
-        {[50000, 100000, 300000, 500000].map((preset) => (
+        {[500000, 1000000, 3000000, 5000000].map((preset) => (
           <button
             key={preset}
             onClick={() => setAmount(String(preset))}
