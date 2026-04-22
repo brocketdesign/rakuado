@@ -27,6 +27,7 @@ import AdvertiserAdmin from './pages/AdvertiserAdmin'
 import AdminEmailDashboard from './pages/AdminEmailDashboard'
 import AccountTypeSelection from './pages/AccountTypeSelection'
 import Support from './pages/Support'
+import RakubunPage from './pages/RakubunPage'
 import Loading from './components/Loading'
 
 function ProtectedRoute({ children }) {
@@ -121,6 +122,7 @@ export default function App() {
         <Route path="advertiser-admin" element={<AdminRoute><AdvertiserAdmin /></AdminRoute>} />
         <Route path="admin-email-dashboard" element={<AdminRoute><AdminEmailDashboard /></AdminRoute>} />
         <Route path="support" element={<Support />} />
+        <Route path="rakubun" element={<RakubunPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

@@ -38,7 +38,7 @@ router.get('/callback', async (req, res) => {
     const { code, state, error } = req.query;
 
     if (error === 'access_denied') {
-      return res.redirect('/dashboard?rakubun=denied');
+      return res.redirect('/dashboard/rakubun?rakubun=denied');
     }
 
     if (!state || state !== req.session.rakubunOAuthState) {
@@ -83,10 +83,10 @@ router.get('/callback', async (req, res) => {
       },
     );
 
-    return res.redirect('/dashboard?rakubun=connected');
+    return res.redirect('/dashboard/rakubun?rakubun=connected');
   } catch (err) {
     console.error('[Rakubun OAuth] Callback error:', err);
-    return res.redirect('/dashboard?rakubun=error');
+    return res.redirect('/dashboard/rakubun?rakubun=error');
   }
 });
 

@@ -3,7 +3,6 @@ import { useAuth } from '../hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
 import api from '../lib/api'
 import { PageHeader, StatCard, Card } from '../components/UI'
-import RakubunWidget from '../components/RakubunWidget'
 import {
   BarChart3, CreditCard, Mail, Users, UserPlus,
   Megaphone, Key, MailPlus, FileText, Eye,
@@ -112,10 +111,21 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Rakubun integration widget */}
+        {/* Rakubun link card */}
         <div>
           <h2 className="mb-4 text-lg font-semibold text-white">コンテンツ管理</h2>
-          <RakubunWidget />
+          <Link
+            to="/dashboard/rakubun"
+            className="group glass-card flex items-start gap-4 p-5 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-blue-500/10"
+          >
+            <div className="rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 p-3 text-white shrink-0">
+              <Wand2 size={22} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-200 group-hover:text-white">Rakubun</p>
+              <p className="text-xs text-slate-500 mt-0.5">WordPressブログのAI自動管理・記事生成</p>
+            </div>
+          </Link>
         </div>
       </div>
     )
@@ -163,10 +173,18 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Tools */}
+      {/* Rakubun */}
       <div>
         <h2 className="mb-4 text-lg font-semibold text-white">コンテンツ管理</h2>
-        <RakubunWidget />
+        <Link
+          to="/dashboard/rakubun"
+          className="group glass-card flex items-center gap-4 p-5 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-blue-500/10"
+        >
+          <div className="rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 p-3 text-white">
+            <Wand2 size={22} />
+          </div>
+          <span className="text-sm font-medium text-slate-200 group-hover:text-white">Rakubun</span>
+        </Link>
       </div>
 
       {/* Ads & Tools */}
