@@ -130,6 +130,7 @@ function startServer() {
         ['/api/admin', './routers/api/admin-email-config'],
         ['/api/support', './routers/api/support'],
         ['/api/rakubun', './routers/api/rakubun'],
+        ['/api/vibedash', './routers/api/vibedash'],
       ];
 
       routers.forEach(([route, path]) => app.use(route, require(path)));
