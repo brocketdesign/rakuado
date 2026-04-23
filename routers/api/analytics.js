@@ -652,4 +652,81 @@ router.get('/comparison', async (req, res) => {
   }
 });
 
+// Helper to extract clean domain from a URL (mirrors partner-metrics.js)
+function cleanDomain(url) {
+  if (!url) return '';
+  let d = url.trim().toLowerCase();
+  d = d.replace(/^https?:\/\//, '');
+  d = d.replace(/^www\./, '');
+  d = d.replace(/\/$/, '');
+  return d.split('/')[0];
+}
+
+// GET /api/analytics/candidate-sites
+// Returns partner request candidates (script installed, not yet approved) with their metrics data.
+// Admin only (protected by middleware above).
+router.get('/candidate-sites', async (req, res) => {
+  try {
+    const { days = '30' } = req.query;
+    const numDays = Math.min(parseInt(days) || 30, 90);
+
+    const candidateStatuses = ['reviewing', 'data_waiting', 'analytics_requested', 'metrics_snippet_sent'];
+
+    const requests = await global.db.collection('partnerRequests')
+      .find({ status: { $in: candidateStatuses } })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    const today = new Date().toISOString().slice(0, 10);
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - numDays);
+    const start = startDate.toISOString().slice(0, 10);
+
+    const candidates = await Promise.all(requests.map(async (partnerReq) => {
+      const domain = cleanDomain(partnerReq.blogUrl);
+
+      let metrics = { totalPageviews: 0, totalSessions: 0, daily: [] };
+
+      if (domain) {
+        const records = await global.db.collection('partnerMetricsDaily')
+          .find({ domain, date: { $gte: start, $lte: today } })
+          .sort({ date: 1 })
+          .toArray();
+
+        let totalPageviews = 0;
+        let totalSessions = 0;
+        const daily = records.map((r) => {
+          totalPageviews += r.pageviews || 0;
+          totalSessions += r.uniqueSessions || 0;
+          return {
+            date: r.date,
+            pageviews: r.pageviews || 0,
+            sessions: r.uniqueSessions || 0,
+          };
+        });
+
+        metrics = { totalPageviews, totalSessions, daily };
+      }
+
+      return {
+        id: partnerReq._id.toString(),
+        email: partnerReq.email,
+        blogUrl: partnerReq.blogUrl,
+        domain,
+        status: partnerReq.status,
+        currentStep: partnerReq.currentStep,
+        dataWaitingStartedAt: partnerReq.dataWaitingStartedAt,
+        metricsSnippetSent: partnerReq.metricsSnippetSent || false,
+        createdAt: partnerReq.createdAt,
+        metrics,
+      };
+    }));
+
+    res.json({ success: true, candidates, days: numDays });
+  } catch (error) {
+    console.error('Candidate sites API error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;

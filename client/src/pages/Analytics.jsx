@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import api from '../lib/api'
 import { formatNumber } from '../lib/utils'
-import { PageHeader, StatCard, Card, Tabs, Button } from '../components/UI'
-import { BarChart3, Eye, MousePointerClick, TrendingUp, ExternalLink } from 'lucide-react'
+import { PageHeader, StatCard, Card, Tabs, Button, Badge } from '../components/UI'
+import { BarChart3, Eye, MousePointerClick, TrendingUp, ExternalLink, Users, Clock } from 'lucide-react'
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from 'recharts'
@@ -12,6 +12,28 @@ const SITE_COLORS = [
   '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#3b82f6',
   '#ec4899', '#14b8a6', '#f97316', '#84cc16', '#a78bfa',
 ]
+
+const CANDIDATE_STATUS_MAP = {
+  pending:              { label: '申請済み',         variant: 'warning' },
+  analytics_requested:  { label: 'データ収集中',     variant: 'info' },
+  data_waiting:         { label: 'データ収集中',     variant: 'info' },
+  reviewing:            { label: '審査中',           variant: 'purple' },
+  metrics_snippet_sent: { label: 'スクリプト設置済', variant: 'purple' },
+}
+
+const CANDIDATE_STEP_LABELS = {
+  submitted:            'サイト登録',
+  metrics_snippet_sent: 'スクリプト設置',
+  analytics_requested:  'データ収集中',
+  data_waiting:         'データ収集中',
+  reviewing:            '審査中',
+}
+
+function hoursLeftFrom(startedAt) {
+  if (!startedAt) return null
+  const rem = 72 * 60 * 60 * 1000 - (Date.now() - new Date(startedAt).getTime())
+  return rem <= 0 ? 0 : Math.ceil(rem / (60 * 60 * 1000))
+}
 
 export default function Analytics() {
   const [period, setPeriod] = useState('current')
@@ -60,6 +82,16 @@ export default function Analytics() {
     },
     enabled: tab === 'comparison',
   })
+
+  const { data: candidatesData, isLoading: isCandidatesLoading } = useQuery({
+    queryKey: ['analytics-candidate-sites'],
+    queryFn: async () => {
+      const res = await api.get('/api/analytics/candidate-sites')
+      return res.data
+    },
+    enabled: tab === 'candidates',
+  })
+  const candidates = candidatesData?.candidates || []
 
   // ── Infinite scroll sentinel ──────────────────────────────
   const summaryList = sitesSummary?.sites || []
@@ -129,6 +161,7 @@ export default function Analytics() {
             { value: 'simple', label: 'シンプル' },
             { value: 'detailed', label: '詳細' },
             { value: 'comparison', label: '比較' },
+            { value: 'candidates', label: '候補サイト' },
           ]}
           active={tab}
           onChange={setTab}
@@ -416,6 +449,114 @@ export default function Analytics() {
                 </table>
               </div>
             </Card>
+          )}
+        </div>
+      )}
+
+      {/* ── CANDIDATES VIEW: unconfirmed sites with metrics ── */}
+      {tab === 'candidates' && (
+        <div className="space-y-3">
+          {isCandidatesLoading ? (
+            <div className="flex h-40 items-center justify-center">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-700 border-t-violet-500" />
+            </div>
+          ) : candidates.length === 0 ? (
+            <Card>
+              <div className="flex h-32 flex-col items-center justify-center gap-2 text-sm text-slate-500">
+                <Users size={24} className="text-slate-600" />
+                審査待ちの候補サイトはありません
+              </div>
+            </Card>
+          ) : (
+            <>
+              <p className="text-xs text-slate-500">
+                スクリプト設置済みでまだ承認されていないサイト — 過去{candidatesData?.days || 30}日間のデータ
+              </p>
+              {candidates.map((c) => {
+                const statusInfo = CANDIDATE_STATUS_MAP[c.status] || { label: c.status, variant: 'default' }
+                const stepLabel = CANDIDATE_STEP_LABELS[c.status] || c.currentStep || '—'
+                const hours = c.status === 'data_waiting' ? hoursLeftFrom(c.dataWaitingStartedAt) : null
+                const hasData = c.metrics.totalPageviews > 0 || c.metrics.totalSessions > 0
+                const maxPV = Math.max(...candidates.map((x) => x.metrics.totalPageviews), 1)
+                const barWidth = Math.max(2, Math.round((c.metrics.totalPageviews / maxPV) * 100))
+
+                return (
+                  <Card key={c.id} className="transition-all hover:border-slate-600">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      {/* Left: site info */}
+                      <div className="flex min-w-0 flex-col gap-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {c.blogUrl ? (
+                            <a
+                              href={c.blogUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 font-semibold text-violet-400 transition-colors hover:text-violet-300"
+                            >
+                              {c.domain || c.blogUrl}
+                              <ExternalLink size={13} />
+                            </a>
+                          ) : (
+                            <span className="font-semibold text-slate-300">—</span>
+                          )}
+                          <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                          {c.email && <span>{c.email}</span>}
+                          <span>ステップ: {stepLabel}</span>
+                          {hours !== null && hours > 0 && (
+                            <span className="inline-flex items-center gap-1 text-amber-400">
+                              <Clock size={11} />
+                              あと{hours}h
+                            </span>
+                          )}
+                          {hours === 0 && (
+                            <span className="text-green-400">収集完了</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right: metrics */}
+                      <div className="flex shrink-0 items-center gap-6 text-right">
+                        <div>
+                          <div className="text-xs text-slate-500">セッション</div>
+                          <div className="font-semibold text-white">{formatNumber(c.metrics.totalSessions)}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-500">PV</div>
+                          <div className={`text-xl font-bold ${hasData ? 'text-white' : 'text-slate-600'}`}>
+                            {formatNumber(c.metrics.totalPageviews)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="mt-3 h-1 overflow-hidden rounded-full bg-slate-700/60">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${hasData ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-slate-700'}`}
+                        style={{ width: `${barWidth}%` }}
+                      />
+                    </div>
+
+                    {/* Mini daily sparkline (last 7 days) */}
+                    {c.metrics.daily.length > 0 && (
+                      <div className="mt-3">
+                        <ResponsiveContainer width="100%" height={60}>
+                          <LineChart data={c.metrics.daily.slice(-14)}>
+                            <Line type="monotone" dataKey="pageviews" name="PV" stroke="#f59e0b" strokeWidth={1.5} dot={false} />
+                            <Tooltip
+                              contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#f1f5f9', fontSize: 11 }}
+                              formatter={(v) => [formatNumber(v), 'PV']}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+                  </Card>
+                )
+              })}
+            </>
           )}
         </div>
       )}
