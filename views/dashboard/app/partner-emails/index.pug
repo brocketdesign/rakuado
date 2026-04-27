@@ -408,7 +408,7 @@ block mainContent
                 // Use a sandboxed iframe to safely render the HTML preview
                 previewContent.innerHTML = '';
                 const iframe = document.createElement('iframe');
-                iframe.sandbox = 'allow-same-origin';
+                iframe.sandbox = '';
                 iframe.style.cssText = 'width:100%;min-height:300px;border:none;';
                 previewContent.appendChild(iframe);
                 iframe.contentDocument.open();
@@ -913,7 +913,9 @@ block mainContent
                     allPartners.forEach(p => {
                         const opt = document.createElement('option');
                         opt.value = p._id;
-                        opt.textContent = `${escapeHtml(p.name)}${p.email ? ' <' + escapeHtml(p.email) + '>' : ' (メールなし)'}`;
+                        const nameText = p.name || '-';
+                        const emailText = p.email ? ` (${p.email})` : ' (メールなし)';
+                        opt.textContent = nameText + emailText;
                         if (!p.email) opt.disabled = true;
                         select.appendChild(opt);
                     });
