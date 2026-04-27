@@ -270,22 +270,58 @@ export default function PartnerEmails() {
             選択したパートナー（またはすべて）に任意の内容でメールを送信します。
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-300">送信先 / Recipients</label>
-            <select
-              multiple
-              size={Math.min(partners.length + 1, 8)}
-              value={customRecipients}
-              onChange={(e) => setCustomRecipients(Array.from(e.target.selectedOptions, (o) => o.value))}
-              className="w-full rounded-xl border border-slate-600 bg-slate-800/50 px-3 py-2 text-sm text-white"
-            >
-              <option value="all" className="font-semibold">★ すべてのパートナー / All Partners</option>
-              {partners.map((p) => (
-                <option key={p._id} value={p._id} disabled={!p.email}>
-                  {p.name || '-'}{p.email ? ` (${p.email})` : ' (メールなし)'}
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-xs text-slate-500">Ctrl（Mac: ⌘）+クリックで複数選択。「すべて」を選ぶと全員に送信。</p>
+            <label className="mb-2 block text-sm font-medium text-slate-300">送信先 / Recipients</label>
+            <div className="rounded-xl border border-slate-600 bg-slate-800/50 divide-y divide-slate-700/50 max-h-56 overflow-y-auto">
+              {/* All partners row */}
+              <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-slate-700/40 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={customRecipients.includes('all')}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setCustomRecipients(['all'])
+                    } else {
+                      setCustomRecipients([])
+                    }
+                  }}
+                  className="h-4 w-4 rounded border-slate-500 accent-violet-500 cursor-pointer"
+                />
+                <span className="text-sm font-semibold text-amber-400">★ すべてのパートナー / All Partners</span>
+              </label>
+              {/* Individual partner rows */}
+              {partners.map((p) => {
+                const checked = customRecipients.includes('all') || customRecipients.includes(p._id)
+                return (
+                  <label
+                    key={p._id}
+                    className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${p.email ? 'cursor-pointer hover:bg-slate-700/40' : 'opacity-40 cursor-not-allowed'}`}
+                  >
+                    <input
+                      type="checkbox"
+                      disabled={!p.email || customRecipients.includes('all')}
+                      checked={checked}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setCustomRecipients((prev) => [...prev.filter((x) => x !== 'all'), p._id])
+                        } else {
+                          setCustomRecipients((prev) => prev.filter((x) => x !== p._id && x !== 'all'))
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-slate-500 accent-violet-500 cursor-pointer"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm text-white truncate">{p.name || '—'}</p>
+                      <p className="text-xs text-slate-400 truncate">{p.email || 'メールなし'}</p>
+                    </div>
+                  </label>
+                )
+              })}
+            </div>
+            <p className="mt-1.5 text-xs text-slate-500">
+              {customRecipients.includes('all')
+                ? `すべての有効なパートナーに送信します (${partners.filter((p) => p.email).length}名)`
+                : `${customRecipients.length}名 選択中`}
+            </p>
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-300">件名 / Subject</label>
@@ -312,9 +348,14 @@ export default function PartnerEmails() {
               {customPreview ? 'プレビューを閉じる' : 'プレビュー / Preview'}
             </Button>
             {customPreview && customBody && (
-              <div className="mt-3 rounded-xl border border-slate-600 bg-white p-4 max-h-64 overflow-y-auto">
-                <div dangerouslySetInnerHTML={{ __html: customBody }} />
-              </div>
+              <iframe
+                key={customBody}
+                srcDoc={customBody}
+                sandbox="allow-same-origin"
+                title="Email Preview"
+                className="mt-3 rounded-xl border border-slate-600 w-full bg-white"
+                style={{ height: '300px' }}
+              />
             )}
           </div>
         </div>
