@@ -71,7 +71,21 @@ export default function Dashboard() {
     retry: false,
   })
 
-  const todayViews = analyticsData?.totalViews ?? '—'
+  // Sum all views in the current period
+  const totalViews = analyticsData?.data?.reduce((sum, d) => sum + (d.views || 0), 0) ?? '—'
+
+  const { data: partnersData } = useQuery({
+    queryKey: ['partners-count'],
+    queryFn: async () => {
+      const res = await api.get('/api/partners')
+      return res.data
+    },
+    retry: false,
+  })
+  const partnerCount = partnersData?.partners?.length ?? '—'
+  const activePartnerCount = partnersData?.partners
+    ? partnersData.partners.filter((p) => p.status !== 'stopped' && p.status !== 'inactive').length
+    : '—'
 
   // ── Regular user view ──────────────────────────────────────────────────────
   if (!isAdmin) {
@@ -147,9 +161,9 @@ export default function Dashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="今日の閲覧数" value={todayViews} icon={Eye} color="blue" />
-        <StatCard title="パートナー" value="—" icon={Users} color="violet" />
-        <StatCard title="コンテンツ" value="—" icon={Wand2} color="green" />
+        <StatCard title="今月の閲覧数" value={totalViews} icon={Eye} color="blue" />
+        <StatCard title="パートナー（全体）" value={partnerCount} icon={Users} color="violet" />
+        <StatCard title="パートナー（稼働中）" value={activePartnerCount} icon={Users} color="green" />
       </div>
 
       {/* Partner Management */}
