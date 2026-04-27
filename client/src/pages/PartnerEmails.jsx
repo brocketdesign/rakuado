@@ -4,7 +4,7 @@ import api from '../lib/api'
 import { formatCurrency } from '../lib/utils'
 import { PageHeader, Card, Badge, Button, Tabs, StatCard } from '../components/UI'
 import Modal from '../components/Modal'
-import { Mail, FileText, Send, AlertCircle, CheckCircle, Clock, SendHorizonal } from 'lucide-react'
+import { Mail, FileText, Send, AlertCircle, CheckCircle, Clock, SendHorizonal, PenLine } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const statusColors = {
@@ -29,7 +29,51 @@ export default function PartnerEmails() {
   const [selectedDraft, setSelectedDraft] = useState(null)
   const [testEmailOpen, setTestEmailOpen] = useState(false)
   const [testEmail, setTestEmail] = useState('')
+  const [customEmailOpen, setCustomEmailOpen] = useState(false)
+  const [customSubject, setCustomSubject] = useState('')
+  const [customBody, setCustomBody] = useState('')
+  const [customRecipients, setCustomRecipients] = useState(['all'])
+  const [customPreview, setCustomPreview] = useState(false)
   const queryClient = useQueryClient()
+
+  const { data: partnersData } = useQuery({
+    queryKey: ['partners-list'],
+    queryFn: async () => {
+      const res = await api.get('/api/partners')
+      return res.data
+    },
+  })
+  const partners = partnersData?.partners || []
+
+  const customEmailMutation = useMutation({
+    mutationFn: ({ subject, htmlBody, partnerIds }) =>
+      api.post('/api/partners/emails/send-custom', { subject, htmlBody, partnerIds }),
+    onSuccess: (res) => {
+      const { sent, failed, skipped } = res.data.results
+      toast.success(`送信完了: ${sent.length}件送信、${failed.length}件失敗、${skipped.length}件スキップ`)
+      setCustomEmailOpen(false)
+      setCustomSubject('')
+      setCustomBody('')
+      setCustomRecipients(['all'])
+      setCustomPreview(false)
+    },
+    onError: (err) => toast.error(err?.response?.data?.error || 'カスタムメールの送信に失敗しました'),
+  })
+
+  const handleSendCustomEmail = () => {
+    if (!customSubject.trim() || !customBody.trim()) {
+      toast.error('件名と本文を入力してください')
+      return
+    }
+    if (customRecipients.length === 0) {
+      toast.error('送信先を選択してください')
+      return
+    }
+    const partnerIds = customRecipients.includes('all') ? 'all' : customRecipients
+    const label = customRecipients.includes('all') ? 'すべてのパートナー' : `${customRecipients.length}名`
+    if (!confirm(`${label}にカスタムメールを送信してもよろしいですか？`)) return
+    customEmailMutation.mutate({ subject: customSubject, htmlBody: customBody, partnerIds })
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['partner-emails', period],
@@ -87,6 +131,19 @@ export default function PartnerEmails() {
           <Button variant="secondary" onClick={() => setTestEmailOpen(true)}>
             テストメール
           </Button>
+          <Button
+            className="bg-amber-500 hover:bg-amber-400 text-slate-900"
+            onClick={() => {
+              setCustomSubject('')
+              setCustomBody('')
+              setCustomRecipients(['all'])
+              setCustomPreview(false)
+              setCustomEmailOpen(true)
+            }}
+          >
+            <PenLine size={16} />
+            カスタムメール
+          </Button>
         </div>
       </PageHeader>
 
@@ -139,7 +196,7 @@ export default function PartnerEmails() {
                     <td className="px-4 py-3 text-white font-medium">{d.partnerName || '—'}</td>
                     <td className="px-4 py-3 text-slate-300">{d.domain || '—'}</td>
                     <td className="px-4 py-3 text-slate-300">{d.email || '—'}</td>
-                    <td className="px-4 py-3 text-slate-300">{d.operatingDays || 0}日</td>
+                    <td className="px-4 py-3 text-slate-300">{d.activeDays ?? 0}日</td>
                     <td className="px-4 py-3 text-white font-medium">{formatCurrency(d.paymentAmount || 0)}</td>
                     <td className="px-4 py-3">
                       <Badge variant={statusColors[d.status] || 'default'}>
@@ -186,6 +243,81 @@ export default function PartnerEmails() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Custom Email Modal */}
+      <Modal
+        isOpen={customEmailOpen}
+        onClose={() => setCustomEmailOpen(false)}
+        title="カスタムメール送信 / Send Custom Email"
+        size="lg"
+        footer={
+          <div className="flex gap-3">
+            <Button variant="secondary" onClick={() => setCustomEmailOpen(false)}>キャンセル</Button>
+            <Button
+              className="bg-amber-500 hover:bg-amber-400 text-slate-900"
+              onClick={handleSendCustomEmail}
+              disabled={customEmailMutation.isPending}
+            >
+              <Send size={16} />
+              {customEmailMutation.isPending ? '送信中...' : '送信 / Send'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="rounded-lg bg-blue-900/30 border border-blue-700/50 px-4 py-3 text-sm text-blue-300">
+            選択したパートナー（またはすべて）に任意の内容でメールを送信します。
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-300">送信先 / Recipients</label>
+            <select
+              multiple
+              size={Math.min(partners.length + 1, 8)}
+              value={customRecipients}
+              onChange={(e) => setCustomRecipients(Array.from(e.target.selectedOptions, (o) => o.value))}
+              className="w-full rounded-xl border border-slate-600 bg-slate-800/50 px-3 py-2 text-sm text-white"
+            >
+              <option value="all" className="font-semibold">★ すべてのパートナー / All Partners</option>
+              {partners.map((p) => (
+                <option key={p._id} value={p._id} disabled={!p.email}>
+                  {p.name || '-'}{p.email ? ` (${p.email})` : ' (メールなし)'}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-slate-500">Ctrl（Mac: ⌘）+クリックで複数選択。「すべて」を選ぶと全員に送信。</p>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-300">件名 / Subject</label>
+            <input
+              type="text"
+              value={customSubject}
+              onChange={(e) => setCustomSubject(e.target.value)}
+              placeholder="件名を入力してください"
+              className="w-full rounded-xl border border-slate-600 bg-slate-800/50 px-4 py-2.5 text-sm text-white placeholder-slate-500"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-300">本文 (HTML可) / Body</label>
+            <textarea
+              rows={10}
+              value={customBody}
+              onChange={(e) => setCustomBody(e.target.value)}
+              placeholder="メール本文を入力してください。HTMLタグ使用可。"
+              className="w-full rounded-xl border border-slate-600 bg-slate-800/50 px-4 py-2.5 text-sm text-white placeholder-slate-500 font-mono"
+            />
+          </div>
+          <div>
+            <Button variant="outline" size="sm" onClick={() => setCustomPreview((v) => !v)}>
+              {customPreview ? 'プレビューを閉じる' : 'プレビュー / Preview'}
+            </Button>
+            {customPreview && customBody && (
+              <div className="mt-3 rounded-xl border border-slate-600 bg-white p-4 max-h-64 overflow-y-auto">
+                <div dangerouslySetInnerHTML={{ __html: customBody }} />
+              </div>
+            )}
+          </div>
+        </div>
       </Modal>
 
       {/* Test Email Modal */}

@@ -29,12 +29,6 @@ const CANDIDATE_STEP_LABELS = {
   data_waiting:         'データ収集中',
   reviewing:            '審査中',
 }
-  submitted:            'サイト登録',
-  metrics_snippet_sent: 'スクリプト設置',
-  analytics_requested:  'データ収集中',
-  data_waiting:         'データ収集中',
-  reviewing:            '審査中',
-}
 
 function hoursLeftFrom(startedAt) {
   if (!startedAt) return null
