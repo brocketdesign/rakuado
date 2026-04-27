@@ -354,12 +354,6 @@ block mainContent
             }
         }
 
-        /* Preview modal scrollable body */
-        #email-preview-modal .modal-body {
-            max-height: 70vh;
-            overflow-y: auto;
-        }
-
     script.
         let currentPeriod = 'current';
         let drafts = [];
@@ -411,7 +405,19 @@ block mainContent
                 const body = document.getElementById('custom-email-body').value;
                 const previewArea = document.getElementById('custom-email-preview-area');
                 const previewContent = document.getElementById('custom-email-preview-content');
-                previewContent.innerHTML = body;
+                // Use a sandboxed iframe to safely render the HTML preview
+                previewContent.innerHTML = '';
+                const iframe = document.createElement('iframe');
+                iframe.sandbox = 'allow-same-origin';
+                iframe.style.cssText = 'width:100%;min-height:300px;border:none;';
+                previewContent.appendChild(iframe);
+                iframe.contentDocument.open();
+                iframe.contentDocument.write(body);
+                iframe.contentDocument.close();
+                // Adjust iframe height to content
+                iframe.onload = () => {
+                    iframe.style.height = (iframe.contentDocument.body.scrollHeight + 20) + 'px';
+                };
                 previewArea.style.display = 'block';
             });
 

@@ -618,10 +618,13 @@ router.post('/send-custom', async (req, res) => {
     }
 
     let partners;
-    if (!partnerIds || partnerIds === 'all' || (Array.isArray(partnerIds) && partnerIds.length === 0)) {
+    if (!partnerIds || partnerIds === 'all') {
       // Send to all partners that have an email address
       partners = await db.collection('partners').find({ email: { $exists: true, $ne: '' } }).sort({ order: 1 }).toArray();
     } else if (Array.isArray(partnerIds)) {
+      if (partnerIds.length === 0) {
+        return res.status(400).json({ success: false, error: 'No partners selected' });
+      }
       partners = await db.collection('partners').find({
         _id: { $in: partnerIds.map(id => new ObjectId(id)) },
         email: { $exists: true, $ne: '' }
@@ -636,7 +639,8 @@ router.post('/send-custom', async (req, res) => {
 
     const results = { sent: [], failed: [], skipped: [] };
 
-    for (const partner of partners) {
+    for (let i = 0; i < partners.length; i++) {
+      const partner = partners[i];
       if (!partner.email) {
         results.skipped.push({ partnerName: partner.name, reason: 'No email configured' });
         continue;
@@ -648,7 +652,7 @@ router.post('/send-custom', async (req, res) => {
         results.failed.push({ partnerName: partner.name, email: partner.email, error: err.message });
       }
       // Rate-limit: ~1.6 emails/sec
-      if (partners.indexOf(partner) < partners.length - 1) {
+      if (i < partners.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 600));
       }
     }
