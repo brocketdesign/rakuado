@@ -670,10 +670,17 @@ router.get('/candidate-sites', async (req, res) => {
     const { days = '30' } = req.query;
     const numDays = Math.min(parseInt(days) || 30, 90);
 
-    const candidateStatuses = ['reviewing', 'data_waiting', 'analytics_requested', 'metrics_snippet_sent'];
+    const candidateStatuses = ['reviewing', 'data_waiting', 'analytics_requested', 'metrics_snippet_sent', 'pending'];
+    const candidateSteps = ['reviewing', 'data_waiting', 'analytics_requested', 'metrics_snippet_sent'];
 
     const requests = await global.db.collection('partnerRequests')
-      .find({ status: { $in: candidateStatuses } })
+      .find({
+        $or: [
+          { status: { $in: candidateStatuses }, currentStep: { $ne: 'submitted' } },
+          { currentStep: { $in: candidateSteps } },
+        ],
+        status: { $nin: ['approved', 'rejected', 'snippet_sent', 'snippet_verified'] },
+      })
       .sort({ createdAt: -1 })
       .toArray();
 

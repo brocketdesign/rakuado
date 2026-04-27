@@ -10,6 +10,14 @@ const ensureMembership = require('../../middleware/ensureMembership');
 router.use(ensureAuthenticated);
 router.use(ensureMembership);
 
+// Admin-only guard
+router.use((req, res, next) => {
+  if (!req.user || !req.user.isAdmin) {
+    return res.status(403).json({ success: false, error: 'Admin access required' });
+  }
+  next();
+});
+
 // Get all partner requests
 router.get('/', async (req, res) => {
   try {
@@ -482,6 +490,9 @@ router.post('/:id/send-metrics-snippet', async (req, res) => {
     // Advance step to 'metrics_snippet_sent' only if still at the initial submitted step
     const nextStep = request.currentStep === 'submitted' ? 'metrics_snippet_sent' : request.currentStep;
 
+    // Also update status so it appears in candidate-sites
+    const statusUpdate = nextStep === 'metrics_snippet_sent' ? 'metrics_snippet_sent' : request.status;
+
     await col.updateOne(
       { _id: new ObjectId(id) },
       {
@@ -489,6 +500,7 @@ router.post('/:id/send-metrics-snippet', async (req, res) => {
           metricsSnippetSent: true,
           metricsSnippetCode,
           currentStep: nextStep,
+          status: statusUpdate,
           updatedAt: new Date(),
         },
       }
@@ -498,6 +510,31 @@ router.post('/:id/send-metrics-snippet', async (req, res) => {
   } catch (error) {
     console.error('Error sending metrics snippet:', error);
     res.status(500).json({ success: false, error: 'Failed to generate metrics snippet' });
+  }
+});
+
+// ─── Move to review (data_waiting / analytics_requested → reviewing) ────────────
+router.post('/:id/move-to-review', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const col = global.db.collection('partnerRequests');
+    let request;
+    try {
+      request = await col.findOne({ _id: new ObjectId(id) });
+    } catch {
+      return res.status(400).json({ success: false, error: 'Invalid request ID' });
+    }
+    if (!request) return res.status(404).json({ success: false, error: 'Request not found' });
+
+    await col.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { status: 'reviewing', currentStep: 'reviewing', updatedAt: new Date() } }
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error moving to review:', error);
+    res.status(500).json({ success: false, error: 'Failed to move to review' });
   }
 });
 

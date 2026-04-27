@@ -544,6 +544,7 @@ router.post('/check-metrics-script', async (req, res) => {
       // Automatically start 72h data collection — skip the intermediate metrics_snippet_sent step
       if (['submitted', 'metrics_snippet_sent'].includes(request.currentStep)) {
         update.currentStep = 'data_waiting';
+        update.status = 'data_waiting';
         update.dataWaitingStartedAt = now;
       }
       await collection.updateOne({ _id: request._id }, { $set: update });
@@ -575,7 +576,7 @@ router.post('/start-data-waiting', async (req, res) => {
     const now = new Date();
     await collection.updateOne(
       { _id: request._id },
-      { $set: { currentStep: 'data_waiting', dataWaitingStartedAt: now, updatedAt: now } }
+      { $set: { currentStep: 'data_waiting', status: 'data_waiting', dataWaitingStartedAt: now, updatedAt: now } }
     );
 
     res.json({ success: true, dataWaitingStartedAt: now });

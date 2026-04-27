@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api'
 import { formatNumber } from '../lib/utils'
 import { PageHeader, StatCard, Card, Tabs, Button, Badge } from '../components/UI'
-import { BarChart3, Eye, MousePointerClick, TrendingUp, ExternalLink, Users, Clock } from 'lucide-react'
+import { BarChart3, Eye, MousePointerClick, TrendingUp, ExternalLink, Users, Clock, CheckCircle, XCircle, PlayCircle } from 'lucide-react'
+import toast from 'react-hot-toast'
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from 'recharts'
@@ -28,6 +29,12 @@ const CANDIDATE_STEP_LABELS = {
   data_waiting:         'データ収集中',
   reviewing:            '審査中',
 }
+  submitted:            'サイト登録',
+  metrics_snippet_sent: 'スクリプト設置',
+  analytics_requested:  'データ収集中',
+  data_waiting:         'データ収集中',
+  reviewing:            '審査中',
+}
 
 function hoursLeftFrom(startedAt) {
   if (!startedAt) return null
@@ -43,6 +50,7 @@ export default function Analytics() {
   const [comparisonMetric, setComparisonMetric] = useState('views')
   const [hiddenSites, setHiddenSites] = useState(new Set())
   const loadMoreRef = useRef(null)
+  const queryClient = useQueryClient()
 
   // Reset infinite scroll count when period changes
   useEffect(() => { setVisibleCount(5) }, [period])
@@ -92,6 +100,15 @@ export default function Analytics() {
     enabled: tab === 'candidates',
   })
   const candidates = candidatesData?.candidates || []
+
+  const candidateActionMutation = useMutation({
+    mutationFn: ({ id, action }) => api.post(`/api/partner-recruitment/${id}/${action}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['analytics-candidate-sites'])
+      toast.success('更新しました')
+    },
+    onError: () => toast.error('操作に失敗しました'),
+  })
 
   // ── Infinite scroll sentinel ──────────────────────────────
   const summaryList = sitesSummary?.sites || []
@@ -516,17 +533,59 @@ export default function Analytics() {
                         </div>
                       </div>
 
-                      {/* Right: metrics */}
-                      <div className="flex shrink-0 items-center gap-6 text-right">
-                        <div>
-                          <div className="text-xs text-slate-500">セッション</div>
-                          <div className="font-semibold text-white">{formatNumber(c.metrics.totalSessions)}</div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-slate-500">PV</div>
-                          <div className={`text-xl font-bold ${hasData ? 'text-white' : 'text-slate-600'}`}>
-                            {formatNumber(c.metrics.totalPageviews)}
+                      {/* Right: metrics + actions */}
+                      <div className="flex shrink-0 flex-col items-end gap-3">
+                        <div className="flex items-center gap-6 text-right">
+                          <div>
+                            <div className="text-xs text-slate-500">セッション</div>
+                            <div className="font-semibold text-white">{formatNumber(c.metrics.totalSessions)}</div>
                           </div>
+                          <div>
+                            <div className="text-xs text-slate-500">PV</div>
+                            <div className={`text-xl font-bold ${hasData ? 'text-white' : 'text-slate-600'}`}>
+                              {formatNumber(c.metrics.totalPageviews)}
+                            </div>
+                          </div>
+                        </div>
+                        {/* Admin action buttons */}
+                        <div className="flex flex-wrap gap-2">
+                          {/* Move to review: for sites in data_waiting / analytics_requested */}
+                          {['data_waiting', 'analytics_requested', 'metrics_snippet_sent'].includes(c.status) && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={candidateActionMutation.isPending}
+                              onClick={() => candidateActionMutation.mutate({ id: c.id, action: 'move-to-review' })}
+                            >
+                              <PlayCircle size={13} />
+                              審査開始
+                            </Button>
+                          )}
+                          {/* Approve: for sites already in reviewing */}
+                          {c.status === 'reviewing' && (
+                            <Button
+                              size="sm"
+                              disabled={candidateActionMutation.isPending}
+                              onClick={() => candidateActionMutation.mutate({ id: c.id, action: 'approve' })}
+                            >
+                              <CheckCircle size={13} />
+                              承認する
+                            </Button>
+                          )}
+                          {/* Reject: always available */}
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            disabled={candidateActionMutation.isPending}
+                            onClick={() => {
+                              if (window.confirm(`${c.domain || c.blogUrl} を却下しますか？`)) {
+                                candidateActionMutation.mutate({ id: c.id, action: 'reject' })
+                              }
+                            }}
+                          >
+                            <XCircle size={13} />
+                            却下
+                          </Button>
                         </div>
                       </div>
                     </div>

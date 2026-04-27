@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api'
 import { PageHeader, Card, Badge, Button, EmptyState } from '../components/UI'
 import Modal from '../components/Modal'
-import { UserPlus, Search, ExternalLink, Activity, Timer, CheckCircle, Code } from 'lucide-react'
+import { UserPlus, Search, ExternalLink, Activity, Timer, CheckCircle, Code, PlayCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 // Mirrors the STEPS in PartnerPortal
@@ -213,8 +213,22 @@ export default function PartnerRecruitment() {
         footer={
           selected && (
             <div className="flex flex-wrap gap-2">
-              {/* Approve — only when reviewing */}
-              {selected.currentStep === 'reviewing' && (
+              {/* Send metrics snippet — at the start of the pipeline */}
+              {['submitted', 'pending'].includes(selected.currentStep) && !selected.metricsSnippetSent && (
+                <Button variant="outline" size="sm" disabled={actionMutation.isPending}
+                  onClick={() => actionMutation.mutate({ id: selected._id, action: 'send-metrics-snippet' })}>
+                  <Activity size={14} /> 計測スニペット送付
+                </Button>
+              )}
+              {/* Move to review — for data collecting sites */}
+              {['data_waiting', 'analytics_requested', 'metrics_snippet_sent'].includes(selected.currentStep) && selected.status !== 'reviewing' && (
+                <Button variant="outline" size="sm" disabled={actionMutation.isPending}
+                  onClick={() => actionMutation.mutate({ id: selected._id, action: 'move-to-review' })}>
+                  <PlayCircle size={14} /> 審査開始
+                </Button>
+              )}
+              {/* Approve — when reviewing or data collection done */}
+              {(selected.currentStep === 'reviewing' || (selected.status === 'reviewing')) && (
                 <Button size="sm" disabled={actionMutation.isPending}
                   onClick={() => actionMutation.mutate({ id: selected._id, action: 'approve' })}>
                   <CheckCircle size={14} /> 承認する
@@ -331,7 +345,7 @@ export default function PartnerRecruitment() {
             )}
 
             {/* ── Notes + payment proposal ────────────────────────── */}
-            {selected.currentStep === 'reviewing' && (
+            {(selected.currentStep === 'reviewing' || selected.status === 'reviewing') && (
               <div className="space-y-3">
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-slate-300">社内メモ</label>

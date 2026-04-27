@@ -625,6 +625,9 @@ router.post('/send-custom', async (req, res) => {
       if (partnerIds.length === 0) {
         return res.status(400).json({ success: false, error: 'No partners selected' });
       }
+      if (!partnerIds.every(id => ObjectId.isValid(id))) {
+        return res.status(400).json({ success: false, error: 'Invalid partner ID format' });
+      }
       partners = await db.collection('partners').find({
         _id: { $in: partnerIds.map(id => new ObjectId(id)) },
         email: { $exists: true, $ne: '' }
