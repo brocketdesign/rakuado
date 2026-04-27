@@ -36,17 +36,20 @@ block mainContent
                                     | 前期間 / Previous Period
                         .col-auto
                             span#period-info.text-muted.small
-                        .col-auto
+                        .col-auto.d-flex.flex-wrap.gap-2.align-items-center
                             button#generate-drafts-btn.btn.btn-success
                                 i.fas.fa-magic.me-2
                                 | ドラフト生成 / Generate Drafts
-                            button#send-all-btn.btn.btn-primary.ms-2(disabled)
+                            button#send-all-btn.btn.btn-primary(disabled)
                                 i.fas.fa-paper-plane.me-2
                                 | 一括送信 / Send All
-                            button#test-email-btn.btn.btn-outline-info.ms-2
+                            button#custom-email-btn.btn.btn-warning
+                                i.fas.fa-pen-alt.me-2
+                                | カスタムメール / Custom Email
+                            button#test-email-btn.btn.btn-outline-info
                                 i.fas.fa-flask.me-2
                                 | テスト送信 / Test Email
-                            span#action-status.text-muted.small.ms-2
+                            span#action-status.text-muted.small
 
     // Email Status Overview
     section.status-overview.mb-5
@@ -99,12 +102,12 @@ block mainContent
                         table#emails-table.table.table-hover.mb-0
                             thead.table-light
                                 tr
-                                    th
+                                    th(style="width:40px")
                                         input#select-all(type="checkbox")
                                     th.fw-bold パートナー名
-                                    th.fw-bold ドメイン
-                                    th.fw-bold メールアドレス
-                                    th.fw-bold 稼働日数
+                                    th.fw-bold.d-none.d-md-table-cell ドメイン
+                                    th.fw-bold.d-none.d-lg-table-cell メールアドレス
+                                    th.fw-bold.d-none.d-md-table-cell 稼働日数
                                     th.fw-bold 支払い額
                                     th.fw-bold ステータス
                                     th.fw-bold アクション
@@ -115,18 +118,19 @@ block mainContent
                                             span.visually-hidden Loading...
 
     // Email Preview Modal
-    #email-preview-modal.modal.fade(tabindex="-1")
-        .modal-dialog.modal-xl
+    #email-preview-modal.modal.fade(tabindex="-1" aria-labelledby="email-preview-modal-title" aria-hidden="true")
+        .modal-dialog.modal-xl.modal-dialog-scrollable
             .modal-content
                 .modal-header
-                    h5.modal-title
+                    h5.modal-title#email-preview-modal-title
                         i.fas.fa-eye.me-2
                         | メールプレビュー / Email Preview
-                    button.btn-close(type="button" data-bs-dismiss="modal")
-                .modal-body
-                    #email-preview-content
+                    button.btn-close(type="button" data-bs-dismiss="modal" aria-label="Close")
+                .modal-body.p-0
+                    #email-preview-content.p-4
                         .text-center
                             .spinner-border.text-primary(role="status")
+                                span.visually-hidden Loading...
                 .modal-footer
                     button.btn.btn-secondary(type="button" data-bs-dismiss="modal") 閉じる / Close
                     button#send-from-preview-btn.btn.btn-primary(type="button" disabled)
@@ -196,6 +200,44 @@ block mainContent
                     button#send-test-email-btn.btn.btn-info(type="button")
                         i.fas.fa-paper-plane.me-2
                         | テスト送信 / Send Test
+
+    // Custom Email Modal
+    #custom-email-modal.modal.fade(tabindex="-1" aria-labelledby="custom-email-modal-title" aria-hidden="true")
+        .modal-dialog.modal-xl.modal-dialog-scrollable
+            .modal-content
+                .modal-header.bg-warning.text-dark
+                    h5.modal-title#custom-email-modal-title
+                        i.fas.fa-pen-alt.me-2
+                        | カスタムメール送信 / Send Custom Email
+                    button.btn-close(type="button" data-bs-dismiss="modal" aria-label="Close")
+                .modal-body
+                    .alert.alert-info
+                        i.fas.fa-info-circle.me-2
+                        | 選択したパートナー（またはすべてのパートナー）に任意の内容でメールを送信します。
+                    form#custom-email-form
+                        .mb-3
+                            label.form-label.fw-bold(for="custom-email-recipients") 送信先 / Recipients
+                            select#custom-email-recipients.form-select(multiple size="6")
+                                option.fw-bold(value="all") ★ すべてのパートナー / All Partners
+                            small.text-muted Ctrlキー（Macは⌘）を押しながらクリックで複数選択。「すべて」を選ぶと全員に送信。
+                        .mb-3
+                            label.form-label.fw-bold(for="custom-email-subject") 件名 / Subject
+                            input#custom-email-subject.form-control(type="text" required placeholder="件名を入力してください")
+                        .mb-3
+                            label.form-label.fw-bold(for="custom-email-body") 本文 (HTML可) / Body (HTML allowed)
+                            textarea#custom-email-body.form-control(rows="12" required placeholder="メール本文を入力してください。HTMLタグ使用可。")
+                        .mb-3
+                            button#preview-custom-email-btn.btn.btn-outline-secondary(type="button")
+                                i.fas.fa-eye.me-2
+                                | プレビュー / Preview
+                        #custom-email-preview-area(style="display:none")
+                            label.form-label.fw-bold プレビュー / Preview
+                            .border.rounded.p-3.bg-white#custom-email-preview-content
+                .modal-footer
+                    button.btn.btn-secondary(type="button" data-bs-dismiss="modal") キャンセル / Cancel
+                    button#send-custom-email-btn.btn.btn-warning.text-dark(type="button")
+                        i.fas.fa-paper-plane.me-2
+                        | 送信 / Send
 
     style.
         .hero-section {
@@ -277,9 +319,45 @@ block mainContent
             font-size: 0.875rem;
         }
 
+        /* Responsive table: stack cells on small screens */
+        @media (max-width: 767px) {
+            #emails-table thead {
+                display: none;
+            }
+            #emails-table tbody tr {
+                display: block;
+                border: 1px solid #dee2e6;
+                border-radius: 0.5rem;
+                margin-bottom: 1rem;
+                padding: 0.5rem;
+            }
+            #emails-table tbody td {
+                display: flex !important;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.4rem 0.5rem;
+                border: none;
+                border-bottom: 1px solid #f0f0f0;
+                font-size: 0.875rem;
+            }
+            #emails-table tbody td:last-child {
+                border-bottom: none;
+                flex-wrap: wrap;
+                gap: 0.25rem;
+            }
+            #emails-table tbody td[data-label]::before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: #6c757d;
+                min-width: 110px;
+                flex-shrink: 0;
+            }
+        }
+
     script.
         let currentPeriod = 'current';
         let drafts = [];
+        let allPartners = [];
         let currentDraftId = null;
         let currentFilterStatus = 'all';
         let selectedDraftIds = new Set();
@@ -287,6 +365,7 @@ block mainContent
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
             await loadDrafts();
+            await loadPartnersForCustomEmail();
             setupEventListeners();
         });
         
@@ -312,6 +391,38 @@ block mainContent
             
             // Send all button
             document.getElementById('send-all-btn').addEventListener('click', sendAllDrafts);
+
+            // Custom email button
+            document.getElementById('custom-email-btn').addEventListener('click', () => {
+                document.getElementById('custom-email-form').reset();
+                document.getElementById('custom-email-preview-area').style.display = 'none';
+                const modal = new bootstrap.Modal(document.getElementById('custom-email-modal'));
+                modal.show();
+            });
+
+            // Preview custom email button
+            document.getElementById('preview-custom-email-btn').addEventListener('click', () => {
+                const body = document.getElementById('custom-email-body').value;
+                const previewArea = document.getElementById('custom-email-preview-area');
+                const previewContent = document.getElementById('custom-email-preview-content');
+                // Use a sandboxed iframe to safely render the HTML preview
+                previewContent.innerHTML = '';
+                const iframe = document.createElement('iframe');
+                iframe.sandbox = '';
+                iframe.style.cssText = 'width:100%;min-height:300px;border:none;';
+                previewContent.appendChild(iframe);
+                iframe.contentDocument.open();
+                iframe.contentDocument.write(body);
+                iframe.contentDocument.close();
+                // Adjust iframe height to content
+                iframe.onload = () => {
+                    iframe.style.height = (iframe.contentDocument.body.scrollHeight + 20) + 'px';
+                };
+                previewArea.style.display = 'block';
+            });
+
+            // Send custom email button
+            document.getElementById('send-custom-email-btn').addEventListener('click', sendCustomEmail);
             
             // Test email button
             document.getElementById('test-email-btn').addEventListener('click', () => {
@@ -414,18 +525,18 @@ block mainContent
                                ${draft.status === 'sent' || !draft.hasData ? 'disabled' : ''}
                                ${selectedDraftIds.has(draft._id) ? 'checked' : ''}>
                     </td>
-                    <td>${partnerName}</td>
-                    <td>${domain}</td>
-                    <td>${partnerEmail}</td>
-                    <td>${draft.activeDays || 0} / ${draft.totalDays || 0}日</td>
-                    <td>¥${(draft.paymentAmount || 0).toLocaleString('ja-JP')}</td>
-                    <td>
+                    <td data-label="パートナー名">${partnerName}</td>
+                    <td class="d-none d-md-table-cell" data-label="ドメイン">${domain}</td>
+                    <td class="d-none d-lg-table-cell" data-label="メールアドレス">${partnerEmail}</td>
+                    <td class="d-none d-md-table-cell" data-label="稼働日数">${draft.activeDays || 0} / ${draft.totalDays || 0}日</td>
+                    <td data-label="支払い額">¥${(draft.paymentAmount || 0).toLocaleString('ja-JP')}</td>
+                    <td data-label="ステータス">
                         <span class="status-badge status-${draft.status}">
                             ${getStatusLabel(draft.status)}
                         </span>
                         ${errorMessage}
                     </td>
-                    <td>
+                    <td data-label="アクション">
                         <button class="btn btn-sm btn-outline-primary action-btn me-1" 
                                 onclick="previewEmail('${draft._id}')">
                             <i class="fas fa-eye"></i> プレビュー
@@ -785,5 +896,86 @@ block mainContent
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>テスト送信 / Send Test';
+            }
+        }
+
+        // Load partners list for custom email modal
+        async function loadPartnersForCustomEmail() {
+            try {
+                const response = await fetch('/api/partners');
+                const data = await response.json();
+                if (data.success) {
+                    allPartners = data.partners;
+                    const select = document.getElementById('custom-email-recipients');
+                    // Remove existing partner options (keep "all" option)
+                    const existingOptions = select.querySelectorAll('option:not([value="all"])');
+                    existingOptions.forEach(o => o.remove());
+                    allPartners.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = p._id;
+                        const nameText = p.name || '-';
+                        const emailText = p.email ? ` (${p.email})` : ' (メールなし)';
+                        opt.textContent = nameText + emailText;
+                        if (!p.email) opt.disabled = true;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading partners for custom email:', error);
+            }
+        }
+
+        // Send custom email to selected or all partners
+        async function sendCustomEmail() {
+            const select = document.getElementById('custom-email-recipients');
+            const subject = document.getElementById('custom-email-subject').value.trim();
+            const htmlBody = document.getElementById('custom-email-body').value.trim();
+
+            if (!subject || !htmlBody) {
+                showAlert('error', '件名と本文を入力してください');
+                return;
+            }
+
+            const selectedValues = Array.from(select.selectedOptions).map(o => o.value);
+            if (selectedValues.length === 0) {
+                showAlert('error', '送信先を選択してください');
+                return;
+            }
+
+            const sendToAll = selectedValues.includes('all');
+            const partnerIds = sendToAll ? 'all' : selectedValues;
+            const recipientLabel = sendToAll ? 'すべてのパートナー' : `${selectedValues.length}名`;
+
+            if (!confirm(`${recipientLabel}にカスタムメールを送信してもよろしいですか？`)) return;
+
+            const btn = document.getElementById('send-custom-email-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>送信中...';
+
+            try {
+                const response = await fetch('/api/partners/emails/send-custom', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subject, htmlBody, partnerIds })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const { sent, failed, skipped } = data.results;
+                    showAlert('success',
+                        `カスタムメール送信完了: 送信 ${sent.length}件、失敗 ${failed.length}件、スキップ ${skipped.length}件`);
+                    bootstrap.Modal.getInstance(document.getElementById('custom-email-modal')).hide();
+                    document.getElementById('custom-email-form').reset();
+                    document.getElementById('custom-email-preview-area').style.display = 'none';
+                } else {
+                    showAlert('error', data.error || 'カスタムメールの送信に失敗しました');
+                }
+            } catch (error) {
+                console.error('Error sending custom email:', error);
+                showAlert('error', 'カスタムメールの送信中にエラーが発生しました');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>送信 / Send';
             }
         }

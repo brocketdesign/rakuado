@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { ObjectId } = require('mongodb');
-const { sendEmail, sendEmailBatch } = require('../../services/email');
+const { sendEmail, sendEmailBatch, sendRawEmail } = require('../../services/email');
 const { 
   getCustomMonthPeriod, 
   countActiveDaysFromAnalytics, 
@@ -601,6 +601,70 @@ router.post('/send-test', async (req, res) => {
       success: false, 
       error: error.message || 'Failed to send test email' 
     });
+  }
+});
+
+// POST send a one-time custom email to selected or all partners
+router.post('/send-custom', async (req, res) => {
+  try {
+    const db = global.db;
+    const { subject, htmlBody, partnerIds } = req.body;
+
+    if (!subject || !htmlBody) {
+      return res.status(400).json({
+        success: false,
+        error: 'Subject and HTML body are required'
+      });
+    }
+
+    let partners;
+    if (!partnerIds || partnerIds === 'all') {
+      // Send to all partners that have an email address
+      partners = await db.collection('partners').find({ email: { $exists: true, $ne: '' } }).sort({ order: 1 }).toArray();
+    } else if (Array.isArray(partnerIds)) {
+      if (partnerIds.length === 0) {
+        return res.status(400).json({ success: false, error: 'No partners selected' });
+      }
+      partners = await db.collection('partners').find({
+        _id: { $in: partnerIds.map(id => new ObjectId(id)) },
+        email: { $exists: true, $ne: '' }
+      }).toArray();
+    } else {
+      return res.status(400).json({ success: false, error: 'Invalid partnerIds value' });
+    }
+
+    if (partners.length === 0) {
+      return res.status(400).json({ success: false, error: 'No partners with email addresses found' });
+    }
+
+    const results = { sent: [], failed: [], skipped: [] };
+
+    for (let i = 0; i < partners.length; i++) {
+      const partner = partners[i];
+      if (!partner.email) {
+        results.skipped.push({ partnerName: partner.name, reason: 'No email configured' });
+        continue;
+      }
+      try {
+        await sendRawEmail(partner.email, subject, htmlBody);
+        results.sent.push({ partnerName: partner.name, email: partner.email });
+      } catch (err) {
+        results.failed.push({ partnerName: partner.name, email: partner.email, error: err.message });
+      }
+      // Rate-limit: ~1.6 emails/sec
+      if (i < partners.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 600));
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Custom email sending complete. Sent: ${results.sent.length}, Failed: ${results.failed.length}, Skipped: ${results.skipped.length}`,
+      results
+    });
+  } catch (error) {
+    console.error('Error sending custom emails:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to send custom emails' });
   }
 });
 
