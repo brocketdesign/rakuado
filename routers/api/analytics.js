@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = global.db;
+const getDb = () => global.db;
 const ensureAuthenticated = require('../../middleware/authMiddleware');
 
 // All analytics routes require authentication and admin access
@@ -89,7 +89,7 @@ router.get('/data', async (req, res) => {
     const dayBeforeStart = new Date(startDate);
     dayBeforeStart.setDate(dayBeforeStart.getDate() - 1);
 
-    const data = await db.collection('analyticsDaily')
+    const data = await getDb().collection('analyticsDaily')
       .find({
         date: {
           $gte: dayBeforeStart.toISOString().split('T')[0],
@@ -199,7 +199,7 @@ router.get('/data', async (req, res) => {
 // GET available sites
 router.get('/sites', async (req, res) => {
   try {
-    const dailyData = await db.collection('analyticsDaily')
+    const dailyData = await getDb().collection('analyticsDaily')
       .find({})
       .sort({ date: -1 })
       .limit(1)
@@ -238,7 +238,7 @@ router.get('/summary', async (req, res) => {
     const dayBeforePeriod = new Date(startDate);
     dayBeforePeriod.setDate(dayBeforePeriod.getDate() - 1);
 
-    const data = await db.collection('analyticsDaily')
+    const data = await getDb().collection('analyticsDaily')
       .find({
         date: {
           $gte: dayBeforePeriod.toISOString().split('T')[0],
@@ -302,7 +302,7 @@ router.get('/summary', async (req, res) => {
     const dayBeforePrevStart = new Date(prevStart);
     dayBeforePrevStart.setDate(dayBeforePrevStart.getDate() - 1);
 
-    const prevData = await db.collection('analyticsDaily')
+    const prevData = await getDb().collection('analyticsDaily')
       .find({
         date: {
           $gte: dayBeforePrevStart.toISOString().split('T')[0],
@@ -391,10 +391,10 @@ router.post('/initialize', async (req, res) => {
       const dateStr = current.toISOString().split('T')[0];
       
       // Check if record already exists
-      const existing = await db.collection('analyticsDaily').findOne({ date: dateStr });
+      const existing = await getDb().collection('analyticsDaily').findOne({ date: dateStr });
       
       if (!existing) {
-        await db.collection('analyticsDaily').insertOne({
+        await getDb().collection('analyticsDaily').insertOne({
           date: dateStr,
           timestamp: current.getTime(),
           total: { views: 0, clicks: 0 },
@@ -423,7 +423,7 @@ router.post('/sync-today', async (req, res) => {
     const todayStr = today.toISOString().split('T')[0];
     
     // Get all popups and their current refery data
-    const popups = await db.collection('referalPopups').find({}).toArray();
+    const popups = await getDb().collection('referalPopups').find({}).toArray();
     
     let totalViews = 0;
     let totalClicks = 0;
@@ -447,7 +447,7 @@ router.post('/sync-today', async (req, res) => {
     }
 
     // Update today's analytics record
-    await db.collection('analyticsDaily').replaceOne(
+    await getDb().collection('analyticsDaily').replaceOne(
       { date: todayStr },
       {
         date: todayStr,
@@ -484,7 +484,7 @@ router.get('/sites-summary', async (req, res) => {
     const dayBeforeStart = new Date(startDate);
     dayBeforeStart.setDate(dayBeforeStart.getDate() - 1);
 
-    const data = await db.collection('analyticsDaily')
+    const data = await getDb().collection('analyticsDaily')
       .find({
         date: {
           $gte: dayBeforeStart.toISOString().split('T')[0],
@@ -573,7 +573,7 @@ router.get('/comparison', async (req, res) => {
     const dayBeforeStart = new Date(startDate);
     dayBeforeStart.setDate(dayBeforeStart.getDate() - 1);
 
-    const data = await db.collection('analyticsDaily')
+    const data = await getDb().collection('analyticsDaily')
       .find({
         date: {
           $gte: dayBeforeStart.toISOString().split('T')[0],
@@ -673,7 +673,7 @@ router.get('/candidate-sites', async (req, res) => {
     const candidateStatuses = ['reviewing', 'data_waiting', 'analytics_requested', 'metrics_snippet_sent', 'pending'];
     const candidateSteps = ['reviewing', 'data_waiting', 'analytics_requested', 'metrics_snippet_sent'];
 
-    const requests = await global.db.collection('partnerRequests')
+    const requests = await getDb().collection('partnerRequests')
       .find({
         $or: [
           { status: { $in: candidateStatuses }, currentStep: { $ne: 'submitted' } },
@@ -695,7 +695,7 @@ router.get('/candidate-sites', async (req, res) => {
       let metrics = { totalPageviews: 0, totalSessions: 0, daily: [] };
 
       if (domain) {
-        const records = await global.db.collection('partnerMetricsDaily')
+        const records = await getDb().collection('partnerMetricsDaily')
           .find({ domain, date: { $gte: start, $lte: today } })
           .sort({ date: 1 })
           .toArray();

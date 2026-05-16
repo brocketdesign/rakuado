@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const db = global.db;
-const POPUPS = db.collection('referalPopups');
+const getDb = () => global.db;
+const getPopups = () => global.db.collection('referalPopups');
 const multer = require('multer');
 const aws = require('aws-sdk');
 const path = require('path');
@@ -114,7 +114,7 @@ const normalizeSlug = (slugRaw = '') => {
 
 // Function to reset view and click data for all popups
 async function resetViewClickData() {
-  await POPUPS.updateMany(
+  await getPopups().updateMany(
     {},
     {
       $set: {
@@ -135,7 +135,7 @@ router.post('/reset', ensureAuthenticated, requireAdmin, async (req, res) => {
 // GET /list -- list all popups for the admin dashboard
 router.get('/list', ensureAuthenticated, requireAdmin, async (req, res) => {
   try {
-    const popups = await POPUPS.find({}).sort({ order: 1 }).toArray();
+    const popups = await getPopups().find({}).sort({ order: 1 }).toArray();
     const result = popups.map((p) => {
       const refery = Array.isArray(p.refery) ? p.refery : [];
       return {
@@ -161,7 +161,7 @@ router.get('/info', ensureAuthenticated, requireAdmin, async (req, res) => {
   let id = req.query.popup;
   if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
   try {
-    const doc = await POPUPS.findOne({ _id: new ObjectId(id) });
+    const doc = await getPopups().findOne({ _id: new ObjectId(id) });
     if (!doc) return res.status(404).json({ error: 'Not found' });
     const recentRefery = filterRecentRefery(doc.refery);
     const views24h = recentRefery.reduce((sum, entry) => sum + (entry.view || 0), 0);
@@ -186,7 +186,7 @@ router.get('/info', ensureAuthenticated, requireAdmin, async (req, res) => {
 
 // GET enabled popup in rotation (for frontend) - returns one popup at a time
 router.get('/enabled', async (req, res) => {
-  const popups = await POPUPS.find({ 
+  const popups = await getPopups().find({ 
     enabled: { $ne: false }
   }).sort({ order: 1 }).toArray();
 
@@ -213,11 +213,11 @@ router.get('/register-view', async (req, res) => {
   let id = req.query.popup;
   const domain = req.query.domain || 'unknown';
   if (!isValidObjectId(id)) return res.sendStatus(400);
-  const popup = await POPUPS.findOne({ _id: new ObjectId(id) });
+  const popup = await getPopups().findOne({ _id: new ObjectId(id) });
   if (!popup) return res.sendStatus(404);
   
   // Update popup stats
-  await POPUPS.updateOne({ _id: popup._id }, { $inc: { views: 1 } });
+  await getPopups().updateOne({ _id: popup._id }, { $inc: { views: 1 } });
   
   // NOTE: analytics are now computed from cumulative snapshots by the analytics cron job.
   // We retain popup-level counters (`views`) and `refery` for snapshot aggregation,
@@ -234,7 +234,7 @@ router.get('/register-view', async (req, res) => {
     return r;
   });
   if (!found) refery.push({ domain, view: 1, click: 0, timestamp: now() });
-  await POPUPS.updateOne({ _id: popup._id }, { $set: { refery } });
+  await getPopups().updateOne({ _id: popup._id }, { $set: { refery } });
   
   return res.sendStatus(200);
 });
@@ -244,11 +244,11 @@ router.get('/register-click', async (req, res) => {
   let id = req.query.popup;
   const domain = req.query.domain || 'unknown';
   if (!isValidObjectId(id)) return res.sendStatus(400);
-  const popup = await POPUPS.findOne({ _id: new ObjectId(id) });
+  const popup = await getPopups().findOne({ _id: new ObjectId(id) });
   if (!popup) return res.sendStatus(404);
   
   // Update popup stats
-  await POPUPS.updateOne({ _id: popup._id }, { $inc: { clicks: 1 } });
+  await getPopups().updateOne({ _id: popup._id }, { $inc: { clicks: 1 } });
   
   // NOTE: analytics are now computed from cumulative snapshots by the analytics cron job.
   // We retain popup-level counters (`clicks`) and `refery` for snapshot aggregation,
@@ -265,7 +265,7 @@ router.get('/register-click', async (req, res) => {
     return r;
   });
   if (!found) refery.push({ domain, view: 0, click: 1, timestamp: now() });
-  await POPUPS.updateOne({ _id: popup._id }, { $set: { refery } });
+  await getPopups().updateOne({ _id: popup._id }, { $set: { refery } });
   
   return res.sendStatus(200);
 });
@@ -280,12 +280,12 @@ router.post('/order', ensureAuthenticated, requireAdmin, async (req, res) => {
     const id = popups[i];
     if (!isValidObjectId(id)) continue;
     const o = parseInt(orders[i], 10);
-    await POPUPS.updateOne({ _id: new ObjectId(id) }, { $set: { order: o } });
+    await getPopups().updateOne({ _id: new ObjectId(id) }, { $set: { order: o } });
   }
   // Re-normalize
-  const userPopups = await POPUPS.find({}).sort({ order: 1 }).toArray();
+  const userPopups = await getPopups().find({}).sort({ order: 1 }).toArray();
   for (let i = 0; i < userPopups.length; i++) {
-    await POPUPS.updateOne({ _id: userPopups[i]._id }, { $set: { order: i + 1 } });
+    await getPopups().updateOne({ _id: userPopups[i]._id }, { $set: { order: i + 1 } });
   }
   return res.sendStatus(200);
 });
@@ -309,7 +309,7 @@ router.post('/save', upload.single('image'), ensureAuthenticated, requireAdmin, 
   if (popup) {
     slugQuery._id = { $ne: new ObjectId(popup) };
   }
-  const existingSlugOwner = await POPUPS.findOne(slugQuery);
+  const existingSlugOwner = await getPopups().findOne(slugQuery);
   if (existingSlugOwner) {
     console.warn('[referal::save] Duplicate slug detected', normalizedSlug);
     return res.status(409).json({ error: 'Slug already exists. Please choose a different value.' });
@@ -317,9 +317,9 @@ router.post('/save', upload.single('image'), ensureAuthenticated, requireAdmin, 
 
   if (!popup) {
     // create
-    const count = await POPUPS.countDocuments({});
+    const count = await getPopups().countDocuments({});
     const nextOrder = count + 1;
-    const result = await POPUPS.insertOne({
+    const result = await getPopups().insertOne({
       name,
       imageUrl,
       targetUrl,
@@ -334,7 +334,7 @@ router.post('/save', upload.single('image'), ensureAuthenticated, requireAdmin, 
     return res.json({ imageUrl, _id: result.insertedId, slug: normalizedSlug });
   } else {
     // update
-    await POPUPS.updateOne(
+    await getPopups().updateOne(
       { _id: new ObjectId(popup) },
       { $set: { name, imageUrl, targetUrl, enabled, slug: normalizedSlug } }
     );
@@ -347,7 +347,7 @@ router.post('/save', upload.single('image'), ensureAuthenticated, requireAdmin, 
 router.post('/toggle', ensureAuthenticated, requireAdmin, async (req, res) => {
   const { id, enabled } = req.body;
   if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
-  await POPUPS.updateOne({ _id: new ObjectId(id) }, { $set: { enabled: enabled === 'true' } });
+  await getPopups().updateOne({ _id: new ObjectId(id) }, { $set: { enabled: enabled === 'true' } });
   return res.sendStatus(200);
 });
 
@@ -355,14 +355,14 @@ router.post('/toggle', ensureAuthenticated, requireAdmin, async (req, res) => {
 router.delete('/:popup', ensureAuthenticated, requireAdmin, async (req, res) => {
   const id = req.params.popup;
   if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
-  const result = await POPUPS.deleteOne({ _id: new ObjectId(id) });
+  const result = await getPopups().deleteOne({ _id: new ObjectId(id) });
   if (result.deletedCount === 0) {
     return res.status(404).json({ error: 'Not found' });
   }
   // Re-normalize order
-  const userPopups = await POPUPS.find({}).sort({ order: 1 }).toArray();
+  const userPopups = await getPopups().find({}).sort({ order: 1 }).toArray();
   for (let i = 0; i < userPopups.length; i++) {
-    await POPUPS.updateOne({ _id: userPopups[i]._id }, { $set: { order: i + 1 } });
+    await getPopups().updateOne({ _id: userPopups[i]._id }, { $set: { order: i + 1 } });
   }
   return res.sendStatus(200);
 });
@@ -376,7 +376,7 @@ router.get('/about', (req, res) => {
 router.get('/next-popup', async (req, res) => {
   try {
     // Get all enabled popups sorted by order
-    const enabledPopups = await POPUPS.find({ enabled: { $ne: false } }).sort({ order: 1 }).toArray();
+    const enabledPopups = await getPopups().find({ enabled: { $ne: false } }).sort({ order: 1 }).toArray();
     
     if (enabledPopups.length === 0) {
       return res.json({ popup: null });

@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "buildCommand": "cd client && npm install --include=dev && npm run build",
+  "builds": [
+    {
+      "src": "app.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "client/dist/**",
+          "views/**",
+          "public/**",
+          "emails/**",
+          "utils/**",
+          "middleware/**",
+          "modules/**",
+          "routers/**",
+          "services/**",
+          "controllers/**"
+        ]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app.js"
+    }
+  ]
+}

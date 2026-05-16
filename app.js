@@ -4,199 +4,170 @@ const express = require('express');
 const session = require('express-session');
 const flash = require('connect-flash');
 const compression = require('compression');
-const http = require('http');
-const LocalStrategy = require('passport-local').Strategy;
-const { MongoClient, ObjectId } = require('mongodb');
 const MongoDBStore = require('connect-mongodb-session')(session);
-const { StableDiffusionApi } = require("stable-diffusion-api");
-
-const { initializeAnalyticsCronJobs } = require('./modules/cronjob-analytics.js');
-const { initializePartnersCronJobs } = require('./modules/cronjob-partners.js');
-
 const passport = require("passport");
 const passportConfig = require('./middleware/passport')(passport);
-const path = require('path'); // Add path module
-const ip = require('ip');
-const app = express();
-const server = http.createServer(app);
+const path = require('path');
 const cors = require('cors');
-const port = process.env.PORT || 3000;
+const { connectToDatabase } = require('./utils/db');
 
-const url = process.env.MONGODB_URL; // Use MONGODB_URL from .env file
-const dbName = process.env.MONGODB_DATABASE; // Use MONGODB_DATABASE from .env file
+const app = express();
 
-function startServer() {
-  console.log('Attempting to connect to MongoDB...');
-  console.log('MongoDB URL:', url ? url.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') : 'NOT SET');
-  console.log('Database Name:', dbName || 'NOT SET');
-  
-  if (!url || !dbName) {
-    console.error('MongoDB connection string or database name not found in environment variables');
-    process.exit(1);
+const url = process.env.MONGODB_URL;
+
+// Middleware: ensure the DB is connected before every request.
+// connectToDatabase() caches the connection so subsequent calls are instant.
+app.use(async (req, res, next) => {
+  try {
+    await connectToDatabase();
+    next();
+  } catch (err) {
+    console.error('Database connection failed:', err.message);
+    return res.status(500).json({ error: 'Database connection failed' });
   }
+});
 
-  MongoClient.connect(url, { 
-    useUnifiedTopology: true,
-    serverSelectionTimeoutMS: 10000, // 10 seconds timeout
-    connectTimeoutMS: 10000,
-    socketTimeoutMS: 0,
-    maxPoolSize: 10
+// Session middleware
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    store: new MongoDBStore({
+      uri: url,
+      collection: 'sessions',
+    }),
   })
-    .then(client => {
-      console.log('✅ Successfully connected to MongoDB');
+);
 
-      const db = client.db(dbName); // Use the database name from .env file
-      global.db = db; // Save the db connection in a global variable
-      initializeAnalyticsCronJobs(db)
-      initializePartnersCronJobs(db)
+// Serve static files from the 'public' directory
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static('uploads'));
 
-      // Seed default email notification configs
-      const { seedEmailConfig } = require('./services/adminNotifications');
-      seedEmailConfig();
+app.use(compression());
+app.use(flash());
+app.use((req, res, next) => {
+  res.locals.messages = req.flash();
+  next();
+});
+app.use((req, res, next) => {
+  if (process.env.NODE_ENV !== 'local' && req.header('x-forwarded-proto') !== 'https') {
+    res.redirect(`https://${req.header('host')}${req.url}`);
+  } else {
+    next();
+  }
+});
+app.use(passport.initialize());
+app.use(passport.session());
 
-      // Use the express-session middleware
-      app.use(
-        session({
-          secret: process.env.SESSION_SECRET, // Use SESSION_SECRET from .env file
-          resave: false,
-          saveUninitialized: false,
-          store: new MongoDBStore({
-            uri: url,
-            collection: 'sessions',
-          }),
-        })
-      );
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-      // Serve static files from the 'public' directory
-      app.use(express.static(path.join(__dirname, 'public')));
-      app.use('/uploads', express.static('uploads'));
+app.set('trust proxy', 1);
+app.use(cors());
 
-      app.use(compression());
-      app.use(flash());
-      app.use((req, res, next) => {
-        res.locals.messages = req.flash();
-        next();
-      });
-      app.use((req, res, next) => {
-        if (process.env.NODE_ENV !== 'local' && req.header('x-forwarded-proto') !== 'https') {
-          res.redirect(`https://${req.header('host')}${req.url}`);
-        } else {
-          next();
-        }
-      });   
-      app.use(passport.initialize());
-      app.use(passport.session());
+app.set('view engine', 'pug');
+app.set('views', './views');
 
-      // Add other middleware
-      app.use(express.json());
-      app.use(express.urlencoded({ extended: true }));
+// Handle partner-ad.js route directly (before other routers to avoid conflicts)
+const partnerAdModule = require('./routers/api/partner-ad');
+app.get('/api/partner-ad.js', partnerAdModule.servePartnerAdScript);
 
-      app.set('trust proxy', 1); 
-      
-      app.use(cors());
+// Handle partner-metrics.js tracking script route
+const partnerMetricsModule = require('./routers/api/partner-metrics');
+app.get('/api/partner-metrics.js', partnerMetricsModule.serveMetricsScript);
 
-      app.set('view engine', 'pug');
-      app.set('views', './views');
+// Define and use routers
+const routers = [
+  ['/', './routers/index'],
+  ['/user', './routers/user'],
+  ['/auth', './routers/auth'],
+  ['/payment', './routers/payment'],
+  ['/api/affiliate', './routers/api/affiliate'],
+  ['/api/abtest', './routers/api/abtest'],
+  ['/api/referal', './routers/api/referal'],
+  ['/api/analytics', './routers/api/analytics'],
+  ['/api/partners', './routers/api/partners'],
+  ['/api/partner-recruitment', './routers/api/partner-recruitment'],
+  ['/api/partner-portal', './routers/api/partner-portal'],
+  ['/api/partner-ad', './routers/api/partner-ad'],
+  ['/api/api-keys', './routers/api/api-keys'],
+  ['/api/mailing-lists', './routers/api/mailing-lists'],
+  ['/api/v1', './routers/api/v1'],
+  ['/api/ga', './routers/api/ga'],
+  ['/api/advertiser', './routers/api/advertiser'],
+  ['/api/ads', './routers/api/ads'],
+  ['/api/admin', './routers/api/admin-ads'],
+  ['/api/admin', './routers/api/admin-email-config'],
+  ['/api/support', './routers/api/support'],
+  ['/api/rakubun', './routers/api/rakubun'],
+  ['/api/vibedash', './routers/api/vibedash'],
+];
 
-      // Handle partner-ad.js route directly (before other routers to avoid conflicts)
-      const partnerAdModule = require('./routers/api/partner-ad');
-      app.get('/api/partner-ad.js', partnerAdModule.servePartnerAdScript);
+routers.forEach(([route, routerPath]) => app.use(route, require(routerPath)));
 
-      // Handle partner-metrics.js tracking script route
-      const partnerMetricsModule = require('./routers/api/partner-metrics');
-      app.get('/api/partner-metrics.js', partnerMetricsModule.serveMetricsScript);
+// Register partner metrics router (loaded above for the .js script route)
+app.use('/api/partner-metrics', partnerMetricsModule.router);
 
-      // Define and use routers concisely
-      const routers = [
-        ['/', './routers/index'],
-        ['/user', './routers/user'],
-        ['/auth', './routers/auth'],
-        ['/payment', './routers/payment'],
-        ['/api/affiliate', './routers/api/affiliate'],
-        ['/api/abtest', './routers/api/abtest'],
-        ['/api/referal', './routers/api/referal'],
-        ['/api/analytics', './routers/api/analytics'],
-        ['/api/partners', './routers/api/partners'],
-        ['/api/partner-recruitment', './routers/api/partner-recruitment'],
-        ['/api/partner-portal', './routers/api/partner-portal'],
-        ['/api/partner-ad', './routers/api/partner-ad'],
-        ['/api/api-keys', './routers/api/api-keys'],
-        ['/api/mailing-lists', './routers/api/mailing-lists'],
-        ['/api/v1', './routers/api/v1'],
-        ['/api/ga', './routers/api/ga'],
-        ['/api/advertiser', './routers/api/advertiser'],
-        ['/api/ads', './routers/api/ads'],
-        ['/api/admin', './routers/api/admin-ads'],
-        ['/api/admin', './routers/api/admin-email-config'],
-        ['/api/support', './routers/api/support'],
-        ['/api/rakubun', './routers/api/rakubun'],
-        ['/api/vibedash', './routers/api/vibedash'],
-      ];
+// Add partner emails API router
+app.use('/api/partners/emails', require('./routers/api/partner-emails'));
 
-      routers.forEach(([route, path]) => app.use(route, require(path)));
+// Serve React client build for dashboard and login
+const clientDistPath = path.join(__dirname, 'client', 'dist');
+app.use('/assets', express.static(path.join(clientDistPath, 'assets')));
+app.use('/favicon.svg', express.static(path.join(clientDistPath, 'favicon.svg')));
+app.use('/icons.svg', express.static(path.join(clientDistPath, 'icons.svg')));
 
-      // Create indexes for ad network collections
-      Promise.all([
-        db.collection('adCampaigns').createIndex({ status: 1, type: 1, startDate: 1, endDate: 1 }),
-        db.collection('adBudgetTransactions').createIndex({ advertiserId: 1, createdAt: -1 }),
-        db.collection('adBudgetTransactions').createIndex({ campaignId: 1, type: 1, createdAt: -1 }),
-        db.collection('adImpressions').createIndex({ campaignId: 1, createdAt: -1 }),
-        db.collection('adImpressions').createIndex({ advertiserId: 1, createdAt: -1 }),
-        db.collection('adClicks').createIndex({ campaignId: 1, createdAt: -1 }),
-        db.collection('adClicks').createIndex({ impressionId: 1, ipHash: 1 }),
-        db.collection('adBudgetTransactions').createIndex({ stripeSessionId: 1 }, { sparse: true }),
-        db.collection('supportTickets').createIndex({ userId: 1, createdAt: -1 }),
-        db.collection('supportTickets').createIndex({ status: 1, createdAt: -1 }),
-      ]).catch((err) => console.error('Ad network index creation error:', err));
-      
-      // Register partner metrics router (loaded above for the .js script route)
-      app.use('/api/partner-metrics', partnerMetricsModule.router);
+// SPA fallback: serve React index.html for /dashboard/* and /login routes
+const serveReactApp = (req, res) => {
+  res.sendFile(path.join(clientDistPath, 'index.html'));
+};
+app.get('/dashboard', serveReactApp);
+app.get('/dashboard/*', serveReactApp);
+app.get('/login', serveReactApp);
 
-      // Add partner emails API router
-      app.use('/api/partners/emails', require('./routers/api/partner-emails'));
+// After first DB connection: create indexes, seed config, and start cron jobs.
+// This runs once in the background and does not block request handling.
+connectToDatabase()
+  .then((db) => {
+    // Seed default email notification configs
+    const { seedEmailConfig } = require('./services/adminNotifications');
+    seedEmailConfig();
 
-      // Serve React client build for dashboard and login
-      const clientDistPath = path.join(__dirname, 'client', 'dist');
-      app.use('/assets', express.static(path.join(clientDistPath, 'assets')));
-      app.use('/favicon.svg', express.static(path.join(clientDistPath, 'favicon.svg')));
-      app.use('/icons.svg', express.static(path.join(clientDistPath, 'icons.svg')));
+    // Create indexes for ad network collections
+    Promise.all([
+      db.collection('adCampaigns').createIndex({ status: 1, type: 1, startDate: 1, endDate: 1 }),
+      db.collection('adBudgetTransactions').createIndex({ advertiserId: 1, createdAt: -1 }),
+      db.collection('adBudgetTransactions').createIndex({ campaignId: 1, type: 1, createdAt: -1 }),
+      db.collection('adImpressions').createIndex({ campaignId: 1, createdAt: -1 }),
+      db.collection('adImpressions').createIndex({ advertiserId: 1, createdAt: -1 }),
+      db.collection('adClicks').createIndex({ campaignId: 1, createdAt: -1 }),
+      db.collection('adClicks').createIndex({ impressionId: 1, ipHash: 1 }),
+      db.collection('adBudgetTransactions').createIndex({ stripeSessionId: 1 }, { sparse: true }),
+      db.collection('supportTickets').createIndex({ userId: 1, createdAt: -1 }),
+      db.collection('supportTickets').createIndex({ status: 1, createdAt: -1 }),
+    ]).catch((err) => console.error('Ad network index creation error:', err));
 
-      // SPA fallback: serve React index.html for /dashboard/* and /login routes
-      const serveReactApp = (req, res) => {
-        res.sendFile(path.join(clientDistPath, 'index.html'));
-      };
-      app.get('/dashboard', serveReactApp);
-      app.get('/dashboard/*', serveReactApp);
-      app.get('/login', serveReactApp);
+    // Cron jobs require a persistent process — skip them on Vercel serverless.
+    if (!process.env.VERCEL) {
+      const { initializeAnalyticsCronJobs } = require('./modules/cronjob-analytics.js');
+      const { initializePartnersCronJobs } = require('./modules/cronjob-partners.js');
+      initializeAnalyticsCronJobs(db);
+      initializePartnersCronJobs(db);
+    }
+  })
+  .catch((err) => console.error('DB initialization error:', err.message));
 
+// Export the app for Vercel (and any other serverless host).
+module.exports = app;
 
-      server.listen(port, '0.0.0.0', () => 
-      console.log(`Express running → PORT http://${ip.address()}:${port}`));
-
-    })
-    .catch(err => {
-      console.error('❌ MongoDB connection failed:');
-      console.error('Error details:', err.message);
-      console.error('Error code:', err.code);
-      
-      if (err.code === 'ESERVFAIL' || err.code === 'ENOTFOUND') {
-        console.error('');
-        console.error('🔧 DNS/Network issue detected. Possible solutions:');
-        console.error('1. Check your internet connection');
-        console.error('2. Verify the MongoDB URL in your .env file');
-        console.error('3. Ensure the MongoDB cluster is running and accessible');
-        console.error('4. Check if you need to whitelist your IP address in MongoDB Atlas');
-        console.error('');
-        console.error('Current MongoDB URL (sanitized):', url ? url.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') : 'NOT SET');
-      }
-      
-      console.error('');
-      console.error('⏳ Retrying connection in 5 seconds...');
-      setTimeout(() => {
-        console.log('🔄 Retrying MongoDB connection...');
-        startServer();
-      }, 5000);
-    });
+// Start the HTTP server only when running outside of a serverless environment.
+if (!process.env.VERCEL) {
+  const http = require('http');
+  const ip = require('ip');
+  const port = process.env.PORT || 3000;
+  const server = http.createServer(app);
+  server.listen(port, '0.0.0.0', () =>
+    console.log(`Express running → PORT http://${ip.address()}:${port}`)
+  );
 }
-
-startServer();
