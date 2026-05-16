@@ -1,0 +1,17 @@
+# Reduce serverless function size — exclude items unused by app.js runtime path.
+.git
+.github
+.DS_Store
+docs
+scripts
+emails/**/*.psd
+uploads
+client/src
+client/public
+client/node_modules
+client/index.html
+client/vite.config.*
+client/eslint.config.*
+client/README.md
+client/package*.json
+*.md

@@ -6,7 +6,7 @@ const {
 } = require('../services/tools')
 
 const router = express.Router();
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const passport = require('passport');
 const { email, sendEmail } = require('../services/email')
 const { notifyAdmin } = require('../services/adminNotifications')
