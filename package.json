@@ -21,12 +21,15 @@
     "url": "https://github.com/brocketdesign/rakubun/issues"
   },
   "homepage": "https://github.com/brocketdesign/rakubun#readme",
+  "engines": {
+    "node": "20.x"
+  },
   "dependencies": {
     "@ngrok/ngrok": "^1.2.0",
     "a1111-webui-api": "^1.6.10002",
     "aws-sdk": "^2.1628.0",
     "axios": "^1.6.5",
-    "bcrypt": "^5.1.1",
+    "bcryptjs": "^2.4.3",
     "chrome-aws-lambda": "^10.1.0",
     "compression": "^1.7.4",
     "connect-flash": "^0.1.1",

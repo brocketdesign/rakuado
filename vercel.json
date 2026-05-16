@@ -1,6 +1,13 @@
 {
   "version": 2,
   "buildCommand": "cd client && npm install --include=dev && npm run build",
+  "build": {
+    "env": {
+      "PUPPETEER_SKIP_DOWNLOAD": "true",
+      "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true",
+      "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD": "true"
+    }
+  },
   "builds": [
     {
       "src": "app.js",

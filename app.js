@@ -11,9 +11,26 @@ const path = require('path');
 const cors = require('cors');
 const { connectToDatabase } = require('./utils/db');
 
+// On serverless platforms (e.g. Vercel) each invocation reuses the warm
+// process. Killing it on a stray async error would cause the next request
+// to pay a full cold-start penalty and produce FUNCTION_INVOCATION_FAILED
+// for the in-flight request. Log loudly and keep the process alive; the
+// per-request error handler below converts any error reaching a handler
+// into a proper 500 response.
+process.on('uncaughtException', (err) => {
+  console.error('uncaughtException:', err && err.stack ? err.stack : err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('unhandledRejection:', reason);
+});
+
 const app = express();
 
 const url = process.env.MONGODB_URL;
+
+// `trust proxy` MUST be set before session/redirect middleware so that
+// secure cookies and req.secure work correctly behind Vercel's proxy.
+app.set('trust proxy', 1);
 
 // Middleware: ensure the DB is connected before every request.
 // connectToDatabase() caches the connection so subsequent calls are instant.
@@ -27,22 +44,63 @@ app.use(async (req, res, next) => {
   }
 });
 
+// Build the session store lazily and attach an `error` listener so a
+// background connection failure does not crash the serverless runtime.
+// `connect-mongodb-session` is an EventEmitter and would otherwise throw
+// on an unhandled 'error' event.
+let _sessionStore = null;
+function getSessionStore() {
+  if (_sessionStore) return _sessionStore;
+  if (!url) {
+    console.warn('MONGODB_URL not set — falling back to in-memory session store');
+    return undefined; // express-session will use MemoryStore
+  }
+  try {
+    _sessionStore = new MongoDBStore({
+      uri: url,
+      collection: 'sessions',
+    });
+    _sessionStore.on('error', (err) => {
+      console.error(
+        'Session store error — sessions will be unavailable until reconnect:',
+        err && err.message ? err.message : err
+      );
+    });
+  } catch (err) {
+    console.error('Failed to initialise session store:', err.message);
+    _sessionStore = null;
+  }
+  return _sessionStore || undefined;
+}
+
+// Resolve session secret. If SESSION_SECRET is missing we cannot crash the
+// function (that would render the site permanently down on Vercel until the
+// env var is configured), but we MUST NOT use a predictable default — that
+// would let an attacker forge session cookies. Generate an ephemeral random
+// secret per cold start and log a clear warning so the misconfiguration is
+// visible in the platform logs.
+let sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret) {
+  sessionSecret = require('crypto').randomBytes(32).toString('hex');
+  console.warn(
+    'SESSION_SECRET is not set — generated an ephemeral secret for this instance. ' +
+      'Sessions will be invalidated on every cold start. Configure SESSION_SECRET in your Vercel project settings.'
+  );
+}
+
 // Session middleware
 app.use(
   session({
-    secret: process.env.SESSION_SECRET,
+    secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
-    store: new MongoDBStore({
-      uri: url,
-      collection: 'sessions',
-    }),
+    store: getSessionStore(),
   })
 );
 
 // Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use(compression());
 app.use(flash());
@@ -51,7 +109,7 @@ app.use((req, res, next) => {
   next();
 });
 app.use((req, res, next) => {
-  if (process.env.NODE_ENV !== 'local' && req.header('x-forwarded-proto') !== 'https') {
+  if (process.env.NODE_ENV !== 'local' && !process.env.VERCEL && req.header('x-forwarded-proto') !== 'https') {
     res.redirect(`https://${req.header('host')}${req.url}`);
   } else {
     next();
@@ -63,7 +121,6 @@ app.use(passport.session());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.set('trust proxy', 1);
 app.use(cors());
 
 app.set('view engine', 'pug');
@@ -157,6 +214,20 @@ connectToDatabase()
     }
   })
   .catch((err) => console.error('DB initialization error:', err.message));
+
+// Global error handler — must be the last middleware. Without this, an
+// uncaught error in any route bubbles up to Vercel as FUNCTION_INVOCATION_FAILED.
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error('Unhandled route error:', err && err.stack ? err.stack : err);
+  if (res.headersSent) return next(err);
+  const wantsJson = req.path.startsWith('/api/') || (req.headers.accept || '').includes('application/json');
+  if (wantsJson) {
+    res.status(500).json({ error: 'Internal Server Error' });
+  } else {
+    res.status(500).send('Internal Server Error');
+  }
+});
 
 // Export the app for Vercel (and any other serverless host).
 module.exports = app;
