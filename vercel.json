@@ -5,7 +5,8 @@
     "env": {
       "PUPPETEER_SKIP_DOWNLOAD": "true",
       "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true",
-      "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD": "true"
+      "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD": "true",
+      "NGROK_SKIP_DOWNLOAD": "true"
     }
   },
   "builds": [
